@@ -4,6 +4,9 @@
 //! `OnboardingAction` implementation, forwarding action-specific JSON config.
 
 use crate::capabilities::ingestion::engine::CsvHrisConnector;
+use crate::capabilities::logic::engine::{
+    IdentityDeduplicator, IdentityFuzzyMatch, PIIMasking, SCDType2,
+};
 use crate::domain::{Error, OnboardingAction, Result};
 use crate::domain::engine::manifest::ActionConfig;
 use std::sync::Arc;
@@ -22,10 +25,16 @@ impl ActionFactory {
                 let connector = CsvHrisConnector::from_action_config(&action_config.config)?;
                 Ok(Arc::new(connector))
             }
-            // Future action types go here:
-            // "data_validator" => { ... }
-            // "scd_type_2"     => { ... }
-            // "api_dispatcher"  => { ... }
+            "scd_type_2" => Ok(Arc::new(SCDType2::new())),
+            "pii_masking" => {
+                let masking = PIIMasking::from_action_config(&action_config.config);
+                Ok(Arc::new(masking))
+            }
+            "identity_deduplicator" => Ok(Arc::new(IdentityDeduplicator::new())),
+            "identity_fuzzy_match" => {
+                let fuzzy = IdentityFuzzyMatch::from_action_config(&action_config.config);
+                Ok(Arc::new(fuzzy))
+            }
             other => Err(Error::ConfigurationError(format!(
                 "Unknown action type: '{}'",
                 other
@@ -61,6 +70,50 @@ mod tests {
         };
         let action = ActionFactory::create(&config).expect("should create csv connector");
         assert_eq!(action.id(), "csv_hris_connector");
+    }
+
+    #[test]
+    fn test_factory_creates_scd_type_2() {
+        let config = ActionConfig {
+            id: "scd".into(),
+            action_type: "scd_type_2".into(),
+            config: serde_json::json!({}),
+        };
+        let action = ActionFactory::create(&config).expect("should create scd_type_2");
+        assert_eq!(action.id(), "scd_type_2");
+    }
+
+    #[test]
+    fn test_factory_creates_pii_masking() {
+        let config = ActionConfig {
+            id: "mask".into(),
+            action_type: "pii_masking".into(),
+            config: serde_json::json!({ "mask_ssn": true, "mask_salary": false }),
+        };
+        let action = ActionFactory::create(&config).expect("should create pii_masking");
+        assert_eq!(action.id(), "pii_masking");
+    }
+
+    #[test]
+    fn test_factory_creates_identity_deduplicator() {
+        let config = ActionConfig {
+            id: "dedup".into(),
+            action_type: "identity_deduplicator".into(),
+            config: serde_json::json!({}),
+        };
+        let action = ActionFactory::create(&config).expect("should create identity_deduplicator");
+        assert_eq!(action.id(), "identity_deduplicator");
+    }
+
+    #[test]
+    fn test_factory_creates_identity_fuzzy_match() {
+        let config = ActionConfig {
+            id: "fuzzy".into(),
+            action_type: "identity_fuzzy_match".into(),
+            config: serde_json::json!({ "threshold": 0.85 }),
+        };
+        let action = ActionFactory::create(&config).expect("should create identity_fuzzy_match");
+        assert_eq!(action.id(), "identity_fuzzy_match");
     }
 
     #[test]

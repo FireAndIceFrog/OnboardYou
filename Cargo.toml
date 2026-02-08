@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 # Data processing
-polars = { version = "0.48", features = ["lazy", "parquet", "csv"] }
+polars = { version = "0.48", features = ["lazy", "parquet", "csv", "strings", "dtype-struct"] }
 
 # Error handling
 thiserror = "1.0"
