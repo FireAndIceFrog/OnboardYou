@@ -8,7 +8,8 @@ mod common;
 use onboard_you::{ActionConfig, ActionFactory, RosterContext};
 use onboard_you::capabilities::ingestion::engine::{
     WorkdayConfig, WorkdayHrisConnector, WorkdayResponseGroup,
-    build_get_workers_envelope, parse_get_workers_response, workers_to_dataframe,
+    build_get_workers_envelope, parse_get_workers_response,
+    parse_response_results, workers_to_dataframe,
 };
 use onboard_you::OnboardingAction;
 use polars::prelude::*;
@@ -136,11 +137,12 @@ fn test_soap_envelope_contains_credentials() {
         worker_count_limit: 100,
         response_group: WorkdayResponseGroup::default(),
     };
-    let envelope = build_get_workers_envelope(&config, "my_secret");
+    let envelope = build_get_workers_envelope(&config, "my_secret", 1);
 
     assert!(envelope.contains("ISU_Test@test_co"));
     assert!(envelope.contains("my_secret"));
     assert!(envelope.contains("Get_Workers_Request"));
+    assert!(envelope.contains("<bsvc:Page>1</bsvc:Page>"));
     assert!(envelope.contains("v45.2"));
 }
 
@@ -247,4 +249,34 @@ fn test_e2e_workday_pipeline_with_deduplication() {
         .into_iter()
         .collect();
     assert_eq!(is_dup, vec![Some(false), Some(false)]);
+}
+
+// ── Pagination Integration Tests ─────────────────────────────────────────
+
+#[test]
+fn test_parse_response_results_integration() {
+    let rr = parse_response_results(WORKDAY_RESPONSE_XML);
+    assert_eq!(rr.total_results, 2);
+    assert_eq!(rr.total_pages, 1);
+    assert_eq!(rr.page_results, 2);
+    assert_eq!(rr.page, 1);
+}
+
+#[test]
+fn test_envelope_page_parameter_integration() {
+    let config = WorkdayConfig {
+        tenant_url: "https://wd3.workday.com".into(),
+        tenant_id: "page_test".into(),
+        username: "ISU".into(),
+        password: "pw".into(),
+        worker_count_limit: 50,
+        response_group: WorkdayResponseGroup::default(),
+    };
+
+    let env_p1 = build_get_workers_envelope(&config, "pw", 1);
+    assert!(env_p1.contains("<bsvc:Page>1</bsvc:Page>"));
+    assert!(env_p1.contains("<bsvc:Count>50</bsvc:Count>"));
+
+    let env_p5 = build_get_workers_envelope(&config, "pw", 5);
+    assert!(env_p5.contains("<bsvc:Page>5</bsvc:Page>"));
 }

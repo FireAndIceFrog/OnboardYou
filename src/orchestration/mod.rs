@@ -2,9 +2,12 @@
 //!
 //! - Factory: Maps manifest string IDs to Capability instances
 //! - Pipeline Runner: Sequentially executes Actions on the RosterContext
+//! - Clients: Shared HTTP / SOAP client abstractions
 
+pub mod clients;
 pub mod factory;
 pub mod pipeline_runner;
 
+pub use clients::*;
 pub use factory::*;
 pub use pipeline_runner::*;

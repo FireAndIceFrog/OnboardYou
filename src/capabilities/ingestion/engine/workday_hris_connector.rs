@@ -21,6 +21,7 @@
 
 use crate::capabilities::ingestion::traits::HrisConnector;
 use crate::domain::{Error, OnboardingAction, Result, RosterContext};
+use crate::orchestration::clients::{ReqwestSoapClient, SoapClient};
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -157,8 +158,27 @@ impl WorkdayConfig {
 /// Builds the SOAP envelope for the `Get_Workers` operation.
 ///
 /// The envelope uses WS-Security `UsernameToken` authentication and includes
-/// the `Response_Group` element to control which data sections are returned.
-pub fn build_get_workers_envelope(config: &WorkdayConfig, password: &str) -> String {
+/// the `Response_Filter` element (with `Page` and `Count`) to control
+/// pagination, plus a `Response_Group` to select which data sections are returned.
+///
+/// # Workday Pagination Model
+///
+/// The `Response_Filter` element controls which page of results to return:
+///
+/// | Element | Type | Description                                         |
+/// |---------|------|-----------------------------------------------------|
+/// | `Page`  | u32  | 1-based page number to retrieve                     |
+/// | `Count` | u32  | Maximum number of results per page (default 200)    |
+///
+/// The response contains a `Response_Results` element with:
+///
+/// | Element         | Description                              |
+/// |-----------------|------------------------------------------|
+/// | `Total_Results` | Total number of worker records available  |
+/// | `Total_Pages`   | Total number of pages                    |
+/// | `Page_Results`  | Number of results on this page           |
+/// | `Page`          | Current page number                      |
+pub fn build_get_workers_envelope(config: &WorkdayConfig, password: &str, page: u32) -> String {
     let rg = &config.response_group;
 
     format!(
@@ -178,6 +198,7 @@ pub fn build_get_workers_envelope(config: &WorkdayConfig, password: &str) -> Str
   <env:Body>
     <bsvc:Get_Workers_Request bsvc:version="{version}">
       <bsvc:Response_Filter>
+        <bsvc:Page>{page}</bsvc:Page>
         <bsvc:Count>{count}</bsvc:Count>
       </bsvc:Response_Filter>
       <bsvc:Response_Group>
@@ -194,6 +215,7 @@ pub fn build_get_workers_envelope(config: &WorkdayConfig, password: &str) -> Str
         tenant_id = config.tenant_id,
         password = password,
         version = WORKDAY_API_VERSION,
+        page = page,
         count = config.worker_count_limit,
         include_personal = rg.include_personal_information,
         include_employment = rg.include_employment_information,
@@ -388,60 +410,53 @@ pub fn workers_to_dataframe(records: &[WorkdayWorkerRecord]) -> Result<DataFrame
 }
 
 // ───────────────────────────────────────────────────────────────────────────
-// HTTP Client (abstracted for testability)
+// Response_Results pagination metadata
 // ───────────────────────────────────────────────────────────────────────────
 
-/// Trait abstracting the HTTP POST call so we can inject mocks in tests.
-pub trait SoapClient: Send + Sync {
-    /// Send a SOAP POST request and return the raw XML response body.
-    fn post_soap(&self, endpoint: &str, envelope: &str) -> Result<String>;
+/// Parsed pagination metadata from the `Response_Results` element in a
+/// Workday SOAP response.
+///
+/// The Workday WWS API returns this block alongside every paged Get request:
+///
+/// ```xml
+/// <wd:Response_Results>
+///   <wd:Total_Results>1254</wd:Total_Results>
+///   <wd:Total_Pages>7</wd:Total_Pages>
+///   <wd:Page_Results>200</wd:Page_Results>
+///   <wd:Page>1</wd:Page>
+/// </wd:Response_Results>
+/// ```
+#[derive(Debug, Clone)]
+pub struct ResponseResults {
+    pub total_results: u32,
+    pub total_pages: u32,
+    pub page_results: u32,
+    pub page: u32,
 }
 
-/// Production HTTP client that sends real SOAP requests via `reqwest`.
-#[derive(Debug, Clone)]
-pub struct ReqwestSoapClient;
+/// Extract pagination metadata from a Workday SOAP response XML string.
+///
+/// Falls back to `{ total_results: 0, total_pages: 1, page_results: 0, page: 1 }`
+/// when the tags are absent (e.g. single-page responses from older endpoints).
+pub fn parse_response_results(xml: &str) -> ResponseResults {
+    let total_results = extract_tag(xml, "Total_Results")
+        .parse::<u32>()
+        .unwrap_or(0);
+    let total_pages = extract_tag(xml, "Total_Pages")
+        .parse::<u32>()
+        .unwrap_or(1);
+    let page_results = extract_tag(xml, "Page_Results")
+        .parse::<u32>()
+        .unwrap_or(0);
+    let page = extract_tag(xml, "Page")
+        .parse::<u32>()
+        .unwrap_or(1);
 
-impl SoapClient for ReqwestSoapClient {
-    fn post_soap(&self, endpoint: &str, envelope: &str) -> Result<String> {
-        let client = reqwest::blocking::Client::builder()
-            .danger_accept_invalid_certs(false)
-            .timeout(std::time::Duration::from_secs(60))
-            .build()
-            .map_err(|e| Error::IngestionError(format!("HTTP client error: {}", e)))?;
-
-        let response = client
-            .post(endpoint)
-            .header("Content-Type", "text/xml; charset=utf-8")
-            .header("SOAPAction", "")
-            .body(envelope.to_owned())
-            .send()
-            .map_err(|e| {
-                Error::IngestionError(format!(
-                    "Workday SOAP request to '{}' failed: {}",
-                    endpoint, e
-                ))
-            })?;
-
-        let status = response.status();
-        let body = response.text().map_err(|e| {
-            Error::IngestionError(format!("Failed to read Workday response body: {}", e))
-        })?;
-
-        if !status.is_success() {
-            // Try to extract a Workday fault message from the response
-            let fault_msg = extract_tag(&body, "faultstring");
-            let detail = if fault_msg.is_empty() {
-                body.chars().take(500).collect::<String>()
-            } else {
-                fault_msg
-            };
-            return Err(Error::IngestionError(format!(
-                "Workday returned HTTP {}: {}",
-                status, detail
-            )));
-        }
-
-        Ok(body)
+    ResponseResults {
+        total_results,
+        total_pages,
+        page_results,
+        page,
     }
 }
 
@@ -508,28 +523,78 @@ impl WorkdayHrisConnector {
         Ok(Self::new(config))
     }
 
-    /// Fetch workers from Workday, handling pagination via `Response_Filter.Page`.
+    /// Fetch workers from Workday, paging through all results via
+    /// `Response_Filter.Page`.
+    ///
+    /// Workday pagination is 1-based: the first request sets `Page = 1`,
+    /// and `Response_Results.Total_Pages` tells us how many pages exist.
+    /// Each page returns up to `worker_count_limit` workers.  All pages
+    /// are concatenated into a single `Vec<WorkdayWorkerRecord>`.
     fn fetch_all_workers(&self) -> Result<Vec<WorkdayWorkerRecord>> {
         let password = self.config.resolved_password()?;
         let endpoint = self.config.soap_endpoint();
-        let envelope = build_get_workers_envelope(&self.config, &password);
+
+        let mut all_records: Vec<WorkdayWorkerRecord> = Vec::new();
+        let mut current_page: u32 = 1;
+        let mut total_pages: u32 = 1; // will be updated after first response
+
+        loop {
+            let envelope =
+                build_get_workers_envelope(&self.config, &password, current_page);
+
+            tracing::info!(
+                endpoint = %endpoint,
+                tenant = %self.config.tenant_id,
+                page = current_page,
+                total_pages = total_pages,
+                "WorkdayHrisConnector: calling Get_Workers page {}/{}",
+                current_page,
+                total_pages,
+            );
+
+            let response_xml = self.client.post_soap(&endpoint, &envelope)?;
+
+            // Parse pagination metadata from Response_Results
+            let results_meta = parse_response_results(&response_xml);
+            total_pages = results_meta.total_pages;
+
+            tracing::info!(
+                total_results = results_meta.total_results,
+                total_pages = results_meta.total_pages,
+                page_results = results_meta.page_results,
+                page = results_meta.page,
+                "WorkdayHrisConnector: response metadata"
+            );
+
+            // Parse worker records from this page
+            let page_records = parse_get_workers_response(&response_xml)?;
+
+            tracing::info!(
+                workers = page_records.len(),
+                page = current_page,
+                "WorkdayHrisConnector: parsed {} workers from page {}",
+                page_records.len(),
+                current_page,
+            );
+
+            all_records.extend(page_records);
+
+            // Move to the next page if there are more
+            if current_page >= total_pages {
+                break;
+            }
+            current_page += 1;
+        }
 
         tracing::info!(
-            endpoint = %endpoint,
-            tenant = %self.config.tenant_id,
-            "WorkdayHrisConnector: calling Get_Workers"
+            total_workers = all_records.len(),
+            total_pages = total_pages,
+            "WorkdayHrisConnector: finished pagination — {} workers across {} page(s)",
+            all_records.len(),
+            total_pages,
         );
 
-        let response_xml = self.client.post_soap(&endpoint, &envelope)?;
-        let records = parse_get_workers_response(&response_xml)?;
-
-        tracing::info!(
-            workers = records.len(),
-            "WorkdayHrisConnector: parsed {} worker records",
-            records.len()
-        );
-
-        Ok(records)
+        Ok(all_records)
     }
 }
 
@@ -583,6 +648,9 @@ impl OnboardingAction for WorkdayHrisConnector {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // Re-export the trait locally so mock impls work
+    use crate::orchestration::clients::SoapClient;
 
     // ── Mock SOAP Client ───────────────────────────────────────────────
 
@@ -784,11 +852,12 @@ mod tests {
     #[test]
     fn test_get_workers_envelope_structure() {
         let config = sample_config();
-        let envelope = build_get_workers_envelope(&config, "secret");
+        let envelope = build_get_workers_envelope(&config, "secret", 1);
 
         assert!(envelope.contains("ISU_Test@acme_test"));
         assert!(envelope.contains("secret"));
         assert!(envelope.contains("Get_Workers_Request"));
+        assert!(envelope.contains("<bsvc:Page>1</bsvc:Page>"));
         assert!(envelope.contains("<bsvc:Count>100</bsvc:Count>"));
         assert!(envelope.contains("Include_Personal_Information"));
         assert!(envelope.contains("UsernameToken"));
@@ -799,10 +868,17 @@ mod tests {
         let mut config = sample_config();
         config.response_group.include_compensation = true;
         config.response_group.include_roles = true;
-        let envelope = build_get_workers_envelope(&config, "pw");
+        let envelope = build_get_workers_envelope(&config, "pw", 1);
 
         assert!(envelope.contains("<bsvc:Include_Compensation>true</bsvc:Include_Compensation>"));
         assert!(envelope.contains("<bsvc:Include_Roles>true</bsvc:Include_Roles>"));
+    }
+
+    #[test]
+    fn test_envelope_page_number() {
+        let config = sample_config();
+        let env_p3 = build_get_workers_envelope(&config, "pw", 3);
+        assert!(env_p3.contains("<bsvc:Page>3</bsvc:Page>"));
     }
 
     // ── XML Parsing Tests ──────────────────────────────────────────────
@@ -1010,5 +1086,155 @@ mod tests {
                 field
             );
         }
+    }
+
+    // ── Response_Results / Pagination Tests ────────────────────────────
+
+    #[test]
+    fn test_parse_response_results_from_sample_xml() {
+        let rr = parse_response_results(SAMPLE_WORKDAY_XML);
+        assert_eq!(rr.total_results, 3);
+        assert_eq!(rr.total_pages, 1);
+        assert_eq!(rr.page_results, 3);
+        assert_eq!(rr.page, 1);
+    }
+
+    #[test]
+    fn test_parse_response_results_missing_tags() {
+        let xml = "<env:Envelope><env:Body><empty/></env:Body></env:Envelope>";
+        let rr = parse_response_results(xml);
+        assert_eq!(rr.total_results, 0);
+        assert_eq!(rr.total_pages, 1);
+        assert_eq!(rr.page_results, 0);
+        assert_eq!(rr.page, 1);
+    }
+
+    #[test]
+    fn test_parse_response_results_multi_page() {
+        let xml = r#"
+        <wd:Response_Results>
+          <wd:Total_Results>450</wd:Total_Results>
+          <wd:Total_Pages>3</wd:Total_Pages>
+          <wd:Page_Results>200</wd:Page_Results>
+          <wd:Page>2</wd:Page>
+        </wd:Response_Results>"#;
+        let rr = parse_response_results(xml);
+        assert_eq!(rr.total_results, 450);
+        assert_eq!(rr.total_pages, 3);
+        assert_eq!(rr.page_results, 200);
+        assert_eq!(rr.page, 2);
+    }
+
+    /// Mock that returns different XML for each page, simulating multi-page
+    /// Workday pagination.
+    struct PaginatingMockClient;
+
+    impl SoapClient for PaginatingMockClient {
+        fn post_soap(&self, _endpoint: &str, envelope: &str) -> Result<String> {
+            // Inspect the envelope to determine which page was requested
+            let page = if envelope.contains("<bsvc:Page>1</bsvc:Page>") {
+                1
+            } else if envelope.contains("<bsvc:Page>2</bsvc:Page>") {
+                2
+            } else {
+                panic!("unexpected page in envelope");
+            };
+
+            match page {
+                1 => Ok(r#"<?xml version="1.0" encoding="UTF-8"?>
+<env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/">
+  <env:Body>
+    <wd:Get_Workers_Response xmlns:wd="urn:com.workday/bsvc">
+      <wd:Response_Results>
+        <wd:Total_Results>3</wd:Total_Results>
+        <wd:Total_Pages>2</wd:Total_Pages>
+        <wd:Page_Results>2</wd:Page_Results>
+        <wd:Page>1</wd:Page>
+      </wd:Response_Results>
+      <wd:Response_Data>
+        <wd:Worker>
+          <wd:Worker_ID>WK-P1A</wd:Worker_ID>
+          <wd:Employee_ID>E-P1A</wd:Employee_ID>
+          <wd:First_Name>PageOneA</wd:First_Name>
+          <wd:Last_Name>Worker</wd:Last_Name>
+          <wd:Email_Address>p1a@acme.com</wd:Email_Address>
+          <wd:Job_Title>Engineer</wd:Job_Title>
+          <wd:Status>Active</wd:Status>
+        </wd:Worker>
+        <wd:Worker>
+          <wd:Worker_ID>WK-P1B</wd:Worker_ID>
+          <wd:Employee_ID>E-P1B</wd:Employee_ID>
+          <wd:First_Name>PageOneB</wd:First_Name>
+          <wd:Last_Name>Worker</wd:Last_Name>
+          <wd:Email_Address>p1b@acme.com</wd:Email_Address>
+          <wd:Job_Title>Designer</wd:Job_Title>
+          <wd:Status>Active</wd:Status>
+        </wd:Worker>
+      </wd:Response_Data>
+    </wd:Get_Workers_Response>
+  </env:Body>
+</env:Envelope>"#.to_string()),
+
+                2 => Ok(r#"<?xml version="1.0" encoding="UTF-8"?>
+<env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/">
+  <env:Body>
+    <wd:Get_Workers_Response xmlns:wd="urn:com.workday/bsvc">
+      <wd:Response_Results>
+        <wd:Total_Results>3</wd:Total_Results>
+        <wd:Total_Pages>2</wd:Total_Pages>
+        <wd:Page_Results>1</wd:Page_Results>
+        <wd:Page>2</wd:Page>
+      </wd:Response_Results>
+      <wd:Response_Data>
+        <wd:Worker>
+          <wd:Worker_ID>WK-P2A</wd:Worker_ID>
+          <wd:Employee_ID>E-P2A</wd:Employee_ID>
+          <wd:First_Name>PageTwoA</wd:First_Name>
+          <wd:Last_Name>Worker</wd:Last_Name>
+          <wd:Email_Address>p2a@acme.com</wd:Email_Address>
+          <wd:Job_Title>Manager</wd:Job_Title>
+          <wd:Status>Active</wd:Status>
+        </wd:Worker>
+      </wd:Response_Data>
+    </wd:Get_Workers_Response>
+  </env:Body>
+</env:Envelope>"#.to_string()),
+
+                _ => unreachable!(),
+            }
+        }
+    }
+
+    #[test]
+    fn test_pagination_fetches_all_pages() {
+        let config = sample_config();
+        let client = Box::new(PaginatingMockClient);
+        let connector = WorkdayHrisConnector::with_client(config, client);
+
+        let initial = RosterContext::new(LazyFrame::default());
+        let ctx = connector.execute(initial).expect("paginated execute");
+        let df = ctx.data.collect().expect("collect");
+
+        // 2 workers from page 1 + 1 worker from page 2 = 3
+        assert_eq!(df.height(), 3);
+
+        let ids = df.column("worker_id").unwrap();
+        let id_vec: Vec<Option<&str>> = ids.str().unwrap().into_iter().collect();
+        assert_eq!(id_vec, vec![
+            Some("WK-P1A"), Some("WK-P1B"), Some("WK-P2A"),
+        ]);
+    }
+
+    #[test]
+    fn test_pagination_single_page_no_extra_calls() {
+        // When Total_Pages == 1 there should be exactly one SOAP call
+        let config = sample_config();
+        let client = Box::new(MockSoapClient::new(SAMPLE_WORKDAY_XML));
+        let connector = WorkdayHrisConnector::with_client(config, client);
+
+        let lf = connector.fetch_data().expect("fetch_data");
+        let df = lf.collect().expect("collect");
+        // The sample XML has Total_Pages=1, so all 3 records are from page 1
+        assert_eq!(df.height(), 3);
     }
 }
