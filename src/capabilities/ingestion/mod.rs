@@ -1,7 +1,10 @@
 //! Ingestion: Data acquisition (Webhooks, API Polling, CSV parsing)
+//!
+//! - **traits**: Connector interfaces (HrisConnector)
+//! - **engine**: Concrete implementations (CsvHrisConnector, DataValidator)
 
-pub mod hris_connector;
-pub mod validator;
+pub mod engine;
+pub mod traits;
 
-pub use hris_connector::*;
-pub use validator::*;
+pub use engine::*;
+pub use traits::*;

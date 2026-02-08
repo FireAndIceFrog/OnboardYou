@@ -26,3 +26,4 @@ tracing-subscriber = "0.3"
 [dev-dependencies]
 # Testing utilities
 criterion = "0.5"
+tempfile = "3"

@@ -1,23 +1,11 @@
 //! Core domain types and business interfaces
 //!
-//! The Contract: Defines the core traits (OnboardingAction) and connector interfaces
-//! that all capabilities must implement.
+//! - **traits**: The Contract — core traits (OnboardingAction) that capabilities must implement
+//! - **engine**: Concrete data structures — RosterContext, Manifest, Errors
 
-pub mod errors;
-pub mod manifest;
-pub mod roster;
+pub mod engine;
+pub mod traits;
 
-pub use errors::{Error, Result};
-pub use manifest::Manifest;
-pub use roster::RosterContext;
-
-/// Core trait for all onboarding actions
-///
-/// Implementors (capabilities) transform a RosterContext through the pipeline
-pub trait OnboardingAction: Send + Sync {
-    /// Unique identifier for this action
-    fn id(&self) -> &str;
-
-    /// Execute this action on the given roster context
-    fn execute(&self, context: RosterContext) -> Result<RosterContext>;
-}
+// Re-export for ergonomic imports: `use crate::domain::{...}`
+pub use engine::{ActionConfig, Error, FieldMetadata, Manifest, Result, RosterContext};
+pub use traits::OnboardingAction;
