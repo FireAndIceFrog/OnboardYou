@@ -21,7 +21,7 @@
 
 use crate::capabilities::ingestion::traits::HrisConnector;
 use crate::domain::{Error, OnboardingAction, Result, RosterContext};
-use crate::orchestration::clients::{ReqwestSoapClient, SoapClient};
+use crate::orchestration::clients::soap_client::{ReqwestSoapClient, SoapClient};
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -650,7 +650,7 @@ mod tests {
     use super::*;
 
     // Re-export the trait locally so mock impls work
-    use crate::orchestration::clients::SoapClient;
+    use crate::orchestration::clients::soap_client::SoapClient;
 
     // ── Mock SOAP Client ───────────────────────────────────────────────
 
