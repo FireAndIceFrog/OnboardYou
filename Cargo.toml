@@ -1,0 +1,28 @@
+[package]
+name = "onboard_you"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Data processing
+polars = { version = "0.48", features = ["lazy", "parquet", "csv"] }
+
+# Error handling
+thiserror = "1.0"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+
+# AWS Lambda
+lambda_runtime = "0.10"
+
+# Utilities
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+[dev-dependencies]
+# Testing utilities
+criterion = "0.5"
