@@ -31,6 +31,11 @@ use polars::prelude::*;
 // ---------------------------------------------------------------------------
 
 /// The masking strategy for a single column.
+///
+/// | Strategy | JSON key   | Effect                                                    |
+/// |----------|------------|-----------------------------------------------------------|
+/// | `Redact` | `"redact"` | Keeps the last N chars, replaces prefix with a mask string |
+/// | `Zero`   | `"zero"`   | Replaces all numeric values with `0`                       |
 #[derive(Debug, Clone)]
 pub enum MaskStrategy {
     /// Keep the last N characters, replace prefix with `mask_prefix`.
@@ -43,6 +48,19 @@ pub enum MaskStrategy {
 }
 
 /// Configuration for a single column to mask.
+///
+/// # JSON shape
+///
+/// ```json
+/// { "name": "ssn", "strategy": "redact", "keep_last": 4, "mask_prefix": "***-**-" }
+/// ```
+///
+/// | Field         | Type   | Default     | Description                             |
+/// |---------------|--------|-------------|-----------------------------------------|
+/// | `name`        | string | —           | Column name to mask                     |
+/// | `strategy`    | string | `"redact"`  | `"redact"` or `"zero"`                 |
+/// | `keep_last`   | int    | `4`         | Characters to preserve (redact only)    |
+/// | `mask_prefix` | string | `"***-**-"` | Prefix replacing the redacted portion   |
 #[derive(Debug, Clone)]
 pub struct ColumnMask {
     pub name: String,
@@ -50,6 +68,23 @@ pub struct ColumnMask {
 }
 
 /// Configuration for PII masking, extracted from manifest JSON.
+///
+/// # New format (recommended)
+///
+/// ```json
+/// {
+///   "columns": [
+///     { "name": "ssn",    "strategy": "redact", "keep_last": 4, "mask_prefix": "***-**-" },
+///     { "name": "salary", "strategy": "zero" }
+///   ]
+/// }
+/// ```
+///
+/// # Legacy format (still supported)
+///
+/// ```json
+/// { "mask_ssn": true, "mask_salary": true }
+/// ```
 #[derive(Debug, Clone)]
 pub struct PIIMaskingConfig {
     pub columns: Vec<ColumnMask>,

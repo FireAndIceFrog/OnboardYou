@@ -27,6 +27,20 @@ use polars::prelude::*;
 // ---------------------------------------------------------------------------
 
 /// Configuration for SCD Type 2 effective dating.
+///
+/// # JSON config
+///
+/// ```json
+/// {
+///   "entity_column": "employee_id",
+///   "date_column": "start_date"
+/// }
+/// ```
+///
+/// | Field           | Type   | Default         | Description                                      |
+/// |-----------------|--------|-----------------|--------------------------------------------------|
+/// | `entity_column` | string | `"employee_id"` | Column that identifies the entity (partition key) |
+/// | `date_column`   | string | `"start_date"`  | Column holding the date used for versioning       |
 #[derive(Debug, Clone)]
 pub struct ScdType2Config {
     /// The column that identifies the entity (partitioning column).
@@ -71,6 +85,17 @@ impl ScdType2Config {
 // ---------------------------------------------------------------------------
 
 /// SCD Type 2 implementation for historical tracking.
+///
+/// Adds `effective_from`, `effective_to`, and `is_current` columns using
+/// Polars window functions.
+///
+/// # Output columns
+///
+/// | Column           | Type   | Description                                    |
+/// |------------------|--------|------------------------------------------------|
+/// | `effective_from` | string | Renamed from `date_column`                     |
+/// | `effective_to`   | string | Next record's date within the entity partition  |
+/// | `is_current`     | bool   | `true` for the latest record per entity         |
 #[derive(Debug, Clone)]
 pub struct SCDType2 {
     config: ScdType2Config,

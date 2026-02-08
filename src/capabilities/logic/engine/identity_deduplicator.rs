@@ -27,6 +27,23 @@ use polars::prelude::*;
 // ---------------------------------------------------------------------------
 
 /// Configuration for the identity deduplicator.
+///
+/// Columns are inspected in priority order — the first non-null value across
+/// the listed columns becomes the dedup key for that row.
+///
+/// # JSON config
+///
+/// ```json
+/// {
+///   "columns": ["national_id", "email"],
+///   "employee_id_column": "employee_id"
+/// }
+/// ```
+///
+/// | Field                | Type     | Default                    | Description                                          |
+/// |----------------------|----------|----------------------------|------------------------------------------------------|
+/// | `columns`            | string[] | `["national_id", "email"]` | Columns to inspect for the dedup key (priority order) |
+/// | `employee_id_column` | string   | `"employee_id"`            | Column whose value is used as the canonical ID        |
 #[derive(Debug, Clone)]
 pub struct DedupConfig {
     /// Columns to inspect (in priority order) when building the dedup key.
@@ -76,6 +93,17 @@ impl DedupConfig {
 // ---------------------------------------------------------------------------
 
 /// Identity deduplication using column-major approach.
+///
+/// Iterates the configured columns in priority order to build a dedup key
+/// per row, then groups rows sharing the same key. The first occurrence is
+/// the canonical record; subsequent rows are flagged as duplicates.
+///
+/// # Output columns
+///
+/// | Column         | Type   | Description                                           |
+/// |----------------|--------|-------------------------------------------------------|
+/// | `canonical_id` | string | The `employee_id_column` value of the first occurrence |
+/// | `is_duplicate` | bool   | `true` for every row after the first in a group        |
 #[derive(Debug, Clone)]
 pub struct IdentityDeduplicator {
     config: DedupConfig,

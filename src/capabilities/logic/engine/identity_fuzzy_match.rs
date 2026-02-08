@@ -66,6 +66,26 @@ fn similarity(a: &str, b: &str) -> f64 {
 // ---------------------------------------------------------------------------
 
 /// Configuration for fuzzy matching.
+///
+/// Configured columns are concatenated into a composite string per row, then
+/// every pair of rows is compared using Levenshtein similarity. Pairs above
+/// `threshold` are grouped via Union-Find.
+///
+/// # JSON config
+///
+/// ```json
+/// {
+///   "columns": ["first_name", "last_name"],
+///   "threshold": 0.85,
+///   "employee_id_column": "employee_id"
+/// }
+/// ```
+///
+/// | Field                | Type     | Default                        | Description                                     |
+/// |----------------------|----------|--------------------------------|-------------------------------------------------|
+/// | `columns`            | string[] | `["first_name", "last_name"]` | Columns concatenated for comparison              |
+/// | `threshold`          | float    | `0.80`                         | Minimum similarity (0.0–1.0) to consider a match |
+/// | `employee_id_column` | string   | `"employee_id"`               | Column used to label match groups                |
 #[derive(Debug, Clone)]
 pub struct IdentityFuzzyMatchConfig {
     /// Minimum similarity (0.0–1.0) to consider two records a match.
@@ -122,6 +142,16 @@ impl IdentityFuzzyMatchConfig {
 // ---------------------------------------------------------------------------
 
 /// Fuzzy matching for probabilistic identity resolution.
+///
+/// Uses Levenshtein similarity on composite strings built from configured
+/// columns. Matches above the threshold are grouped with Union-Find.
+///
+/// # Output columns
+///
+/// | Column             | Type   | Description                                         |
+/// |--------------------|--------|-----------------------------------------------------|
+/// | `match_group_id`   | string | Group label (`grp_<employee_id>` of the group root) |
+/// | `match_confidence` | float  | Highest pairwise similarity within the group         |
 #[derive(Debug, Clone)]
 pub struct IdentityFuzzyMatch {
     config: IdentityFuzzyMatchConfig,

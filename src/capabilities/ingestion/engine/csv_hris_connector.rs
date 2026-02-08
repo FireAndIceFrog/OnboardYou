@@ -16,10 +16,15 @@ use std::path::PathBuf;
 
 /// Configuration extracted from the manifest `ActionConfig.config` JSON.
 ///
-/// Expected shape:
+/// # JSON config
+///
 /// ```json
 /// { "csv_path": "/data/employees.csv" }
 /// ```
+///
+/// | Field      | Type   | Required | Description                   |
+/// |------------|--------|----------|-------------------------------|
+/// | `csv_path` | string | **yes**  | Absolute path to the CSV file |
 #[derive(Debug, Clone)]
 pub struct CsvHrisConnectorConfig {
     pub csv_path: PathBuf,
