@@ -3,7 +3,7 @@
 //! Uses the `ActionConfig` from the manifest to instantiate the correct
 //! `OnboardingAction` implementation, forwarding action-specific JSON config.
 
-use crate::capabilities::ingestion::engine::CsvHrisConnector;
+use crate::capabilities::ingestion::engine::{CsvHrisConnector, WorkdayHrisConnector};
 use crate::capabilities::logic::engine::{
     IdentityDeduplicator, IdentityFuzzyMatch, PIIMasking, SCDType2,
 };
@@ -23,6 +23,10 @@ impl ActionFactory {
         match action_config.action_type.as_str() {
             "csv_hris_connector" => {
                 let connector = CsvHrisConnector::from_action_config(&action_config.config)?;
+                Ok(Arc::new(connector))
+            }
+            "workday_hris_connector" => {
+                let connector = WorkdayHrisConnector::from_action_config(&action_config.config)?;
                 Ok(Arc::new(connector))
             }
             "scd_type_2" => {
