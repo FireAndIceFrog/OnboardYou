@@ -70,21 +70,49 @@ fn similarity(a: &str, b: &str) -> f64 {
 pub struct IdentityFuzzyMatchConfig {
     /// Minimum similarity (0.0–1.0) to consider two records a match.
     pub threshold: f64,
+    /// Columns to concatenate for comparison (e.g. ["first_name", "last_name"]).
+    pub columns: Vec<String>,
+    /// The column holding the employee/entity identifier.
+    pub employee_id_column: String,
 }
 
 impl Default for IdentityFuzzyMatchConfig {
     fn default() -> Self {
-        Self { threshold: 0.80 }
+        Self {
+            threshold: 0.80,
+            columns: vec!["first_name".into(), "last_name".into()],
+            employee_id_column: "employee_id".into(),
+        }
     }
 }
 
 impl IdentityFuzzyMatchConfig {
     pub fn from_json(value: &serde_json::Value) -> Self {
+        let threshold = value
+            .get("threshold")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.80);
+
+        let columns = value
+            .get("columns")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect()
+            })
+            .unwrap_or_else(|| vec!["first_name".into(), "last_name".into()]);
+
+        let employee_id_column = value
+            .get("employee_id_column")
+            .and_then(|v| v.as_str())
+            .unwrap_or("employee_id")
+            .to_string();
+
         Self {
-            threshold: value
-                .get("threshold")
-                .and_then(|v| v.as_f64())
-                .unwrap_or(0.80),
+            threshold,
+            columns,
+            employee_id_column,
         }
     }
 }
@@ -121,7 +149,11 @@ impl OnboardingAction for IdentityFuzzyMatch {
     }
 
     fn execute(&self, mut context: RosterContext) -> Result<RosterContext> {
-        tracing::info!(threshold = self.config.threshold, "IdentityFuzzyMatch: running");
+        tracing::info!(
+            threshold = self.config.threshold,
+            columns = ?self.config.columns,
+            "IdentityFuzzyMatch: running"
+        );
 
         // --- Collect eagerly (fuzzy matching needs random access) -----------
         let lf = std::mem::replace(&mut context.data, LazyFrame::default());
@@ -130,33 +162,40 @@ impl OnboardingAction for IdentityFuzzyMatch {
         })?;
 
         let schema = df.schema();
-        let has_first = schema.contains("first_name");
-        let has_last = schema.contains("last_name");
 
-        if !has_first {
-            tracing::warn!("IdentityFuzzyMatch: no first_name column — skipping");
+        // Filter configured columns to those present in the data
+        let available_columns: Vec<&String> = self
+            .config
+            .columns
+            .iter()
+            .filter(|c| schema.contains(c.as_str()))
+            .collect();
+
+        if available_columns.is_empty() {
+            tracing::warn!(
+                configured = ?self.config.columns,
+                "IdentityFuzzyMatch: none of the configured columns found — skipping"
+            );
             context.data = df.lazy();
             return Ok(context);
         }
 
         let n = df.height();
 
-        // Build full-name strings for comparison
-        let first_names = df.column("first_name").unwrap().str().unwrap();
-        let last_names = if has_last {
-            Some(df.column("last_name").unwrap().str().unwrap())
-        } else {
-            None
-        };
+        // Pre-extract string chunked arrays for the configured columns
+        let column_arrays: Vec<&StringChunked> = available_columns
+            .iter()
+            .map(|name| df.column(name.as_str()).unwrap().str().unwrap())
+            .collect();
 
-        let full_names: Vec<String> = (0..n)
+        // Build composite strings for comparison by concatenating configured columns
+        let composite_strings: Vec<String> = (0..n)
             .map(|i| {
-                let first = first_names.get(i).unwrap_or("");
-                let last = last_names
-                    .as_ref()
-                    .and_then(|ln| ln.get(i))
-                    .unwrap_or("");
-                format!("{} {}", first, last).to_lowercase()
+                let parts: Vec<&str> = column_arrays
+                    .iter()
+                    .map(|arr| arr.get(i).unwrap_or(""))
+                    .collect();
+                parts.join(" ").to_lowercase()
             })
             .collect();
 
@@ -181,7 +220,7 @@ impl OnboardingAction for IdentityFuzzyMatch {
 
         for i in 0..n {
             for j in (i + 1)..n {
-                let sim = similarity(&full_names[i], &full_names[j]);
+                let sim = similarity(&composite_strings[i], &composite_strings[j]);
                 if sim >= self.config.threshold {
                     union(&mut parent, i, j);
                     if sim > best_score[i] {
@@ -195,7 +234,16 @@ impl OnboardingAction for IdentityFuzzyMatch {
         }
 
         // Resolve final groups
-        let employee_ids = df.column("employee_id").unwrap().str().unwrap();
+        let employee_ids = df
+            .column(self.config.employee_id_column.as_str())
+            .map_err(|e| {
+                Error::LogicError(format!(
+                    "Employee ID column '{}' not found: {}",
+                    self.config.employee_id_column, e
+                ))
+            })?
+            .str()
+            .unwrap();
         let group_ids: Vec<String> = (0..n)
             .map(|i| {
                 let root = find(&mut parent, i);
@@ -297,7 +345,10 @@ mod tests {
         }
         .unwrap();
 
-        let config = IdentityFuzzyMatchConfig { threshold: 0.99 };
+        let config = IdentityFuzzyMatchConfig {
+            threshold: 0.99,
+            ..Default::default()
+        };
         let ctx = RosterContext::new(df.lazy());
         let action = IdentityFuzzyMatch::new(config);
         let result = action.execute(ctx).expect("execute");
@@ -339,7 +390,7 @@ mod tests {
     }
 
     #[test]
-    fn test_no_first_name_skips() {
+    fn test_no_configured_columns_skips() {
         let df = df! {
             "employee_id" => &["001"],
             "salary"      => &[50_000i64],
@@ -380,5 +431,55 @@ mod tests {
         let json = serde_json::json!({ "threshold": 0.90 });
         let action = IdentityFuzzyMatch::from_action_config(&json);
         assert!((action.config.threshold - 0.90).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_config_from_json_with_columns() {
+        let json = serde_json::json!({
+            "threshold": 0.85,
+            "columns": ["given_name", "surname"],
+            "employee_id_column": "emp_id"
+        });
+        let config = IdentityFuzzyMatchConfig::from_json(&json);
+        assert!((config.threshold - 0.85).abs() < f64::EPSILON);
+        assert_eq!(config.columns, vec!["given_name", "surname"]);
+        assert_eq!(config.employee_id_column, "emp_id");
+    }
+
+    #[test]
+    fn test_config_defaults() {
+        let json = serde_json::json!({});
+        let config = IdentityFuzzyMatchConfig::from_json(&json);
+        assert_eq!(config.columns, vec!["first_name", "last_name"]);
+        assert_eq!(config.employee_id_column, "employee_id");
+    }
+
+    #[test]
+    fn test_custom_columns() {
+        let df = df! {
+            "id"          => &["001", "002", "003"],
+            "given_name"  => &["John", "Jon",  "Alice"],
+            "surname"     => &["Doe",  "Doe",  "Wonder"],
+        }
+        .unwrap();
+
+        let config = IdentityFuzzyMatchConfig {
+            threshold: 0.80,
+            columns: vec!["given_name".into(), "surname".into()],
+            employee_id_column: "id".into(),
+        };
+        let ctx = RosterContext::new(df.lazy());
+        let action = IdentityFuzzyMatch::new(config);
+        let result = action.execute(ctx).expect("execute");
+        let df = result.data.collect().expect("collect");
+
+        let groups: Vec<Option<&str>> = df
+            .column("match_group_id").unwrap()
+            .str().unwrap()
+            .into_iter()
+            .collect();
+
+        assert_eq!(groups[0], groups[1], "John Doe and Jon Doe should match");
+        assert_ne!(groups[0], groups[2], "Alice Wonder should be separate");
     }
 }

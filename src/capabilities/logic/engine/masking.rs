@@ -1,58 +1,150 @@
-//! PII protection: SSN/Salary masking based on residency rules
+//! PII protection: configurable column masking
 //!
-//! ## Default behaviour
+//! ## Masking rules
 //!
-//! | Field    | Masking rule                                        |
-//! |----------|-----------------------------------------------------|
-//! | `ssn`    | Keep last 4 characters, replace prefix with `***-**` |
-//! | `salary` | Replace with `0`                                    |
+//! Each entry in `columns` specifies a column name and a masking strategy:
 //!
-//! Columns to mask are configurable via manifest JSON:
+//! | Strategy   | Effect                                                       |
+//! |------------|--------------------------------------------------------------|
+//! | `redact`   | Keep last N characters (default 4), replace prefix with mask |
+//! | `zero`     | Replace numeric values with 0                                |
 //!
+//! Configurable via manifest JSON:
 //! ```json
 //! {
-//!   "mask_ssn": true,
-//!   "mask_salary": true
+//!   "columns": [
+//!     { "name": "ssn",    "strategy": "redact", "keep_last": 4, "mask_prefix": "***-**-" },
+//!     { "name": "salary", "strategy": "zero" }
+//!   ]
 //! }
 //! ```
+//!
+//! For backward compatibility, `{ "mask_ssn": true, "mask_salary": true }` is
+//! still accepted and converted to the column-based format.
 
 use crate::capabilities::logic::traits::Masker;
 use crate::domain::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 
+// ---------------------------------------------------------------------------
+// Configuration
+// ---------------------------------------------------------------------------
+
+/// The masking strategy for a single column.
+#[derive(Debug, Clone)]
+pub enum MaskStrategy {
+    /// Keep the last N characters, replace prefix with `mask_prefix`.
+    Redact {
+        keep_last: usize,
+        mask_prefix: String,
+    },
+    /// Replace all values with zero (for numeric columns).
+    Zero,
+}
+
+/// Configuration for a single column to mask.
+#[derive(Debug, Clone)]
+pub struct ColumnMask {
+    pub name: String,
+    pub strategy: MaskStrategy,
+}
+
 /// Configuration for PII masking, extracted from manifest JSON.
 #[derive(Debug, Clone)]
 pub struct PIIMaskingConfig {
-    /// Whether to mask the `ssn` column (default: true)
-    pub mask_ssn: bool,
-    /// Whether to mask the `salary` column (default: true)
-    pub mask_salary: bool,
+    pub columns: Vec<ColumnMask>,
 }
 
 impl Default for PIIMaskingConfig {
     fn default() -> Self {
         Self {
-            mask_ssn: true,
-            mask_salary: true,
+            columns: vec![
+                ColumnMask {
+                    name: "ssn".into(),
+                    strategy: MaskStrategy::Redact {
+                        keep_last: 4,
+                        mask_prefix: "***-**-".into(),
+                    },
+                },
+                ColumnMask {
+                    name: "salary".into(),
+                    strategy: MaskStrategy::Zero,
+                },
+            ],
         }
     }
 }
 
 impl PIIMaskingConfig {
     /// Build from manifest `ActionConfig.config` JSON.
+    ///
+    /// Supports both the new `columns` array format and the legacy
+    /// `mask_ssn` / `mask_salary` boolean format.
     pub fn from_json(value: &serde_json::Value) -> Self {
-        Self {
-            mask_ssn: value
-                .get("mask_ssn")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(true),
-            mask_salary: value
-                .get("mask_salary")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(true),
+        // New format: { "columns": [...] }
+        if let Some(arr) = value.get("columns").and_then(|v| v.as_array()) {
+            let columns = arr
+                .iter()
+                .filter_map(|entry| {
+                    let name = entry.get("name")?.as_str()?.to_string();
+                    let strategy_str = entry
+                        .get("strategy")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("redact");
+                    let strategy = match strategy_str {
+                        "zero" => MaskStrategy::Zero,
+                        _ => MaskStrategy::Redact {
+                            keep_last: entry
+                                .get("keep_last")
+                                .and_then(|v| v.as_u64())
+                                .unwrap_or(4)
+                                as usize,
+                            mask_prefix: entry
+                                .get("mask_prefix")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("***-**-")
+                                .to_string(),
+                        },
+                    };
+                    Some(ColumnMask { name, strategy })
+                })
+                .collect();
+            return Self { columns };
         }
+
+        // Legacy format: { "mask_ssn": bool, "mask_salary": bool }
+        let mut columns = Vec::new();
+        let mask_ssn = value
+            .get("mask_ssn")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true);
+        let mask_salary = value
+            .get("mask_salary")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true);
+
+        if mask_ssn {
+            columns.push(ColumnMask {
+                name: "ssn".into(),
+                strategy: MaskStrategy::Redact {
+                    keep_last: 4,
+                    mask_prefix: "***-**-".into(),
+                },
+            });
+        }
+        if mask_salary {
+            columns.push(ColumnMask {
+                name: "salary".into(),
+                strategy: MaskStrategy::Zero,
+            });
+        }
+        Self { columns }
     }
 }
+
+// ---------------------------------------------------------------------------
+// Engine
+// ---------------------------------------------------------------------------
 
 /// PII masking based on residency and regulatory requirements.
 #[derive(Debug, Clone)]
@@ -89,7 +181,10 @@ impl OnboardingAction for PIIMasking {
     }
 
     fn execute(&self, mut context: RosterContext) -> Result<RosterContext> {
-        tracing::info!("PIIMasking: applying PII masks");
+        tracing::info!(
+            columns = ?self.config.columns.iter().map(|c| &c.name).collect::<Vec<_>>(),
+            "PIIMasking: applying PII masks"
+        );
 
         // Collect eagerly for reliable column operations
         let lf = std::mem::replace(&mut context.data, LazyFrame::default());
@@ -97,48 +192,61 @@ impl OnboardingAction for PIIMasking {
             Error::LogicError(format!("Failed to collect for masking: {}", e))
         })?;
 
-        let has_ssn = df.schema().contains("ssn");
-        let has_salary = df.schema().contains("salary");
+        for col_mask in &self.config.columns {
+            if !df.schema().contains(col_mask.name.as_str()) {
+                tracing::warn!(
+                    column = %col_mask.name,
+                    "PIIMasking: column not found in data — skipping"
+                );
+                continue;
+            }
 
-        // --- SSN masking: ***-**-XXXX (keep last 4) -------------------------
-        if self.config.mask_ssn && has_ssn {
-            let ssn_col = df.column("ssn").unwrap().str().unwrap();
-            let masked: StringChunked = ssn_col
-                .into_iter()
-                .map(|opt_val| {
-                    opt_val.map(|val| {
-                        let len = val.len();
-                        if len >= 4 {
-                            format!("***-**-{}", &val[len - 4..])
-                        } else {
-                            "***-**-????".to_string()
+            match &col_mask.strategy {
+                MaskStrategy::Redact {
+                    keep_last,
+                    mask_prefix,
+                } => {
+                    let src = df.column(&col_mask.name).unwrap().str().unwrap();
+                    let keep = *keep_last;
+                    let prefix = mask_prefix.clone();
+                    let masked: StringChunked = src
+                        .into_iter()
+                        .map(|opt_val| {
+                            opt_val.map(|val| {
+                                let len = val.len();
+                                if len >= keep {
+                                    format!("{}{}", prefix, &val[len - keep..])
+                                } else {
+                                    format!("{}????", prefix)
+                                }
+                            })
+                        })
+                        .collect();
+                    let masked = masked.with_name(col_mask.name.as_str().into());
+                    let _ = df.replace(col_mask.name.as_str(), masked);
+                }
+                MaskStrategy::Zero => {
+                    let col_ref = df.column(&col_mask.name).unwrap();
+                    let n = col_ref.len();
+                    let dtype = col_ref.dtype().clone();
+
+                    let zeros = match dtype {
+                        DataType::Int32 => Series::new(col_mask.name.as_str().into(), vec![0i32; n]),
+                        DataType::Int64 => Series::new(col_mask.name.as_str().into(), vec![0i64; n]),
+                        DataType::Float32 => {
+                            Series::new(col_mask.name.as_str().into(), vec![0.0f32; n])
                         }
-                    })
-                })
-                .collect();
-            let masked = masked.with_name("ssn".into());
-            let _ = df.replace("ssn", masked);
-            context.set_field_source("ssn".into(), "LOGIC_ACTION".into());
-            context.mark_field_modified("ssn".into(), "pii_masking".into());
-        }
+                        DataType::Float64 => {
+                            Series::new(col_mask.name.as_str().into(), vec![0.0f64; n])
+                        }
+                        _ => Series::new(col_mask.name.as_str().into(), vec![0i64; n]),
+                    };
+                    let _ = df.replace(col_mask.name.as_str(), zeros);
+                }
+            }
 
-        // --- Salary masking: replace with 0 ---------------------------------
-        if self.config.mask_salary && has_salary {
-            let salary_col = df.column("salary").unwrap();
-            let n = salary_col.len();
-            let dtype = salary_col.dtype().clone();
-
-            // Create a zero column matching the original dtype
-            let zeros = match dtype {
-                DataType::Int32 => Series::new("salary".into(), vec![0i32; n]),
-                DataType::Int64 => Series::new("salary".into(), vec![0i64; n]),
-                DataType::Float32 => Series::new("salary".into(), vec![0.0f32; n]),
-                DataType::Float64 => Series::new("salary".into(), vec![0.0f64; n]),
-                _ => Series::new("salary".into(), vec![0i64; n]),
-            };
-            let _ = df.replace("salary", zeros);
-            context.set_field_source("salary".into(), "LOGIC_ACTION".into());
-            context.mark_field_modified("salary".into(), "pii_masking".into());
+            context.set_field_source(col_mask.name.clone(), "LOGIC_ACTION".into());
+            context.mark_field_modified(col_mask.name.clone(), "pii_masking".into());
         }
 
         context.data = df.lazy();
@@ -201,8 +309,13 @@ mod tests {
     #[test]
     fn test_mask_ssn_only() {
         let config = PIIMaskingConfig {
-            mask_ssn: true,
-            mask_salary: false,
+            columns: vec![ColumnMask {
+                name: "ssn".into(),
+                strategy: MaskStrategy::Redact {
+                    keep_last: 4,
+                    mask_prefix: "***-**-".into(),
+                },
+            }],
         };
         let ctx = RosterContext::new(test_df().lazy());
         let action = PIIMasking::new(config);
@@ -221,8 +334,10 @@ mod tests {
     #[test]
     fn test_mask_salary_only() {
         let config = PIIMaskingConfig {
-            mask_ssn: false,
-            mask_salary: true,
+            columns: vec![ColumnMask {
+                name: "salary".into(),
+                strategy: MaskStrategy::Zero,
+            }],
         };
         let ctx = RosterContext::new(test_df().lazy());
         let action = PIIMasking::new(config);
@@ -269,10 +384,71 @@ mod tests {
     }
 
     #[test]
-    fn test_from_action_config() {
+    fn test_from_action_config_legacy() {
         let json = serde_json::json!({ "mask_ssn": false, "mask_salary": true });
         let action = PIIMasking::from_action_config(&json);
-        assert!(!action.config.mask_ssn);
-        assert!(action.config.mask_salary);
+        assert_eq!(action.config.columns.len(), 1);
+        assert_eq!(action.config.columns[0].name, "salary");
+    }
+
+    #[test]
+    fn test_from_action_config_new_format() {
+        let json = serde_json::json!({
+            "columns": [
+                { "name": "phone", "strategy": "redact", "keep_last": 4, "mask_prefix": "***-" },
+                { "name": "bonus", "strategy": "zero" }
+            ]
+        });
+        let action = PIIMasking::from_action_config(&json);
+        assert_eq!(action.config.columns.len(), 2);
+        assert_eq!(action.config.columns[0].name, "phone");
+        assert_eq!(action.config.columns[1].name, "bonus");
+    }
+
+    #[test]
+    fn test_custom_redact_column() {
+        let df = df! {
+            "employee_id" => &["001"],
+            "phone"       => &["555-123-4567"],
+        }
+        .unwrap();
+        let config = PIIMaskingConfig {
+            columns: vec![ColumnMask {
+                name: "phone".into(),
+                strategy: MaskStrategy::Redact {
+                    keep_last: 4,
+                    mask_prefix: "***-***-".into(),
+                },
+            }],
+        };
+        let ctx = RosterContext::new(df.lazy());
+        let action = PIIMasking::new(config);
+        let result = action.execute(ctx).expect("execute");
+        let df = result.data.collect().expect("collect");
+
+        let phones: Vec<Option<&str>> = df.column("phone").unwrap().str().unwrap().into_iter().collect();
+        assert_eq!(phones[0], Some("***-***-4567"));
+    }
+
+    #[test]
+    fn test_custom_zero_column() {
+        let df = df! {
+            "employee_id" => &["001"],
+            "bonus"       => &[10_000i64],
+        }
+        .unwrap();
+        let config = PIIMaskingConfig {
+            columns: vec![ColumnMask {
+                name: "bonus".into(),
+                strategy: MaskStrategy::Zero,
+            }],
+        };
+        let ctx = RosterContext::new(df.lazy());
+        let action = PIIMasking::new(config);
+        let result = action.execute(ctx).expect("execute");
+        let df = result.data.collect().expect("collect");
+
+        let bonuses: Vec<Option<i64>> = df.column("bonus").unwrap().i64().unwrap().into_iter().collect();
+        assert_eq!(bonuses[0], Some(0));
     }
 }

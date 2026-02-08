@@ -21,7 +21,7 @@ fn test_identity_resolution_basic() {
     let config = ActionConfig {
         id: "dedup".into(),
         action_type: "identity_deduplicator".into(),
-        config: serde_json::json!({}),
+        config: serde_json::json!({ "columns": ["email"] }),
     };
     let action = ActionFactory::create(&config).expect("create deduplicator");
     assert_eq!(action.id(), "identity_deduplicator");
@@ -61,7 +61,10 @@ fn test_identity_fuzzy_match() {
     let config = ActionConfig {
         id: "fuzzy".into(),
         action_type: "identity_fuzzy_match".into(),
-        config: serde_json::json!({ "threshold": 0.80 }),
+        config: serde_json::json!({
+            "threshold": 0.80,
+            "columns": ["first_name", "last_name"]
+        }),
     };
     let action = ActionFactory::create(&config).expect("create fuzzy match");
     assert_eq!(action.id(), "identity_fuzzy_match");

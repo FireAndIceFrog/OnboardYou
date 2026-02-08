@@ -25,12 +25,18 @@ impl ActionFactory {
                 let connector = CsvHrisConnector::from_action_config(&action_config.config)?;
                 Ok(Arc::new(connector))
             }
-            "scd_type_2" => Ok(Arc::new(SCDType2::new())),
+            "scd_type_2" => {
+                let scd = SCDType2::from_action_config(&action_config.config);
+                Ok(Arc::new(scd))
+            }
             "pii_masking" => {
                 let masking = PIIMasking::from_action_config(&action_config.config);
                 Ok(Arc::new(masking))
             }
-            "identity_deduplicator" => Ok(Arc::new(IdentityDeduplicator::new())),
+            "identity_deduplicator" => {
+                let dedup = IdentityDeduplicator::from_action_config(&action_config.config);
+                Ok(Arc::new(dedup))
+            }
             "identity_fuzzy_match" => {
                 let fuzzy = IdentityFuzzyMatch::from_action_config(&action_config.config);
                 Ok(Arc::new(fuzzy))
@@ -77,7 +83,10 @@ mod tests {
         let config = ActionConfig {
             id: "scd".into(),
             action_type: "scd_type_2".into(),
-            config: serde_json::json!({}),
+            config: serde_json::json!({
+                "entity_column": "employee_id",
+                "date_column": "start_date"
+            }),
         };
         let action = ActionFactory::create(&config).expect("should create scd_type_2");
         assert_eq!(action.id(), "scd_type_2");
@@ -99,7 +108,7 @@ mod tests {
         let config = ActionConfig {
             id: "dedup".into(),
             action_type: "identity_deduplicator".into(),
-            config: serde_json::json!({}),
+            config: serde_json::json!({ "columns": ["email"] }),
         };
         let action = ActionFactory::create(&config).expect("should create identity_deduplicator");
         assert_eq!(action.id(), "identity_deduplicator");

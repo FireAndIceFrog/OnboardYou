@@ -5,22 +5,91 @@
 //!
 //! ## Algorithm
 //!
-//! 1. Sort by `employee_id`, then `start_date` ascending.
-//! 2. Within each `employee_id` partition, shift `start_date` forward by 1 row
-//!    to obtain `effective_to` (the next record's start date).
+//! 1. Sort by configured `entity_column`, then `date_column` ascending.
+//! 2. Within each entity partition, shift the date forward by 1 row
+//!    to obtain `effective_to` (the next record's date).
 //! 3. If `effective_to` is null the record is the latest → `is_current = true`.
-//! 4. Rename the original `start_date` column to `effective_from`.
+//! 4. Rename the original date column to `effective_from`.
+//!
+//! Configurable via manifest JSON:
+//! ```json
+//! {
+//!   "entity_column": "employee_id",
+//!   "date_column": "start_date"
+//! }
+//! ```
 
 use crate::domain::{OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 
-/// SCD Type 2 implementation for historical tracking
-#[derive(Debug, Clone, Default)]
-pub struct SCDType2;
+// ---------------------------------------------------------------------------
+// Configuration
+// ---------------------------------------------------------------------------
+
+/// Configuration for SCD Type 2 effective dating.
+#[derive(Debug, Clone)]
+pub struct ScdType2Config {
+    /// The column that identifies the entity (partitioning column).
+    pub entity_column: String,
+    /// The column that holds the date / timestamp to use for versioning.
+    pub date_column: String,
+}
+
+impl Default for ScdType2Config {
+    fn default() -> Self {
+        Self {
+            entity_column: "employee_id".into(),
+            date_column: "start_date".into(),
+        }
+    }
+}
+
+impl ScdType2Config {
+    /// Build from manifest `ActionConfig.config` JSON.
+    pub fn from_json(value: &serde_json::Value) -> Self {
+        let entity_column = value
+            .get("entity_column")
+            .and_then(|v| v.as_str())
+            .unwrap_or("employee_id")
+            .to_string();
+
+        let date_column = value
+            .get("date_column")
+            .and_then(|v| v.as_str())
+            .unwrap_or("start_date")
+            .to_string();
+
+        Self {
+            entity_column,
+            date_column,
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Engine
+// ---------------------------------------------------------------------------
+
+/// SCD Type 2 implementation for historical tracking.
+#[derive(Debug, Clone)]
+pub struct SCDType2 {
+    config: ScdType2Config,
+}
 
 impl SCDType2 {
-    pub fn new() -> Self {
-        Self
+    pub fn new(config: ScdType2Config) -> Self {
+        Self { config }
+    }
+
+    /// Convenience constructor from manifest JSON.
+    pub fn from_action_config(value: &serde_json::Value) -> Self {
+        Self::new(ScdType2Config::from_json(value))
+    }
+}
+
+impl Default for SCDType2 {
+    fn default() -> Self {
+        Self::new(ScdType2Config::default())
     }
 }
 
@@ -30,25 +99,33 @@ impl OnboardingAction for SCDType2 {
     }
 
     fn execute(&self, mut context: RosterContext) -> Result<RosterContext> {
-        tracing::info!("SCDType2: computing effective dates");
+        tracing::info!(
+            entity = %self.config.entity_column,
+            date = %self.config.date_column,
+            "SCDType2: computing effective dates"
+        );
 
         let lf = std::mem::replace(&mut context.data, LazyFrame::default());
 
-        // 1. Sort by employee_id then start_date
+        // 1. Sort by entity_column then date_column
         let lf = lf.sort(
-            ["employee_id", "start_date"],
+            [&self.config.entity_column, &self.config.date_column],
             SortMultipleOptions::default(),
         );
 
-        // 2. Rename start_date → effective_from
-        let lf = lf.rename(["start_date"], ["effective_from"], true);
+        // 2. Rename date_column → effective_from
+        let lf = lf.rename(
+            [self.config.date_column.as_str()],
+            ["effective_from"],
+            true,
+        );
 
         // 3. Compute effective_to = next record's effective_from within the
-        //    same employee_id partition (shift -1 brings the *next* row's value).
+        //    same entity partition (shift -1 brings the *next* row's value).
         let lf = lf.with_column(
             col("effective_from")
                 .shift(lit(-1))
-                .over([col("employee_id")])
+                .over([col(&self.config.entity_column)])
                 .alias("effective_to"),
         );
 
@@ -91,14 +168,14 @@ mod tests {
 
     #[test]
     fn test_scd_type_2_id() {
-        let action = SCDType2::new();
+        let action = SCDType2::default();
         assert_eq!(action.id(), "scd_type_2");
     }
 
     #[test]
     fn test_scd_type_2_adds_columns() {
         let ctx = RosterContext::new(test_df().lazy());
-        let action = SCDType2::new();
+        let action = SCDType2::default();
         let result = action.execute(ctx).expect("execute");
 
         let df = result.data.collect().expect("collect");
@@ -112,7 +189,7 @@ mod tests {
     #[test]
     fn test_scd_type_2_is_current_flag() {
         let ctx = RosterContext::new(test_df().lazy());
-        let action = SCDType2::new();
+        let action = SCDType2::default();
         let result = action.execute(ctx).expect("execute");
 
         let df = result.data.collect().expect("collect");
@@ -124,37 +201,29 @@ mod tests {
             .into_iter()
             .collect();
 
-        // Within each employee_id group the last record should be current.
-        // After sort by (employee_id, start_date), order is:
-        //   001/2024-01-01  → not current
-        //   001/2024-06-01  → current
-        //   002/2024-02-15  → not current
-        //   002/2024-08-01  → current
         assert_eq!(bools, vec![Some(false), Some(true), Some(false), Some(true)]);
     }
 
     #[test]
     fn test_scd_type_2_effective_to_values() {
         let ctx = RosterContext::new(test_df().lazy());
-        let action = SCDType2::new();
+        let action = SCDType2::default();
         let result = action.execute(ctx).expect("execute");
 
         let df = result.data.collect().expect("collect");
         let eff_to = df.column("effective_to").unwrap();
 
-        // First record of each group should have the second record's date.
-        // Last record of each group should be null.
         let vals: Vec<Option<&str>> = eff_to.str().unwrap().into_iter().collect();
         assert_eq!(vals[0], Some("2024-06-01"));
-        assert_eq!(vals[1], None); // latest for 001
+        assert_eq!(vals[1], None);
         assert_eq!(vals[2], Some("2024-08-01"));
-        assert_eq!(vals[3], None); // latest for 002
+        assert_eq!(vals[3], None);
     }
 
     #[test]
     fn test_scd_type_2_field_metadata() {
         let ctx = RosterContext::new(test_df().lazy());
-        let action = SCDType2::new();
+        let action = SCDType2::default();
         let result = action.execute(ctx).expect("execute");
 
         for col_name in ["effective_from", "effective_to", "is_current"] {
@@ -176,16 +245,66 @@ mod tests {
         .unwrap();
 
         let ctx = RosterContext::new(df.lazy());
-        let action = SCDType2::new();
+        let action = SCDType2::default();
         let result = action.execute(ctx).expect("execute");
         let df = result.data.collect().expect("collect");
 
-        // Every record is the only one → all should be current
         let is_current: Vec<Option<bool>> = df
             .column("is_current").unwrap()
             .bool().unwrap()
             .into_iter()
             .collect();
         assert!(is_current.iter().all(|v| *v == Some(true)));
+    }
+
+    #[test]
+    fn test_config_from_json() {
+        let json = serde_json::json!({
+            "entity_column": "worker_id",
+            "date_column": "hire_date"
+        });
+        let config = ScdType2Config::from_json(&json);
+        assert_eq!(config.entity_column, "worker_id");
+        assert_eq!(config.date_column, "hire_date");
+    }
+
+    #[test]
+    fn test_config_defaults() {
+        let json = serde_json::json!({});
+        let config = ScdType2Config::from_json(&json);
+        assert_eq!(config.entity_column, "employee_id");
+        assert_eq!(config.date_column, "start_date");
+    }
+
+    #[test]
+    fn test_custom_columns() {
+        let df = df! {
+            "worker_id"  => &["W1", "W1", "W2"],
+            "hire_date"  => &["2024-01-01", "2024-06-01", "2024-03-01"],
+            "salary"     => &[50_000i64, 55_000, 60_000],
+        }
+        .unwrap();
+
+        let config = ScdType2Config {
+            entity_column: "worker_id".into(),
+            date_column: "hire_date".into(),
+        };
+        let ctx = RosterContext::new(df.lazy());
+        let action = SCDType2::new(config);
+        let result = action.execute(ctx).expect("execute");
+        let df = result.data.collect().expect("collect");
+
+        // hire_date should be renamed to effective_from
+        assert!(df.column("effective_from").is_ok());
+        assert!(df.column("hire_date").is_err());
+
+        let is_current: Vec<Option<bool>> = df
+            .column("is_current").unwrap()
+            .bool().unwrap()
+            .into_iter()
+            .collect();
+        // W1 has 2 records: first not current, second current
+        // W2 has 1 record: current
+        assert_eq!(is_current, vec![Some(false), Some(true), Some(true)]);
     }
 }
