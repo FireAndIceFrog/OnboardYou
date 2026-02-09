@@ -10,9 +10,11 @@ mod identity_fuzzy_match;
 mod masking;
 mod scd_type_2;
 mod rename_column;
+mod drop_column;
 
 pub use identity_deduplicator::*;
 pub use identity_fuzzy_match::*;
 pub use masking::*;
 pub use scd_type_2::*;
 pub use rename_column::*;
+pub use drop_column::*;

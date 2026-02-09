@@ -1,0 +1,186 @@
+//! Drop columns according to a list
+//!
+//! Configurable via manifest JSON:
+//! ```json
+//! {
+//!   "columns": ["col1", "col2"]
+//! }
+//! ```
+
+use crate::domain::{Error, OnboardingAction, Result, RosterContext};
+use polars::prelude::*;
+use serde::Deserialize;
+
+use std::collections::HashSet;
+
+// ---------------------------------------------------------------------------
+// Configuration
+// ---------------------------------------------------------------------------
+
+/// Configuration for the drop-column action.
+///
+/// # JSON config
+///
+/// ```json
+/// {
+///   "columns": ["col1", "col2"]
+/// }
+/// ```
+///
+/// | Field     | Type          | Description                |
+/// |-----------|---------------|----------------------------|
+/// | `columns` | `[string]`    | List of column names to drop|
+#[derive(Debug, Clone, Deserialize)]
+pub struct DropConfig {
+    /// List of column names to drop.
+    pub columns: Vec<String>,
+}
+
+// ---------------------------------------------------------------------------
+// Validation
+// ---------------------------------------------------------------------------
+
+impl DropConfig {
+    /// Validate that all column names are unique.
+    pub fn validate(&self) -> Result<()> {
+        let mut seen = HashSet::with_capacity(self.columns.len());
+        for col in &self.columns {
+            if !seen.insert(col) {
+                return Err(Error::LogicError(format!(
+                    "drop_column: duplicate column name '{col}'"
+                )));
+            }
+        }
+        Ok(())
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Engine
+// ---------------------------------------------------------------------------
+
+/// Drop columns according to a list.
+///
+/// Validates that all column names are unique, then applies a lazy drop
+/// so the operation is folded into the Polars query plan without
+/// materialising the frame.
+#[derive(Debug, Clone)]
+pub struct DropColumn {
+    config: DropConfig,
+}
+
+impl DropColumn {
+    pub fn new(config: DropConfig) -> Self {
+        Self { config }
+    }
+
+    /// Deserialise and construct from manifest JSON.
+    pub fn from_action_config(value: &serde_json::Value) -> Result<Self> {
+        let config: DropConfig = serde_json::from_value(value.clone())?;
+        config.validate()?;
+        Ok(Self::new(config))
+    }
+}
+
+impl OnboardingAction for DropColumn {
+    fn id(&self) -> &str {
+        "drop_column"
+    }
+
+    fn execute(&self, mut context: RosterContext) -> Result<RosterContext> {
+        tracing::info!(columns = ?self.config.columns, "DropColumn: dropping columns");
+
+        let lf = std::mem::replace(&mut context.data, LazyFrame::default());
+        let lf = lf.drop(self.config.columns.clone());
+
+        // Optionally, mark columns as dropped in metadata if needed
+        for col in &self.config.columns {
+            context.mark_field_modified(col.clone(), "drop_column".into());
+        }
+
+        context.data = lf;
+        Ok(context)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Unit tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_df() -> DataFrame {
+        df! {
+            "employee_id" => &["001", "002"],
+            "first_name"  => &["John", "Jane"],
+            "last_name"   => &["Doe", "Roe"],
+        }
+        .unwrap()
+    }
+
+    #[test]
+    fn test_id() {
+        let config = DropConfig { columns: vec![] };
+        let act = DropColumn::new(config);
+        assert_eq!(act.id(), "drop_column");
+    }
+
+    #[test]
+    fn test_drop_columns() {
+        let json = serde_json::json!({
+            "columns": ["first_name", "last_name"]
+        });
+        let action = DropColumn::from_action_config(&json).expect("valid config");
+        let ctx = RosterContext::new(sample_df().lazy());
+        let result = action.execute(ctx).expect("execute");
+        let df = result.data.collect().expect("collect");
+
+        assert!(df.column("first_name").is_err());
+        assert!(df.column("last_name").is_err());
+        assert!(df.column("employee_id").is_ok());
+    }
+
+    #[test]
+    fn test_duplicate_columns_rejected_at_construction() {
+        let json = serde_json::json!({
+            "columns": ["first_name", "first_name"]
+        });
+        let res = DropColumn::from_action_config(&json);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn test_missing_columns_key_rejected() {
+        let json = serde_json::json!({ "not_columns": ["first_name"] });
+        let res = DropColumn::from_action_config(&json);
+        assert!(res.is_err(), "should fail without a 'columns' key");
+    }
+
+    #[test]
+    fn test_config_deserialise() {
+        let json = serde_json::json!({
+            "columns": ["a", "b"]
+        });
+        let config: DropConfig = serde_json::from_value(json).expect("deserialise");
+        assert_eq!(config.columns.len(), 2);
+        assert_eq!(config.columns[0], "a");
+    }
+
+    #[test]
+    fn test_validate_ok() {
+        let config = DropConfig {
+            columns: vec!["a".into(), "b".into()],
+        };
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_validate_duplicate_columns() {
+        let config = DropConfig {
+            columns: vec!["z".into(), "z".into()],
+        };
+        assert!(config.validate().is_err());
+    }
+}
