@@ -1,0 +1,12 @@
+# OpenTofu local state & build artefacts
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+.build/
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
