@@ -2,8 +2,6 @@
 //!
 //! Deserializes AWS Lambda events and triggers the Mediator
 
-use onboard_you::{Manifest, RosterContext};
-
 fn main() {
     // TODO: Implement Lambda event handling
     // - Receive AWS Lambda event

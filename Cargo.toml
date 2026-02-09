@@ -18,6 +18,8 @@ lambda_http = "0.10"
 aws-config = "1"
 aws-sdk-dynamodb = "1"
 aws-sdk-scheduler = "1"
+serde_dynamo = { version = "4", features = ["aws-sdk-dynamodb+1"] }
 chrono = "0.4"
 thiserror = "1.0"
 uuid = { version = "1", features = ["v4"] }
+axum = "0.8"

@@ -1,12 +1,11 @@
-//! EventBridge Scheduler management
+//! Schedule repository — EventBridge Scheduler management.
 //!
 //! Creates or updates a per-organization schedule that invokes the ETL Lambda
 //! on the cron defined in the pipeline config.
 
 use aws_sdk_scheduler::types::{FlexibleTimeWindow, FlexibleTimeWindowMode, Target};
-use lambda_http::Error;
 
-use crate::config::{AppState, PipelineConfig};
+use crate::models::{ApiError, AppState, PipelineConfig};
 
 /// Schedule name convention: onboardyou-{organizationId}
 fn schedule_name(organization_id: &str) -> String {
@@ -14,12 +13,9 @@ fn schedule_name(organization_id: &str) -> String {
 }
 
 /// Create or update an EventBridge Scheduler schedule for a given pipeline config.
-///
-/// The schedule invokes the ETL trigger Lambda with the organizationId as input.
-pub async fn upsert_schedule(state: &AppState, config: &PipelineConfig) -> Result<(), Error> {
+pub async fn upsert(state: &AppState, config: &PipelineConfig) -> Result<(), ApiError> {
     let name = schedule_name(&config.organization_id);
 
-    // The payload sent to the ETL trigger Lambda on each invocation
     let input_payload = serde_json::json!({
         "organizationId": config.organization_id
     })
@@ -30,14 +26,14 @@ pub async fn upsert_schedule(state: &AppState, config: &PipelineConfig) -> Resul
         .role_arn(&state.scheduler_role_arn)
         .input(input_payload)
         .build()
-        .map_err(|e| Error::from(format!("Failed to build Target: {e}")))?;
+        .map_err(|e| ApiError::Repository(format!("Failed to build Target: {e}")))?;
 
     let flex_window = FlexibleTimeWindow::builder()
         .mode(FlexibleTimeWindowMode::Off)
         .build()
-        .map_err(|e| Error::from(format!("Failed to build FlexibleTimeWindow: {e}")))?;
+        .map_err(|e| ApiError::Repository(format!("Failed to build FlexibleTimeWindow: {e}")))?;
 
-    // Try to update first; if the schedule doesn't exist, create it
+    // Try update first; fall back to create if the schedule doesn't exist yet
     let update_result = state
         .scheduler
         .update_schedule()
@@ -53,7 +49,6 @@ pub async fn upsert_schedule(state: &AppState, config: &PipelineConfig) -> Resul
             tracing::info!(schedule = %name, cron = %config.cron, "Schedule updated");
         }
         Err(_) => {
-            // Schedule doesn't exist — create it
             state
                 .scheduler
                 .create_schedule()
@@ -63,7 +58,7 @@ pub async fn upsert_schedule(state: &AppState, config: &PipelineConfig) -> Resul
                 .flexible_time_window(flex_window)
                 .send()
                 .await
-                .map_err(|e| Error::from(format!("Failed to create schedule: {e}")))?;
+                .map_err(|e| ApiError::Repository(format!("Failed to create schedule: {e}")))?;
 
             tracing::info!(schedule = %name, cron = %config.cron, "Schedule created");
         }
@@ -72,8 +67,9 @@ pub async fn upsert_schedule(state: &AppState, config: &PipelineConfig) -> Resul
     Ok(())
 }
 
-/// Delete an organization's schedule (useful for cleanup / deactivation).
-pub async fn delete_schedule(state: &AppState, organization_id: &str) -> Result<(), Error> {
+/// Delete an organization's schedule.
+#[allow(dead_code)]
+pub async fn delete(state: &AppState, organization_id: &str) -> Result<(), ApiError> {
     let name = schedule_name(organization_id);
 
     state
@@ -82,7 +78,7 @@ pub async fn delete_schedule(state: &AppState, organization_id: &str) -> Result<
         .name(&name)
         .send()
         .await
-        .map_err(|e| Error::from(format!("Failed to delete schedule: {e}")))?;
+        .map_err(|e| ApiError::Repository(format!("Failed to delete schedule: {e}")))?;
 
     tracing::info!(schedule = %name, "Schedule deleted");
     Ok(())
