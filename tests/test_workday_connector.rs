@@ -7,11 +7,10 @@ mod common;
 
 use onboard_you::{ActionConfig, ActionFactory, RosterContext};
 use onboard_you::capabilities::ingestion::engine::{
-    WorkdayConfig, WorkdayHrisConnector, WorkdayResponseGroup,
+    WorkdayConfig, WorkdayResponseGroup,
     build_get_workers_envelope, parse_get_workers_response,
     parse_response_results, workers_to_dataframe,
 };
-use onboard_you::OnboardingAction;
 use polars::prelude::*;
 
 // ── Sample Workday XML for integration tests ─────────────────────────────
