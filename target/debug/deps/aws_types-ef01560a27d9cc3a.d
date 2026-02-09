@@ -1,0 +1,18 @@
+/home/mathew/Documents/github/2026/OnboardYou/target/debug/deps/aws_types-ef01560a27d9cc3a.d: /home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/lib.rs /home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/app_name.rs /home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/build_metadata.rs /home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/endpoint_config.rs /home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/origin.rs /home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/os_shim_internal.rs /home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/region.rs /home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/request_id.rs /home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/sdk_config.rs /home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/service_config.rs /home/mathew/Documents/github/2026/OnboardYou/target/debug/build/aws-types-bb9e73d6837d9b62/out/build_env.rs
+
+/home/mathew/Documents/github/2026/OnboardYou/target/debug/deps/libaws_types-ef01560a27d9cc3a.rmeta: /home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/lib.rs /home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/app_name.rs /home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/build_metadata.rs /home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/endpoint_config.rs /home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/origin.rs /home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/os_shim_internal.rs /home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/region.rs /home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/request_id.rs /home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/sdk_config.rs /home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/service_config.rs /home/mathew/Documents/github/2026/OnboardYou/target/debug/build/aws-types-bb9e73d6837d9b62/out/build_env.rs
+
+/home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/lib.rs:
+/home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/app_name.rs:
+/home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/build_metadata.rs:
+/home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/endpoint_config.rs:
+/home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/origin.rs:
+/home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/os_shim_internal.rs:
+/home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/region.rs:
+/home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/request_id.rs:
+/home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/sdk_config.rs:
+/home/mathew/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-types-1.3.11/src/service_config.rs:
+/home/mathew/Documents/github/2026/OnboardYou/target/debug/build/aws-types-bb9e73d6837d9b62/out/build_env.rs:
+
+# env-dep:CARGO_PKG_VERSION=1.3.11
+# env-dep:OUT_DIR=/home/mathew/Documents/github/2026/OnboardYou/target/debug/build/aws-types-bb9e73d6837d9b62/out
