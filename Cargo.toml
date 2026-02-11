@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "ETL",
-    "lambdas/config-api",
+    "lambdas/api",
     "lambdas/etl-trigger",
 ]
 resolver = "2"
