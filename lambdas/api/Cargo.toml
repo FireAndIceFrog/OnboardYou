@@ -1,5 +1,5 @@
 [package]
-name = "config-api"
+name = "api"
 version = "0.1.0"
 edition = "2021"
 description = "API Lambda: POST/PUT /{organizationId}/config → DynamoDB + EventBridge Scheduler"
