@@ -5,8 +5,8 @@
 
 use crate::capabilities::ingestion::engine::{CsvHrisConnector, WorkdayHrisConnector};
 use crate::capabilities::logic::engine::{
-    IdentityDeduplicator, IdentityFuzzyMatch, IsoCountrySanitizer, PIIMasking, RegexReplace,
-    SCDType2,
+    CellphoneSanitizer, IdentityDeduplicator, IdentityFuzzyMatch, IsoCountrySanitizer,
+    PIIMasking, RegexReplace, SCDType2,
 };
 use crate::domain::{Error, OnboardingAction, Result};
 use crate::domain::engine::manifest::ActionConfig;
@@ -52,6 +52,10 @@ impl ActionFactory {
             }
             "iso_country_sanitizer" => {
                 let action = IsoCountrySanitizer::from_action_config(&action_config.config)?;
+                Ok(Arc::new(action))
+            }
+            "cellphone_sanitizer" => {
+                let action = CellphoneSanitizer::from_action_config(&action_config.config)?;
                 Ok(Arc::new(action))
             }
             other => Err(Error::ConfigurationError(format!(
@@ -161,5 +165,20 @@ mod tests {
         };
         let action = ActionFactory::create(&config).expect("should create regex_replace");
         assert_eq!(action.id(), "regex_replace");
+    }
+
+    #[test]
+    fn test_factory_creates_cellphone_sanitizer() {
+        let config = ActionConfig {
+            id: "phone_intl".into(),
+            action_type: "cellphone_sanitizer".into(),
+            config: serde_json::json!({
+                "phone_column": "mobile_phone",
+                "country_columns": ["work_country", "home_country"],
+                "output_column": "phone_intl"
+            }),
+        };
+        let action = ActionFactory::create(&config).expect("should create cellphone_sanitizer");
+        assert_eq!(action.id(), "cellphone_sanitizer");
     }
 }
