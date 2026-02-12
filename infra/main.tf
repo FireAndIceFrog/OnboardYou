@@ -1,7 +1,9 @@
 ##──────────────────────────────────────────────────────────────
 ## OnboardYou — Root module
-## Wires together DynamoDB, both Lambdas, API Gateway,
-## EventBridge Scheduler role, and IAM.
+##
+## All concrete resources live in ./modules/*
+## This file wires them together with a single routes map
+## so adding a new endpoint is a one-liner.
 ##──────────────────────────────────────────────────────────────
 
 terraform {
@@ -33,5 +35,118 @@ provider "aws" {
       ManagedBy   = "OpenTofu"
       Environment = var.environment
     }
+  }
+}
+
+data "aws_caller_identity" "current" {}
+
+# ══════════════════════════════════════════════════════════════
+# DynamoDB
+# ══════════════════════════════════════════════════════════════
+
+module "pipeline_configs_table" {
+  source     = "./modules/dynamodb"
+  table_name = var.config_table_name
+  hash_key   = "organizationId"
+}
+
+# ══════════════════════════════════════════════════════════════
+# Lambdas
+# ══════════════════════════════════════════════════════════════
+
+module "etl_trigger" {
+  source         = "./modules/lambda"
+  project_prefix = "onboardyou"
+  function_name  = "etl-trigger"
+  description    = "Invoked by EventBridge Scheduler — reads config from DynamoDB, runs the ETL pipeline"
+  environment    = var.environment
+  source_binary  = "${path.module}/../target/lambda/etl-trigger/bootstrap"
+  memory_size    = 512
+  timeout        = 300
+
+  log_retention_days = var.log_retention_days
+
+  environment_variables = {
+    CONFIG_TABLE_NAME = module.pipeline_configs_table.name
+    RUST_LOG          = "info"
+  }
+
+  iam_policy_statements = [
+    {
+      actions   = ["dynamodb:GetItem", "dynamodb:Query"]
+      resources = [module.pipeline_configs_table.arn]
+    },
+  ]
+}
+
+module "config_api" {
+  source         = "./modules/lambda"
+  project_prefix = "onboardyou"
+  function_name  = "config-api"
+  description    = "CRUD /{organizationId}/config + validate → DynamoDB + EventBridge Scheduler"
+  environment    = var.environment
+  source_binary  = "${path.module}/../target/lambda/config-api/bootstrap"
+  memory_size    = 256
+  timeout        = 30
+
+  log_retention_days = var.log_retention_days
+
+  environment_variables = {
+    CONFIG_TABLE_NAME  = module.pipeline_configs_table.name
+    ETL_LAMBDA_ARN     = module.etl_trigger.arn
+    SCHEDULER_ROLE_ARN = aws_iam_role.scheduler_execution.arn
+    RUST_LOG           = "info"
+  }
+
+  iam_policy_statements = [
+    {
+      actions   = ["dynamodb:PutItem", "dynamodb:GetItem", "dynamodb:UpdateItem", "dynamodb:DeleteItem", "dynamodb:Query"]
+      resources = [module.pipeline_configs_table.arn]
+    },
+    {
+      actions   = ["scheduler:CreateSchedule", "scheduler:UpdateSchedule", "scheduler:DeleteSchedule", "scheduler:GetSchedule"]
+      resources = ["arn:aws:scheduler:${var.aws_region}:${data.aws_caller_identity.current.account_id}:schedule/default/onboardyou-*"]
+    },
+    {
+      actions   = ["iam:PassRole"]
+      resources = [aws_iam_role.scheduler_execution.arn]
+    },
+  ]
+}
+
+# ══════════════════════════════════════════════════════════════
+# API Gateway
+# ══════════════════════════════════════════════════════════════
+#
+# To add a new route, just add an entry to the routes map.
+# The module handles resource creation, method + integration,
+# CORS OPTIONS, deployment triggers, and lambda permissions.
+#
+# ──────────────────────────────────────────────────────────────
+
+module "api" {
+  source      = "./modules/api-gateway"
+  api_name    = "onboardyou-api"
+  description = "OnboardYou Config API — manage ETL pipeline configurations"
+  environment = var.environment
+  stage_name  = "v1"
+
+  routes = {
+    config = {
+      methods              = ["GET", "POST", "PUT"]
+      lambda_invoke_arn    = module.config_api.invoke_arn
+      lambda_function_name = module.config_api.function_name
+    }
+    validate = {
+      methods              = ["POST"]
+      lambda_invoke_arn    = module.config_api.invoke_arn
+      lambda_function_name = module.config_api.function_name
+    }
+    # ── Add new routes here ──────────────────────────────────
+    # status = {
+    #   methods              = ["GET"]
+    #   lambda_invoke_arn    = module.some_other_lambda.invoke_arn
+    #   lambda_function_name = module.some_other_lambda.function_name
+    # }
   }
 }
