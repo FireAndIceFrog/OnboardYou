@@ -49,9 +49,10 @@ impl IdentityDeduplicator {
         Self { config }
     }
 
-    /// Convenience constructor from manifest JSON.
-    pub fn from_action_config(value: &serde_json::Value) -> Self {
-        Self::new(DedupConfig::from_json(value))
+    /// Deserialise and construct from manifest JSON.
+    pub fn from_action_config(value: &serde_json::Value) -> Result<Self> {
+        let config: DedupConfig = serde_json::from_value(value.clone())?;
+        Ok(Self::new(config))
     }
 }
 
@@ -336,7 +337,7 @@ mod tests {
             "columns": ["email", "phone"],
             "employee_id_column": "emp_id"
         });
-        let config = DedupConfig::from_json(&json);
+        let config: DedupConfig = serde_json::from_value(json).unwrap();
         assert_eq!(config.columns, vec!["email", "phone"]);
         assert_eq!(config.employee_id_column, "emp_id");
     }
@@ -344,7 +345,7 @@ mod tests {
     #[test]
     fn test_config_defaults() {
         let json = serde_json::json!({});
-        let config = DedupConfig::from_json(&json);
+        let config: DedupConfig = serde_json::from_value(json).unwrap();
         assert_eq!(config.columns, vec!["national_id", "email"]);
         assert_eq!(config.employee_id_column, "employee_id");
     }

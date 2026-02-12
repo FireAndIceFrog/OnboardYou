@@ -54,27 +54,7 @@ impl FilterByValue {
 
     /// Deserialise and construct from manifest JSON.
     pub fn from_action_config(value: &serde_json::Value) -> Result<Self> {
-        let column = value
-            .get("column")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| {
-                Error::ConfigurationError(
-                    "filter_by_value: missing required field 'column'".into(),
-                )
-            })?
-            .to_string();
-
-        let pattern = value
-            .get("pattern")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| {
-                Error::ConfigurationError(
-                    "filter_by_value: missing required field 'pattern'".into(),
-                )
-            })?
-            .to_string();
-
-        let config = FilterByValueConfig { column, pattern };
+        let config: FilterByValueConfig = serde_json::from_value(value.clone())?;
         let regex = config.validate()?;
         Ok(Self::new(config, regex))
     }

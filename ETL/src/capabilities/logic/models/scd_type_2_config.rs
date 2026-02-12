@@ -1,5 +1,7 @@
 //! Configuration model for SCD Type 2 effective dating.
 
+use serde::Deserialize;
+
 /// Configuration for SCD Type 2 effective dating.
 ///
 /// # JSON config
@@ -15,7 +17,8 @@
 /// |-----------------|--------|-----------------|--------------------------------------------------|
 /// | `entity_column` | string | `"employee_id"` | Column that identifies the entity (partition key) |
 /// | `date_column`   | string | `"start_date"`  | Column holding the date used for versioning       |
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
 pub struct ScdType2Config {
     /// The column that identifies the entity (partitioning column).
     pub entity_column: String,
@@ -28,28 +31,6 @@ impl Default for ScdType2Config {
         Self {
             entity_column: "employee_id".into(),
             date_column: "start_date".into(),
-        }
-    }
-}
-
-impl ScdType2Config {
-    /// Build from manifest `ActionConfig.config` JSON.
-    pub fn from_json(value: &serde_json::Value) -> Self {
-        let entity_column = value
-            .get("entity_column")
-            .and_then(|v| v.as_str())
-            .unwrap_or("employee_id")
-            .to_string();
-
-        let date_column = value
-            .get("date_column")
-            .and_then(|v| v.as_str())
-            .unwrap_or("start_date")
-            .to_string();
-
-        Self {
-            entity_column,
-            date_column,
         }
     }
 }

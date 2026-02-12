@@ -42,9 +42,10 @@ impl PIIMasking {
         Self { config }
     }
 
-    /// Convenience constructor from manifest JSON.
-    pub fn from_action_config(value: &serde_json::Value) -> Self {
-        Self::new(PIIMaskingConfig::from_json(value))
+    /// Deserialise and construct from manifest JSON.
+    pub fn from_action_config(value: &serde_json::Value) -> Result<Self> {
+        let config: PIIMaskingConfig = serde_json::from_value(value.clone())?;
+        Ok(Self::new(config))
     }
 }
 
@@ -279,7 +280,7 @@ mod tests {
     #[test]
     fn test_from_action_config_legacy() {
         let json = serde_json::json!({ "mask_ssn": false, "mask_salary": true });
-        let action = PIIMasking::from_action_config(&json);
+        let action = PIIMasking::from_action_config(&json).unwrap();
         assert_eq!(action.config.columns.len(), 1);
         assert_eq!(action.config.columns[0].name, "salary");
     }
@@ -292,7 +293,7 @@ mod tests {
                 { "name": "bonus", "strategy": "zero" }
             ]
         });
-        let action = PIIMasking::from_action_config(&json);
+        let action = PIIMasking::from_action_config(&json).unwrap();
         assert_eq!(action.config.columns.len(), 2);
         assert_eq!(action.config.columns[0].name, "phone");
         assert_eq!(action.config.columns[1].name, "bonus");

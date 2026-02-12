@@ -58,41 +58,7 @@ impl RegexReplace {
 
     /// Deserialise and construct from manifest JSON.
     pub fn from_action_config(value: &serde_json::Value) -> Result<Self> {
-        let column = value
-            .get("column")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| {
-                Error::ConfigurationError(
-                    "regex_replace: missing required field 'column'".into(),
-                )
-            })?
-            .to_string();
-
-        let pattern = value
-            .get("pattern")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| {
-                Error::ConfigurationError(
-                    "regex_replace: missing required field 'pattern'".into(),
-                )
-            })?
-            .to_string();
-
-        let replacement = value
-            .get("replacement")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| {
-                Error::ConfigurationError(
-                    "regex_replace: missing required field 'replacement'".into(),
-                )
-            })?
-            .to_string();
-
-        let config = RegexReplaceConfig {
-            column,
-            pattern,
-            replacement,
-        };
+        let config: RegexReplaceConfig = serde_json::from_value(value.clone())?;
         let regex = config.validate()?;
         Ok(Self::new(config, regex))
     }

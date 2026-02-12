@@ -1,4 +1,31 @@
 //! Configuration models for PII masking.
+//!
+//! Supports two JSON shapes:
+//!
+//! **New format** (recommended):
+//! ```json
+//! {
+//!   "columns": [
+//!     { "name": "ssn",    "strategy": "redact", "keep_last": 4, "mask_prefix": "***-**-" },
+//!     { "name": "salary", "strategy": "zero" }
+//!   ]
+//! }
+//! ```
+//!
+//! **Legacy format** (still accepted):
+//! ```json
+//! { "mask_ssn": true, "mask_salary": true }
+//! ```
+//!
+//! The custom [`Deserialize`] impl handles both shapes, so every call-site
+//! can simply use `serde_json::from_value::<PIIMaskingConfig>(…)`.
+
+use serde::de::{self, Deserializer};
+use serde::Deserialize;
+
+// ---------------------------------------------------------------------------
+// Public types
+// ---------------------------------------------------------------------------
 
 /// The masking strategy for a single column.
 ///
@@ -37,24 +64,10 @@ pub struct ColumnMask {
     pub strategy: MaskStrategy,
 }
 
-/// Configuration for PII masking, extracted from manifest JSON.
+/// Configuration for PII masking.
 ///
-/// # New format (recommended)
-///
-/// ```json
-/// {
-///   "columns": [
-///     { "name": "ssn",    "strategy": "redact", "keep_last": 4, "mask_prefix": "***-**-" },
-///     { "name": "salary", "strategy": "zero" }
-///   ]
-/// }
-/// ```
-///
-/// # Legacy format (still supported)
-///
-/// ```json
-/// { "mask_ssn": true, "mask_salary": true }
-/// ```
+/// Accepts both the new `columns`-array format and the legacy boolean
+/// format.  See module docs for examples.
 #[derive(Debug, Clone)]
 pub struct PIIMaskingConfig {
     pub columns: Vec<ColumnMask>,
@@ -80,55 +93,66 @@ impl Default for PIIMaskingConfig {
     }
 }
 
-impl PIIMaskingConfig {
-    /// Build from manifest `ActionConfig.config` JSON.
-    ///
-    /// Supports both the new `columns` array format and the legacy
-    /// `mask_ssn` / `mask_salary` boolean format.
-    pub fn from_json(value: &serde_json::Value) -> Self {
-        // New format: { "columns": [...] }
-        if let Some(arr) = value.get("columns").and_then(|v| v.as_array()) {
-            let columns = arr
-                .iter()
-                .filter_map(|entry| {
-                    let name = entry.get("name")?.as_str()?.to_string();
-                    let strategy_str = entry
-                        .get("strategy")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("redact");
-                    let strategy = match strategy_str {
-                        "zero" => MaskStrategy::Zero,
-                        _ => MaskStrategy::Redact {
-                            keep_last: entry
-                                .get("keep_last")
-                                .and_then(|v| v.as_u64())
-                                .unwrap_or(4)
-                                as usize,
-                            mask_prefix: entry
-                                .get("mask_prefix")
-                                .and_then(|v| v.as_str())
-                                .unwrap_or("***-**-")
-                                .to_string(),
-                        },
-                    };
-                    Some(ColumnMask { name, strategy })
-                })
-                .collect();
-            return Self { columns };
+// ---------------------------------------------------------------------------
+// Serde plumbing — private helper structs
+// ---------------------------------------------------------------------------
+
+/// Serde-friendly mirror of [`ColumnMask`], used only during
+/// deserialisation. The flattened JSON layout (`strategy`, `keep_last`,
+/// `mask_prefix` as siblings of `name`) doesn't map cleanly to the public
+/// enum, so we deserialise into this raw form first.
+#[derive(Deserialize)]
+struct RawColumnMask {
+    name: String,
+    #[serde(default = "default_strategy_str")]
+    strategy: String,
+    keep_last: Option<usize>,
+    mask_prefix: Option<String>,
+}
+
+fn default_strategy_str() -> String {
+    "redact".into()
+}
+
+impl From<RawColumnMask> for ColumnMask {
+    fn from(raw: RawColumnMask) -> Self {
+        let strategy = match raw.strategy.as_str() {
+            "zero" => MaskStrategy::Zero,
+            _ => MaskStrategy::Redact {
+                keep_last: raw.keep_last.unwrap_or(4),
+                mask_prefix: raw.mask_prefix.unwrap_or_else(|| "***-**-".into()),
+            },
+        };
+        Self {
+            name: raw.name,
+            strategy,
         }
+    }
+}
 
-        // Legacy format: { "mask_ssn": bool, "mask_salary": bool }
+/// New format: `{ "columns": [ … ] }`.
+#[derive(Deserialize)]
+struct NewFormat {
+    columns: Vec<RawColumnMask>,
+}
+
+/// Legacy format: `{ "mask_ssn": bool, "mask_salary": bool }`.
+#[derive(Deserialize)]
+struct LegacyFormat {
+    #[serde(default = "default_true")]
+    mask_ssn: bool,
+    #[serde(default = "default_true")]
+    mask_salary: bool,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+impl From<LegacyFormat> for PIIMaskingConfig {
+    fn from(legacy: LegacyFormat) -> Self {
         let mut columns = Vec::new();
-        let mask_ssn = value
-            .get("mask_ssn")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(true);
-        let mask_salary = value
-            .get("mask_salary")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(true);
-
-        if mask_ssn {
+        if legacy.mask_ssn {
             columns.push(ColumnMask {
                 name: "ssn".into(),
                 strategy: MaskStrategy::Redact {
@@ -137,12 +161,38 @@ impl PIIMaskingConfig {
                 },
             });
         }
-        if mask_salary {
+        if legacy.mask_salary {
             columns.push(ColumnMask {
                 name: "salary".into(),
                 strategy: MaskStrategy::Zero,
             });
         }
         Self { columns }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Custom Deserialize — tries new format first, falls back to legacy
+// ---------------------------------------------------------------------------
+
+impl<'de> Deserialize<'de> for PIIMaskingConfig {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        // Deserialise once into a generic Value, then try each format.
+        let value = serde_json::Value::deserialize(deserializer)?;
+
+        // New format: { "columns": [ … ] }
+        if value.get("columns").is_some() {
+            let new: NewFormat = serde_json::from_value(value).map_err(de::Error::custom)?;
+            return Ok(Self {
+                columns: new.columns.into_iter().map(ColumnMask::from).collect(),
+            });
+        }
+
+        // Legacy format: { "mask_ssn": bool, "mask_salary": bool }
+        let legacy: LegacyFormat = serde_json::from_value(value).map_err(de::Error::custom)?;
+        Ok(Self::from(legacy))
     }
 }

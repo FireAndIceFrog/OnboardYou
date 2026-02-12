@@ -1,6 +1,7 @@
 //! Configuration model for the filter-by-value engine.
 
 use crate::domain::{Error, Result};
+use serde::Deserialize;
 use super::SafeRegex;
 
 /// Configuration for the filter-by-value action.
@@ -10,7 +11,7 @@ use super::SafeRegex;
 /// | `column` | string | Target column whose values are tested against the regex |
 /// | `pattern`| string | Regex pattern (Rust `regex` syntax); rows that match    |
 /// |          |        | are **kept**, non-matching rows are dropped              |
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct FilterByValueConfig {
     /// Column to filter on.
     pub column: String,

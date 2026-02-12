@@ -101,10 +101,10 @@ pub struct HandleDiacritics {
 }
 
 impl HandleDiacritics {
-    pub fn from_action_config(value: &serde_json::Value) -> Self {
-        Self {
-            config: HandleDiacriticsConfig::from_json(value),
-        }
+    /// Deserialise and construct from manifest JSON.
+    pub fn from_action_config(value: &serde_json::Value) -> Result<Self> {
+        let config: HandleDiacriticsConfig = serde_json::from_value(value.clone())?;
+        Ok(Self { config })
     }
 }
 
@@ -208,7 +208,7 @@ mod tests {
 
     #[test]
     fn test_id() {
-        let action = HandleDiacritics::from_action_config(&serde_json::json!({}));
+        let action = HandleDiacritics::from_action_config(&serde_json::json!({})).unwrap();
         assert_eq!(action.id(), "handle_diacritics");
     }
 
@@ -227,7 +227,7 @@ mod tests {
         let json = serde_json::json!({
             "columns": ["first_name", "last_name"]
         });
-        let action = HandleDiacritics::from_action_config(&json);
+        let action = HandleDiacritics::from_action_config(&json).unwrap();
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).expect("execute");
         let df = result.data.collect().expect("collect");
@@ -246,7 +246,7 @@ mod tests {
             "columns": ["first_name"],
             "output_suffix": "_ascii"
         });
-        let action = HandleDiacritics::from_action_config(&json);
+        let action = HandleDiacritics::from_action_config(&json).unwrap();
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).expect("execute");
         let df = result.data.collect().expect("collect");
@@ -260,7 +260,7 @@ mod tests {
 
     #[test]
     fn test_empty_columns_noop() {
-        let action = HandleDiacritics::from_action_config(&serde_json::json!({}));
+        let action = HandleDiacritics::from_action_config(&serde_json::json!({})).unwrap();
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).expect("execute");
         let df = result.data.collect().expect("collect");
@@ -272,7 +272,7 @@ mod tests {
     #[test]
     fn test_field_metadata_provenance() {
         let json = serde_json::json!({ "columns": ["first_name"] });
-        let action = HandleDiacritics::from_action_config(&json);
+        let action = HandleDiacritics::from_action_config(&json).unwrap();
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).expect("execute");
         let meta = result
@@ -285,7 +285,7 @@ mod tests {
     #[test]
     fn test_missing_column_errors() {
         let json = serde_json::json!({ "columns": ["nonexistent"] });
-        let action = HandleDiacritics::from_action_config(&json);
+        let action = HandleDiacritics::from_action_config(&json).unwrap();
         let ctx = RosterContext::new(sample_df().lazy());
         assert!(action.execute(ctx).is_err());
     }

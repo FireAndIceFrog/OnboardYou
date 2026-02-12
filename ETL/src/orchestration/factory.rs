@@ -32,15 +32,15 @@ impl ActionFactory {
                 Ok(Arc::new(connector))
             }
             "scd_type_2" => {
-                let scd = SCDType2::from_action_config(&action_config.config);
+                let scd = SCDType2::from_action_config(&action_config.config)?;
                 Ok(Arc::new(scd))
             }
             "pii_masking" => {
-                let masking = PIIMasking::from_action_config(&action_config.config);
+                let masking = PIIMasking::from_action_config(&action_config.config)?;
                 Ok(Arc::new(masking))
             }
             "identity_deduplicator" => {
-                let dedup = IdentityDeduplicator::from_action_config(&action_config.config);
+                let dedup = IdentityDeduplicator::from_action_config(&action_config.config)?;
                 Ok(Arc::new(dedup))
             }
             "regex_replace" => {
@@ -56,7 +56,7 @@ impl ActionFactory {
                 Ok(Arc::new(action))
             }
             "handle_diacritics" => {
-                let action = HandleDiacritics::from_action_config(&action_config.config);
+                let action = HandleDiacritics::from_action_config(&action_config.config)?;
                 Ok(Arc::new(action))
             }
             "rename_column" => {

@@ -50,9 +50,10 @@ impl SCDType2 {
         Self { config }
     }
 
-    /// Convenience constructor from manifest JSON.
-    pub fn from_action_config(value: &serde_json::Value) -> Self {
-        Self::new(ScdType2Config::from_json(value))
+    /// Deserialise and construct from manifest JSON.
+    pub fn from_action_config(value: &serde_json::Value) -> Result<Self> {
+        let config: ScdType2Config = serde_json::from_value(value.clone())?;
+        Ok(Self::new(config))
     }
 }
 
@@ -256,7 +257,7 @@ mod tests {
             "entity_column": "worker_id",
             "date_column": "hire_date"
         });
-        let config = ScdType2Config::from_json(&json);
+        let config: ScdType2Config = serde_json::from_value(json).unwrap();
         assert_eq!(config.entity_column, "worker_id");
         assert_eq!(config.date_column, "hire_date");
     }
@@ -264,7 +265,7 @@ mod tests {
     #[test]
     fn test_config_defaults() {
         let json = serde_json::json!({});
-        let config = ScdType2Config::from_json(&json);
+        let config: ScdType2Config = serde_json::from_value(json).unwrap();
         assert_eq!(config.entity_column, "employee_id");
         assert_eq!(config.date_column, "start_date");
     }

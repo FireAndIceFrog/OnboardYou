@@ -1,5 +1,7 @@
 //! Configuration model for the identity deduplicator engine.
 
+use serde::Deserialize;
+
 /// Configuration for the identity deduplicator.
 ///
 /// Columns are inspected in priority order — the first non-null value across
@@ -18,7 +20,8 @@
 /// |----------------------|----------|----------------------------|------------------------------------------------------|
 /// | `columns`            | string[] | `["national_id", "email"]` | Columns to inspect for the dedup key (priority order) |
 /// | `employee_id_column` | string   | `"employee_id"`            | Column whose value is used as the canonical ID        |
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
 pub struct DedupConfig {
     /// Columns to inspect (in priority order) when building the dedup key.
     /// The first non-null value across these columns becomes the key.
@@ -32,32 +35,6 @@ impl Default for DedupConfig {
         Self {
             columns: vec!["national_id".into(), "email".into()],
             employee_id_column: "employee_id".into(),
-        }
-    }
-}
-
-impl DedupConfig {
-    /// Build from manifest `ActionConfig.config` JSON.
-    pub fn from_json(value: &serde_json::Value) -> Self {
-        let columns = value
-            .get("columns")
-            .and_then(|v| v.as_array())
-            .map(|arr| {
-                arr.iter()
-                    .filter_map(|v| v.as_str().map(String::from))
-                    .collect()
-            })
-            .unwrap_or_else(|| vec!["national_id".into(), "email".into()]);
-
-        let employee_id_column = value
-            .get("employee_id_column")
-            .and_then(|v| v.as_str())
-            .unwrap_or("employee_id")
-            .to_string();
-
-        Self {
-            columns,
-            employee_id_column,
         }
     }
 }

@@ -1,6 +1,7 @@
 //! Configuration model for the regex-replace engine.
 
 use crate::domain::{Error, Result};
+use serde::Deserialize;
 use super::SafeRegex;
 
 /// Maximum length of the replacement string.
@@ -13,7 +14,7 @@ pub const MAX_REPLACEMENT_LEN: usize = 256;
 /// | `column`      | string | Target column to apply the replacement to      |
 /// | `pattern`     | string | Regex pattern (Rust `regex` syntax)            |
 /// | `replacement` | string | Literal replacement for the matched substring  |
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct RegexReplaceConfig {
     /// Column to operate on.
     pub column: String,
