@@ -34,11 +34,11 @@ async fn main() -> Result<(), lambda_http::Error> {
 fn router(state: AppState) -> Router {
     Router::new()
         .route(
-            "/{organization_id}/config",
+            "/{organization_id}/{customer_company_id}/config",
             get(get_config).post(upsert_config).put(upsert_config),
         )
         .route(
-            "/{organization_id}/config/validate",
+            "/{organization_id}/{customer_company_id}/config/validate",
             post(validate_config),
         )
         .with_state(state)
@@ -46,36 +46,36 @@ fn router(state: AppState) -> Router {
 
 // ── Handlers ────────────────────────────────────────────────
 
-/// GET /{organizationId}/config
+/// GET /{organizationId}/{customerCompanyId}/config
 async fn get_config(
     State(state): State<AppState>,
-    Path(organization_id): Path<String>,
+    Path((organization_id, customer_company_id)): Path<(String, String)>,
 ) -> Result<impl IntoResponse, models::ApiError> {
-    let config = engine::config_engine::get(&state, &organization_id).await?;
+    let config = engine::config_engine::get(&state, &organization_id, &customer_company_id).await?;
     Ok(Json(config))
 }
 
-/// POST/PUT /{organizationId}/config
+/// POST/PUT /{organizationId}/{customerCompanyId}/config
 async fn upsert_config(
     State(state): State<AppState>,
-    Path(organization_id): Path<String>,
+    Path((organization_id, customer_company_id)): Path<(String, String)>,
     Json(body): Json<PipelineConfig>,
 ) -> Result<impl IntoResponse, models::ApiError> {
     // Dry-run column propagation — reject before persisting if any action
     // is misconfigured or produces a schema conflict.
     engine::validation_engine::validate_pipeline(&body.pipeline)?;
 
-    let saved = engine::config_engine::upsert(&state, &organization_id, body).await?;
+    let saved = engine::config_engine::upsert(&state, &organization_id, &customer_company_id, body).await?;
     Ok((StatusCode::OK, Json(saved)))
 }
 
-/// POST /{organizationId}/config/validate
+/// POST /{organizationId}/{customerCompanyId}/config/validate
 ///
 /// Dry-run column propagation: parses the pipeline manifest, builds every
 /// action, and folds `calculate_columns` through the chain. Returns the
 /// column set after each step without executing any real transformations.
 async fn validate_config(
-    Path(_organization_id): Path<String>,
+    Path((_organization_id, _customer_company_id)): Path<(String, String)>,
     Json(body): Json<PipelineConfig>,
 ) -> Result<impl IntoResponse, models::ApiError> {
     // Validation is pure computation — no async I/O needed.

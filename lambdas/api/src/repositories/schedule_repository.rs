@@ -7,17 +7,18 @@ use aws_sdk_scheduler::types::{FlexibleTimeWindow, FlexibleTimeWindowMode, Targe
 
 use crate::models::{ApiError, AppState, PipelineConfig};
 
-/// Schedule name convention: onboardyou-{organizationId}
-fn schedule_name(organization_id: &str) -> String {
-    format!("onboardyou-{organization_id}")
+/// Schedule name convention: onboardyou-{organizationId}-{customerCompanyId}
+fn schedule_name(organization_id: &str, customer_company_id: &str) -> String {
+    format!("onboardyou-{organization_id}-{customer_company_id}")
 }
 
 /// Create or update an EventBridge Scheduler schedule for a given pipeline config.
 pub async fn upsert(state: &AppState, config: &PipelineConfig) -> Result<(), ApiError> {
-    let name = schedule_name(&config.organization_id);
+    let name = schedule_name(&config.organization_id, &config.customer_company_id);
 
     let input_payload = serde_json::json!({
-        "organizationId": config.organization_id
+        "organizationId": config.organization_id,
+        "customerCompanyId": config.customer_company_id
     })
     .to_string();
 
@@ -67,10 +68,10 @@ pub async fn upsert(state: &AppState, config: &PipelineConfig) -> Result<(), Api
     Ok(())
 }
 
-/// Delete an organization's schedule.
+/// Delete a pipeline schedule.
 #[allow(dead_code)]
-pub async fn delete(state: &AppState, organization_id: &str) -> Result<(), ApiError> {
-    let name = schedule_name(organization_id);
+pub async fn delete(state: &AppState, organization_id: &str, customer_company_id: &str) -> Result<(), ApiError> {
+    let name = schedule_name(organization_id, customer_company_id);
 
     state
         .scheduler

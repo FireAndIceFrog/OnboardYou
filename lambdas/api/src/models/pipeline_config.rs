@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 ///   "name": "Acme Onboarding Pipeline",
 ///   "cron": "rate(1 hour)",
 ///   "organizationId": "acme-corp",
+///   "customerCompanyId": "customer-123",
 ///   "lastEdited": "2026-02-09T12:00:00Z",
 ///   "pipeline": { "version": "1.0", "actions": [...] }
 /// }
@@ -25,6 +26,9 @@ pub struct PipelineConfig {
 
     /// Unique identifier for the organization (partition key)
     pub organization_id: String,
+
+    /// Unique identifier for the customer company (sort key)
+    pub customer_company_id: String,
 
     /// ISO 8601 timestamp of last edit — set by the server
     #[serde(default)]

@@ -22,20 +22,26 @@ pub async fn put(state: &AppState, config: &PipelineConfig) -> Result<(), ApiErr
         .await
         .map_err(|e| ApiError::Repository(format!("put_item failed: {e}")))?;
 
-    tracing::info!(organization_id = %config.organization_id, "Config persisted");
+    tracing::info!(
+        organization_id = %config.organization_id,
+        customer_company_id = %config.customer_company_id,
+        "Config persisted"
+    );
     Ok(())
 }
 
-/// Retrieve a PipelineConfig by organizationId (full document).
+/// Retrieve a PipelineConfig by organizationId (PK) + customerCompanyId (SK).
 pub async fn get(
     state: &AppState,
     organization_id: &str,
+    customer_company_id: &str,
 ) -> Result<Option<PipelineConfig>, ApiError> {
     let result = state
         .dynamo
         .get_item()
         .table_name(&state.table_name)
         .key("organizationId", AttributeValue::S(organization_id.to_string()))
+        .key("customerCompanyId", AttributeValue::S(customer_company_id.to_string()))
         .send()
         .await
         .map_err(|e| ApiError::Repository(format!("get_item failed: {e}")))?;

@@ -48,6 +48,7 @@ module "pipeline_configs_table" {
   source     = "./modules/dynamodb"
   table_name = var.config_table_name
   hash_key   = "organizationId"
+  range_key  = "customerCompanyId"
 }
 
 # ══════════════════════════════════════════════════════════════

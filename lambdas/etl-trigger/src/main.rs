@@ -26,8 +26,13 @@ async fn main() -> Result<(), Error> {
         let dynamo = dynamo.clone();
         let table_name = table_name.clone();
         async move {
-            engine::pipeline_engine::run(&dynamo, &table_name, &event.payload.organization_id)
-                .await
+            engine::pipeline_engine::run(
+                &dynamo,
+                &table_name,
+                &event.payload.organization_id,
+                &event.payload.customer_company_id,
+            )
+            .await
         }
     }))
     .await

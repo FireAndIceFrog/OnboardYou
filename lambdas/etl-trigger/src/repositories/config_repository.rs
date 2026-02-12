@@ -12,23 +12,25 @@ pub struct StoredConfig {
     pub pipeline: serde_json::Value,
 }
 
-/// Fetch a pipeline config by organization ID (full document deserialization).
+/// Fetch a pipeline config by organization ID + customer company ID (composite key).
 pub async fn get(
     dynamo: &aws_sdk_dynamodb::Client,
     table_name: &str,
     organization_id: &str,
+    customer_company_id: &str,
 ) -> Result<StoredConfig, Error> {
     let result = dynamo
         .get_item()
         .table_name(table_name)
         .key("organizationId", AttributeValue::S(organization_id.to_string()))
+        .key("customerCompanyId", AttributeValue::S(customer_company_id.to_string()))
         .send()
         .await
         .map_err(|e| Error::from(format!("get_item failed: {e}")))?;
 
     let item = result
         .item
-        .ok_or_else(|| Error::from(format!("No config found for org: {organization_id}")))?;
+        .ok_or_else(|| Error::from(format!("No config found for org: {organization_id}, customer: {customer_company_id}")))?;
 
     let config: StoredConfig = dynamo_serde::from_item(item)
         .map_err(|e| Error::from(format!("Failed to deserialize config: {e}")))?;

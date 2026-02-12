@@ -12,11 +12,12 @@ pub async fn run(
     dynamo: &aws_sdk_dynamodb::Client,
     table_name: &str,
     organization_id: &str,
+    customer_company_id: &str,
 ) -> Result<PipelineResult, Error> {
-    tracing::info!(%organization_id, "ETL trigger fired");
+    tracing::info!(%organization_id, %customer_company_id, "ETL trigger fired");
 
     // 1. Fetch config
-    let config = config_repository::get(dynamo, table_name, organization_id).await?;
+    let config = config_repository::get(dynamo, table_name, organization_id, customer_company_id).await?;
 
     // 2. Deserialize the Manifest
     let manifest: Manifest = serde_json::from_value(config.pipeline)
@@ -36,12 +37,12 @@ pub async fn run(
     match PipelineRunner::run(&manifest, actions, context) {
         Ok(result) => {
             let rows = result.data.clone().collect().map(|df: polars::prelude::DataFrame| df.height()).ok();
-            tracing::info!(%organization_id, rows_processed = ?rows, "Pipeline completed");
-            Ok(PipelineResult::success(organization_id, rows))
+            tracing::info!(%organization_id, %customer_company_id, rows_processed = ?rows, "Pipeline completed");
+            Ok(PipelineResult::success(organization_id, customer_company_id, rows))
         }
         Err(e) => {
-            tracing::error!(%organization_id, error = %e, "Pipeline failed");
-            Ok(PipelineResult::failure(organization_id, e))
+            tracing::error!(%organization_id, %customer_company_id, error = %e, "Pipeline failed");
+            Ok(PipelineResult::failure(organization_id, customer_company_id, e))
         }
     }
 }
