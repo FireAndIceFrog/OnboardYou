@@ -25,17 +25,3 @@ variable "log_retention_days" {
   type        = number
   default     = 14
 }
-
-# ── Cognito (authorizer) ─────────────────────────────────────
-
-variable "cognito_user_pool_id" {
-  description = "Cognito User Pool ID for JWT validation (leave empty in dev — AUTH_DEV_MODE takes over)"
-  type        = string
-  default     = ""
-}
-
-variable "cognito_client_id" {
-  description = "Cognito App Client ID for audience validation"
-  type        = string
-  default     = ""
-}

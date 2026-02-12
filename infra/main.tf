@@ -52,6 +52,15 @@ module "pipeline_configs_table" {
 }
 
 # ══════════════════════════════════════════════════════════════
+# Cognito
+# ══════════════════════════════════════════════════════════════
+
+module "cognito" {
+  source      = "./modules/cognito"
+  environment = var.environment
+}
+
+# ══════════════════════════════════════════════════════════════
 # Lambdas
 # ══════════════════════════════════════════════════════════════
 
@@ -94,8 +103,8 @@ module "authorizer" {
 
   environment_variables = {
     AUTH_DEV_MODE        = var.environment == "dev" ? "true" : "false"
-    COGNITO_USER_POOL_ID = var.cognito_user_pool_id
-    COGNITO_CLIENT_ID    = var.cognito_client_id
+    COGNITO_USER_POOL_ID = module.cognito.user_pool_id
+    COGNITO_CLIENT_ID    = module.cognito.client_id
     RUST_LOG             = "info"
   }
 }
