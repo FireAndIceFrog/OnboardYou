@@ -186,7 +186,7 @@ fn test_full_pipeline_smoke() {
 #[test]
 #[cfg(feature = "benchmark")]
 fn test_benchmark_1k_5k_10k() {
-    let sizes = [1_000];
+    let sizes = [1_000, 5_000, 10_000];
     let mut all_metrics: Vec<RunMetrics> = Vec::with_capacity(sizes.len());
 
     for &n in &sizes {

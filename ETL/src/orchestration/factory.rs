@@ -6,8 +6,7 @@
 use crate::capabilities::ingestion::engine::{CsvHrisConnector, WorkdayHrisConnector};
 use crate::capabilities::logic::engine::{
     CellphoneSanitizer, DropColumn, HandleDiacritics, IdentityDeduplicator,
-    IdentityFuzzyMatch, IsoCountrySanitizer, PIIMasking, RegexReplace, RenameColumn,
-    SCDType2,
+    IsoCountrySanitizer, PIIMasking, RegexReplace, RenameColumn, SCDType2,
 };
 use crate::domain::{Error, OnboardingAction, Result};
 use crate::domain::engine::manifest::ActionConfig;
@@ -42,10 +41,6 @@ impl ActionFactory {
             "identity_deduplicator" => {
                 let dedup = IdentityDeduplicator::from_action_config(&action_config.config);
                 Ok(Arc::new(dedup))
-            }
-            "identity_fuzzy_match" => {
-                let fuzzy = IdentityFuzzyMatch::from_action_config(&action_config.config);
-                Ok(Arc::new(fuzzy))
             }
             "regex_replace" => {
                 let action = RegexReplace::from_action_config(&action_config.config)?;
@@ -142,17 +137,6 @@ mod tests {
         };
         let action = ActionFactory::create(&config).expect("should create identity_deduplicator");
         assert_eq!(action.id(), "identity_deduplicator");
-    }
-
-    #[test]
-    fn test_factory_creates_identity_fuzzy_match() {
-        let config = ActionConfig {
-            id: "fuzzy".into(),
-            action_type: "identity_fuzzy_match".into(),
-            config: serde_json::json!({ "threshold": 0.85 }),
-        };
-        let action = ActionFactory::create(&config).expect("should create identity_fuzzy_match");
-        assert_eq!(action.id(), "identity_fuzzy_match");
     }
 
     #[test]
