@@ -5,7 +5,8 @@
 
 use crate::capabilities::ingestion::engine::{CsvHrisConnector, WorkdayHrisConnector};
 use crate::capabilities::logic::engine::{
-    IdentityDeduplicator, IdentityFuzzyMatch, PIIMasking, RegexReplace, SCDType2,
+    IdentityDeduplicator, IdentityFuzzyMatch, IsoCountrySanitizer, PIIMasking, RegexReplace,
+    SCDType2,
 };
 use crate::domain::{Error, OnboardingAction, Result};
 use crate::domain::engine::manifest::ActionConfig;
@@ -47,6 +48,10 @@ impl ActionFactory {
             }
             "regex_replace" => {
                 let action = RegexReplace::from_action_config(&action_config.config)?;
+                Ok(Arc::new(action))
+            }
+            "iso_country_sanitizer" => {
+                let action = IsoCountrySanitizer::from_action_config(&action_config.config)?;
                 Ok(Arc::new(action))
             }
             other => Err(Error::ConfigurationError(format!(
