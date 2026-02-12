@@ -31,195 +31,10 @@
 //! }
 //! ```
 
+use crate::capabilities::logic::models::{RegexReplaceConfig, SafeRegex};
 use crate::capabilities::logic::traits::ColumnCalculator;
 use crate::domain::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
-use regex::Regex;
-
-// ---------------------------------------------------------------------------
-// Hard limits (compile-time constants — not user-configurable)
-// ---------------------------------------------------------------------------
-
-/// Maximum length of the raw pattern string.
-const MAX_PATTERN_LEN: usize = 128;
-
-/// Maximum compiled NFA/DFA size in bytes (64 KiB).
-const MAX_COMPILED_SIZE: usize = 64 * 1024;
-
-/// Maximum nesting depth of parenthesised groups.
-const MAX_NESTING_DEPTH: usize = 3;
-
-/// Maximum number of capture groups (excluding the implicit group 0).
-const MAX_CAPTURE_GROUPS: usize = 1;
-
-/// Maximum length of the replacement string.
-const MAX_REPLACEMENT_LEN: usize = 256;
-
-// ---------------------------------------------------------------------------
-// Configuration
-// ---------------------------------------------------------------------------
-
-/// Configuration for the regex-replace action.
-///
-/// | Field         | Type   | Description                                    |
-/// |---------------|--------|------------------------------------------------|
-/// | `column`      | string | Target column to apply the replacement to      |
-/// | `pattern`     | string | Regex pattern (Rust `regex` syntax)            |
-/// | `replacement` | string | Literal replacement for the matched substring  |
-#[derive(Debug, Clone)]
-pub struct RegexReplaceConfig {
-    /// Column to operate on.
-    pub column: String,
-    /// The raw regex pattern.
-    pub pattern: String,
-    /// Literal replacement text (backreference syntax is **not** honoured).
-    pub replacement: String,
-}
-
-// ---------------------------------------------------------------------------
-// Validation
-// ---------------------------------------------------------------------------
-
-/// Count the maximum nesting depth of parenthesised groups in a pattern.
-///
-/// Only counts *un-escaped* `(` / `)` pairs.  Escaped parens (`\(`) and
-/// character-class contents (`[()]`) are skipped.
-fn nesting_depth(pattern: &str) -> usize {
-    let mut max_depth: usize = 0;
-    let mut current: usize = 0;
-    let mut chars = pattern.chars().peekable();
-    let mut in_char_class = false;
-
-    while let Some(ch) = chars.next() {
-        match ch {
-            '\\' => {
-                // Skip the next character — it is escaped.
-                let _ = chars.next();
-            }
-            '[' if !in_char_class => {
-                in_char_class = true;
-            }
-            ']' if in_char_class => {
-                in_char_class = false;
-            }
-            '(' if !in_char_class => {
-                current += 1;
-                if current > max_depth {
-                    max_depth = current;
-                }
-            }
-            ')' if !in_char_class => {
-                current = current.saturating_sub(1);
-            }
-            _ => {}
-        }
-    }
-    max_depth
-}
-
-/// Count explicit capture groups (groups that are **not** non-capturing `(?:…)`).
-fn capture_group_count(pattern: &str) -> usize {
-    let mut count: usize = 0;
-    let mut chars = pattern.chars().peekable();
-    let mut in_char_class = false;
-
-    while let Some(ch) = chars.next() {
-        match ch {
-            '\\' => {
-                let _ = chars.next();
-            }
-            '[' if !in_char_class => {
-                in_char_class = true;
-            }
-            ']' if in_char_class => {
-                in_char_class = false;
-            }
-            '(' if !in_char_class => {
-                // Peek ahead: non-capturing `(?:` or flags like `(?i:` don't count.
-                if chars.peek() == Some(&'?') {
-                    // Non-capturing or flag group — don't count.
-                } else {
-                    count += 1;
-                }
-            }
-            _ => {}
-        }
-    }
-    count
-}
-
-/// Escape backreference syntax (`$0`, `$1`, `${name}`, etc.) in the
-/// replacement string so it is treated as a pure literal by `regex::Regex::replace`.
-fn escape_replacement(replacement: &str) -> String {
-    // The `regex` crate treats `$` as a backreference sigil in replacements.
-    // Escaping `$` → `$$` neutralises this.
-    replacement.replace('$', "$$")
-}
-
-impl RegexReplaceConfig {
-    /// Validate all safety invariants.  Called at construction time so that
-    /// an invalid config never reaches `execute`.
-    pub fn validate(&self) -> Result<()> {
-        // 1. Column name must be non-empty
-        if self.column.is_empty() {
-            return Err(Error::ConfigurationError(
-                "regex_replace: 'column' must not be empty".into(),
-            ));
-        }
-
-        // 2. Pattern must be non-empty
-        if self.pattern.is_empty() {
-            return Err(Error::ConfigurationError(
-                "regex_replace: 'pattern' must not be empty".into(),
-            ));
-        }
-
-        // 3. Pattern length
-        if self.pattern.len() > MAX_PATTERN_LEN {
-            return Err(Error::ConfigurationError(format!(
-                "regex_replace: pattern length {} exceeds maximum of {MAX_PATTERN_LEN}",
-                self.pattern.len()
-            )));
-        }
-
-        // 4. Replacement length
-        if self.replacement.len() > MAX_REPLACEMENT_LEN {
-            return Err(Error::ConfigurationError(format!(
-                "regex_replace: replacement length {} exceeds maximum of {MAX_REPLACEMENT_LEN}",
-                self.replacement.len()
-            )));
-        }
-
-        // 5. Nesting depth
-        let depth = nesting_depth(&self.pattern);
-        if depth > MAX_NESTING_DEPTH {
-            return Err(Error::ConfigurationError(format!(
-                "regex_replace: pattern nesting depth {depth} exceeds maximum of {MAX_NESTING_DEPTH}"
-            )));
-        }
-
-        // 6. Capture group count
-        let groups = capture_group_count(&self.pattern);
-        if groups > MAX_CAPTURE_GROUPS {
-            return Err(Error::ConfigurationError(format!(
-                "regex_replace: pattern has {groups} capture group(s); maximum is {MAX_CAPTURE_GROUPS}"
-            )));
-        }
-
-        // 7. Compile the regex with a size limit to catch remaining edge cases
-        regex::RegexBuilder::new(&self.pattern)
-            .size_limit(MAX_COMPILED_SIZE)
-            .build()
-            .map_err(|e| {
-                Error::ConfigurationError(format!(
-                    "regex_replace: invalid pattern '{}': {e}",
-                    self.pattern
-                ))
-            })?;
-
-        Ok(())
-    }
-}
 
 // ---------------------------------------------------------------------------
 // Engine
@@ -231,30 +46,14 @@ impl RegexReplaceConfig {
 #[derive(Debug)]
 pub struct RegexReplace {
     config: RegexReplaceConfig,
-    /// Pre-compiled regex — validated once at construction.
-    compiled: Regex,
-    /// Safe replacement string with backreference syntax escaped.
-    safe_replacement: String,
+    /// Pre-compiled, safety-validated regex.
+    regex: SafeRegex,
 }
 
 impl RegexReplace {
-    /// Construct from a pre-validated config.
-    fn new(config: RegexReplaceConfig) -> Result<Self> {
-        let compiled = regex::RegexBuilder::new(&config.pattern)
-            .size_limit(MAX_COMPILED_SIZE)
-            .build()
-            .map_err(|e| {
-                Error::ConfigurationError(format!(
-                    "regex_replace: failed to compile pattern '{}': {e}",
-                    config.pattern
-                ))
-            })?;
-        let safe_replacement = escape_replacement(&config.replacement);
-        Ok(Self {
-            config,
-            compiled,
-            safe_replacement,
-        })
+    /// Construct from a pre-validated config and its compiled regex.
+    fn new(config: RegexReplaceConfig, regex: SafeRegex) -> Self {
+        Self { config, regex }
     }
 
     /// Deserialise and construct from manifest JSON.
@@ -294,16 +93,13 @@ impl RegexReplace {
             pattern,
             replacement,
         };
-        config.validate()?;
-        Self::new(config)
+        let regex = config.validate()?;
+        Ok(Self::new(config, regex))
     }
 
     /// Apply the replacement to a single string value.
     fn apply(&self, value: &str) -> String {
-        // `replace` replaces the first (leftmost) match only.
-        self.compiled
-            .replace(value, self.safe_replacement.as_str())
-            .into_owned()
+        self.regex.replace_first(value, &self.config.replacement)
     }
 }
 
@@ -379,6 +175,7 @@ impl OnboardingAction for RegexReplace {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::capabilities::logic::models::{MAX_PATTERN_LEN, MAX_REPLACEMENT_LEN};
 
     fn sample_df() -> DataFrame {
         df! {
@@ -709,55 +506,6 @@ mod tests {
     }
 
     // -----------------------------------------------------------------------
-    // Helpers — nesting / group counting
+    // Helpers — now in models::safe_regex (tests retained there)
     // -----------------------------------------------------------------------
-
-    #[test]
-    fn test_nesting_depth_flat() {
-        assert_eq!(nesting_depth("abc"), 0);
-        assert_eq!(nesting_depth("(abc)"), 1);
-        assert_eq!(nesting_depth("(a)(b)"), 1);
-    }
-
-    #[test]
-    fn test_nesting_depth_nested() {
-        assert_eq!(nesting_depth("((a))"), 2);
-        assert_eq!(nesting_depth("(((a)))"), 3);
-        assert_eq!(nesting_depth("((((a))))"), 4);
-    }
-
-    #[test]
-    fn test_nesting_depth_escaped_parens() {
-        // Escaped parens don't count
-        assert_eq!(nesting_depth(r"\(abc\)"), 0);
-        assert_eq!(nesting_depth(r"(\(a\))"), 1);
-    }
-
-    #[test]
-    fn test_nesting_depth_char_class() {
-        // Parens inside character classes don't count
-        assert_eq!(nesting_depth("[(]"), 0);
-        assert_eq!(nesting_depth("[()]"), 0);
-    }
-
-    #[test]
-    fn test_capture_group_count_non_capturing() {
-        assert_eq!(capture_group_count("(?:a)"), 0);
-        assert_eq!(capture_group_count("(?:a)(?:b)"), 0);
-    }
-
-    #[test]
-    fn test_capture_group_count_capturing() {
-        assert_eq!(capture_group_count("(a)"), 1);
-        assert_eq!(capture_group_count("(a)(b)"), 2);
-        assert_eq!(capture_group_count("(a)(?:b)"), 1);
-    }
-
-    #[test]
-    fn test_escape_replacement() {
-        assert_eq!(escape_replacement("hello"), "hello");
-        assert_eq!(escape_replacement("$1"), "$$1");
-        assert_eq!(escape_replacement("${name}"), "$${name}");
-        assert_eq!(escape_replacement("a$b$c"), "a$$b$$c");
-    }
 }

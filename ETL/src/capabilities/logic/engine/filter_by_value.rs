@@ -26,176 +26,10 @@
 //! }
 //! ```
 
+use crate::capabilities::logic::models::{FilterByValueConfig, SafeRegex};
 use crate::capabilities::logic::traits::ColumnCalculator;
 use crate::domain::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
-use regex::Regex;
-
-// ---------------------------------------------------------------------------
-// Hard limits (compile-time constants — not user-configurable)
-// ---------------------------------------------------------------------------
-
-/// Maximum length of the raw pattern string.
-const MAX_PATTERN_LEN: usize = 128;
-
-/// Maximum compiled NFA/DFA size in bytes (64 KiB).
-const MAX_COMPILED_SIZE: usize = 64 * 1024;
-
-/// Maximum nesting depth of parenthesised groups.
-const MAX_NESTING_DEPTH: usize = 3;
-
-/// Maximum number of capture groups (excluding the implicit group 0).
-const MAX_CAPTURE_GROUPS: usize = 1;
-
-// ---------------------------------------------------------------------------
-// Configuration
-// ---------------------------------------------------------------------------
-
-/// Configuration for the filter-by-value action.
-///
-/// | Field    | Type   | Description                                             |
-/// |----------|--------|---------------------------------------------------------|
-/// | `column` | string | Target column whose values are tested against the regex |
-/// | `pattern`| string | Regex pattern (Rust `regex` syntax); rows that match    |
-/// |          |        | are **kept**, non-matching rows are dropped              |
-#[derive(Debug, Clone)]
-pub struct FilterByValueConfig {
-    /// Column to filter on.
-    pub column: String,
-    /// The raw regex pattern.
-    pub pattern: String,
-}
-
-// ---------------------------------------------------------------------------
-// Validation helpers (shared logic with regex_replace)
-// ---------------------------------------------------------------------------
-
-/// Count the maximum nesting depth of parenthesised groups in a pattern.
-///
-/// Only counts *un-escaped* `(` / `)` pairs.  Escaped parens (`\(`) and
-/// character-class contents (`[()]`) are skipped.
-fn nesting_depth(pattern: &str) -> usize {
-    let mut max_depth: usize = 0;
-    let mut current: usize = 0;
-    let mut chars = pattern.chars().peekable();
-    let mut in_char_class = false;
-
-    while let Some(ch) = chars.next() {
-        match ch {
-            '\\' => {
-                let _ = chars.next();
-            }
-            '[' if !in_char_class => {
-                in_char_class = true;
-            }
-            ']' if in_char_class => {
-                in_char_class = false;
-            }
-            '(' if !in_char_class => {
-                current += 1;
-                if current > max_depth {
-                    max_depth = current;
-                }
-            }
-            ')' if !in_char_class => {
-                current = current.saturating_sub(1);
-            }
-            _ => {}
-        }
-    }
-    max_depth
-}
-
-/// Count explicit capture groups (groups that are **not** non-capturing `(?:…)`).
-fn capture_group_count(pattern: &str) -> usize {
-    let mut count: usize = 0;
-    let mut chars = pattern.chars().peekable();
-    let mut in_char_class = false;
-
-    while let Some(ch) = chars.next() {
-        match ch {
-            '\\' => {
-                let _ = chars.next();
-            }
-            '[' if !in_char_class => {
-                in_char_class = true;
-            }
-            ']' if in_char_class => {
-                in_char_class = false;
-            }
-            '(' if !in_char_class => {
-                if chars.peek() == Some(&'?') {
-                    // Non-capturing or flag group — don't count.
-                } else {
-                    count += 1;
-                }
-            }
-            _ => {}
-        }
-    }
-    count
-}
-
-// ---------------------------------------------------------------------------
-// Validation
-// ---------------------------------------------------------------------------
-
-impl FilterByValueConfig {
-    /// Validate all safety invariants.  Called at construction time so that
-    /// an invalid config never reaches `execute`.
-    pub fn validate(&self) -> Result<()> {
-        // 1. Column name must be non-empty
-        if self.column.is_empty() {
-            return Err(Error::ConfigurationError(
-                "filter_by_value: 'column' must not be empty".into(),
-            ));
-        }
-
-        // 2. Pattern must be non-empty
-        if self.pattern.is_empty() {
-            return Err(Error::ConfigurationError(
-                "filter_by_value: 'pattern' must not be empty".into(),
-            ));
-        }
-
-        // 3. Pattern length
-        if self.pattern.len() > MAX_PATTERN_LEN {
-            return Err(Error::ConfigurationError(format!(
-                "filter_by_value: pattern length {} exceeds maximum of {MAX_PATTERN_LEN}",
-                self.pattern.len()
-            )));
-        }
-
-        // 4. Nesting depth
-        let depth = nesting_depth(&self.pattern);
-        if depth > MAX_NESTING_DEPTH {
-            return Err(Error::ConfigurationError(format!(
-                "filter_by_value: pattern nesting depth {depth} exceeds maximum of {MAX_NESTING_DEPTH}"
-            )));
-        }
-
-        // 5. Capture group count
-        let groups = capture_group_count(&self.pattern);
-        if groups > MAX_CAPTURE_GROUPS {
-            return Err(Error::ConfigurationError(format!(
-                "filter_by_value: pattern has {groups} capture group(s); maximum is {MAX_CAPTURE_GROUPS}"
-            )));
-        }
-
-        // 6. Compile the regex with a size limit to catch remaining edge cases
-        regex::RegexBuilder::new(&self.pattern)
-            .size_limit(MAX_COMPILED_SIZE)
-            .build()
-            .map_err(|e| {
-                Error::ConfigurationError(format!(
-                    "filter_by_value: invalid pattern '{}': {e}",
-                    self.pattern
-                ))
-            })?;
-
-        Ok(())
-    }
-}
 
 // ---------------------------------------------------------------------------
 // Engine
@@ -208,23 +42,14 @@ impl FilterByValueConfig {
 #[derive(Debug)]
 pub struct FilterByValue {
     config: FilterByValueConfig,
-    /// Pre-compiled regex — validated once at construction.
-    compiled: Regex,
+    /// Pre-compiled, safety-validated regex.
+    regex: SafeRegex,
 }
 
 impl FilterByValue {
-    /// Construct from a pre-validated config.
-    fn new(config: FilterByValueConfig) -> Result<Self> {
-        let compiled = regex::RegexBuilder::new(&config.pattern)
-            .size_limit(MAX_COMPILED_SIZE)
-            .build()
-            .map_err(|e| {
-                Error::ConfigurationError(format!(
-                    "filter_by_value: failed to compile pattern '{}': {e}",
-                    config.pattern
-                ))
-            })?;
-        Ok(Self { config, compiled })
+    /// Construct from a pre-validated config and its compiled regex.
+    fn new(config: FilterByValueConfig, regex: SafeRegex) -> Self {
+        Self { config, regex }
     }
 
     /// Deserialise and construct from manifest JSON.
@@ -250,13 +75,13 @@ impl FilterByValue {
             .to_string();
 
         let config = FilterByValueConfig { column, pattern };
-        config.validate()?;
-        Self::new(config)
+        let regex = config.validate()?;
+        Ok(Self::new(config, regex))
     }
 
     /// Test whether a single value matches the filter pattern.
     fn matches(&self, value: &str) -> bool {
-        self.compiled.is_match(value)
+        self.regex.is_match(value)
     }
 }
 
@@ -328,6 +153,7 @@ impl OnboardingAction for FilterByValue {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::capabilities::logic::models::MAX_PATTERN_LEN;
     use polars::df;
 
     fn sample_df() -> DataFrame {

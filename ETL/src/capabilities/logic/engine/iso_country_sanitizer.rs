@@ -20,10 +20,10 @@
 //! | `output_column` | string | Column to write the normalised code into          |
 //! | `output_format` | string | `"alpha2"` or `"alpha3"` — desired output format  |
 
+use crate::capabilities::logic::models::{CountryOutputFormat, IsoCountrySanitizerConfig};
 use crate::capabilities::logic::traits::ColumnCalculator;
-use crate::domain::{Error, OnboardingAction, Result, RosterContext};
+use crate::domain::{OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
-use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
@@ -293,60 +293,6 @@ fn lookup() -> &'static HashMap<String, Resolved> {
 fn resolve_country(raw: &str) -> Option<(&'static str, &'static str)> {
     let key = raw.trim().to_ascii_lowercase();
     lookup().get(&key).map(|r| (r.alpha2, r.alpha3))
-}
-
-// ---------------------------------------------------------------------------
-// Output format enum
-// ---------------------------------------------------------------------------
-
-/// Desired output ISO code format.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum CountryOutputFormat {
-    Alpha2,
-    Alpha3,
-}
-
-// ---------------------------------------------------------------------------
-// Configuration
-// ---------------------------------------------------------------------------
-
-/// Configuration for the ISO country sanitizer action.
-///
-/// | Field           | Type   | Description                                          |
-/// |-----------------|--------|------------------------------------------------------|
-/// | `source_column` | string | Column containing the raw country value               |
-/// | `output_column` | string | Column to write the normalised ISO code into          |
-/// | `output_format` | string | `"alpha2"` or `"alpha3"`                              |
-#[derive(Debug, Clone, Deserialize)]
-pub struct IsoCountrySanitizerConfig {
-    /// Column to read the raw country value from.
-    pub source_column: String,
-    /// Column to write the normalised code to.
-    pub output_column: String,
-    /// Desired output format.
-    pub output_format: CountryOutputFormat,
-}
-
-// ---------------------------------------------------------------------------
-// Validation
-// ---------------------------------------------------------------------------
-
-impl IsoCountrySanitizerConfig {
-    /// Validate configuration at construction time.
-    pub fn validate(&self) -> Result<()> {
-        if self.source_column.is_empty() {
-            return Err(Error::ConfigurationError(
-                "iso_country_sanitizer: 'source_column' must not be empty".into(),
-            ));
-        }
-        if self.output_column.is_empty() {
-            return Err(Error::ConfigurationError(
-                "iso_country_sanitizer: 'output_column' must not be empty".into(),
-            ));
-        }
-        Ok(())
-    }
 }
 
 // ---------------------------------------------------------------------------

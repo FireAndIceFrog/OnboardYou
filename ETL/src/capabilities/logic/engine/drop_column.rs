@@ -7,54 +7,10 @@
 //! }
 //! ```
 
+use crate::capabilities::logic::models::DropConfig;
 use crate::capabilities::logic::traits::ColumnCalculator;
-use crate::domain::{Error, OnboardingAction, Result, RosterContext};
+use crate::domain::{OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
-use serde::Deserialize;
-
-use std::collections::HashSet;
-
-// ---------------------------------------------------------------------------
-// Configuration
-// ---------------------------------------------------------------------------
-
-/// Configuration for the drop-column action.
-///
-/// # JSON config
-///
-/// ```json
-/// {
-///   "columns": ["col1", "col2"]
-/// }
-/// ```
-///
-/// | Field     | Type          | Description                |
-/// |-----------|---------------|----------------------------|
-/// | `columns` | `[string]`    | List of column names to drop|
-#[derive(Debug, Clone, Deserialize)]
-pub struct DropConfig {
-    /// List of column names to drop.
-    pub columns: Vec<String>,
-}
-
-// ---------------------------------------------------------------------------
-// Validation
-// ---------------------------------------------------------------------------
-
-impl DropConfig {
-    /// Validate that all column names are unique.
-    pub fn validate(&self) -> Result<()> {
-        let mut seen = HashSet::with_capacity(self.columns.len());
-        for col in &self.columns {
-            if !seen.insert(col) {
-                return Err(Error::LogicError(format!(
-                    "drop_column: duplicate column name '{col}'"
-                )));
-            }
-        }
-        Ok(())
-    }
-}
 
 // ---------------------------------------------------------------------------
 // Engine
