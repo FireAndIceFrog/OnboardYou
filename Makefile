@@ -8,7 +8,7 @@ build-lambdas: build-config-api build-etl-trigger
 
 build-config-api:
 	@echo "▸ Building config-api Lambda..."
-	cargo lambda build --release -p config-api --output-format zip
+	cargo lambda build --release -p api --output-format zip
 
 build-etl-trigger:
 	@echo "▸ Building etl-trigger Lambda..."

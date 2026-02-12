@@ -5,7 +5,7 @@ edition = "2021"
 description = "ETL Trigger Lambda: Invoked by EventBridge Scheduler, reads config from DynamoDB, runs the pipeline"
 
 [[bin]]
-name = "bootstrap"
+name = "etl-trigger"
 path = "src/main.rs"
 
 [dependencies]

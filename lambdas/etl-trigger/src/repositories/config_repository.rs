@@ -9,7 +9,6 @@ use serde_dynamo::aws_sdk_dynamodb_1 as dynamo_serde;
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StoredConfig {
-    pub organization_id: String,
     pub pipeline: serde_json::Value,
 }
 
