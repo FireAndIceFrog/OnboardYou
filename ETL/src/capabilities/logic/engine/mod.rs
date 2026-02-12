@@ -11,6 +11,7 @@ mod masking;
 mod scd_type_2;
 mod rename_column;
 mod drop_column;
+mod regex_replace;
 
 pub use identity_deduplicator::*;
 pub use identity_fuzzy_match::*;
@@ -18,3 +19,4 @@ pub use masking::*;
 pub use scd_type_2::*;
 pub use rename_column::*;
 pub use drop_column::*;
+pub use regex_replace::*;

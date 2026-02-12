@@ -7,6 +7,9 @@ edition = "2021"
 # Data processing
 polars = { version = "0.48", features = ["lazy", "parquet", "csv", "strings", "dtype-struct"] }
 
+# Regex (safe — guarantees linear-time matching, no backtracking)
+regex = "1"
+
 # Error handling
 thiserror = "1.0"
 

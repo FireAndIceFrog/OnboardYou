@@ -5,7 +5,7 @@
 
 use crate::capabilities::ingestion::engine::{CsvHrisConnector, WorkdayHrisConnector};
 use crate::capabilities::logic::engine::{
-    IdentityDeduplicator, IdentityFuzzyMatch, PIIMasking, SCDType2,
+    IdentityDeduplicator, IdentityFuzzyMatch, PIIMasking, RegexReplace, SCDType2,
 };
 use crate::domain::{Error, OnboardingAction, Result};
 use crate::domain::engine::manifest::ActionConfig;
@@ -44,6 +44,10 @@ impl ActionFactory {
             "identity_fuzzy_match" => {
                 let fuzzy = IdentityFuzzyMatch::from_action_config(&action_config.config);
                 Ok(Arc::new(fuzzy))
+            }
+            "regex_replace" => {
+                let action = RegexReplace::from_action_config(&action_config.config)?;
+                Ok(Arc::new(action))
             }
             other => Err(Error::ConfigurationError(format!(
                 "Unknown action type: '{}'",
@@ -137,5 +141,20 @@ mod tests {
             config: serde_json::json!({}),
         };
         assert!(ActionFactory::create(&config).is_err());
+    }
+
+    #[test]
+    fn test_factory_creates_regex_replace() {
+        let config = ActionConfig {
+            id: "clean_phone".into(),
+            action_type: "regex_replace".into(),
+            config: serde_json::json!({
+                "column": "phone",
+                "pattern": "\\+44\\s?",
+                "replacement": "0"
+            }),
+        };
+        let action = ActionFactory::create(&config).expect("should create regex_replace");
+        assert_eq!(action.id(), "regex_replace");
     }
 }
