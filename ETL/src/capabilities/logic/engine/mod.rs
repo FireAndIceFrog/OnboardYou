@@ -13,6 +13,7 @@ mod regex_replace;
 mod iso_country_sanitizer;
 mod cellphone_sanitizer;
 mod handle_diacritics;
+mod filter_by_value;
 
 pub use identity_deduplicator::*;
 pub use masking::*;
@@ -23,3 +24,4 @@ pub use regex_replace::*;
 pub use iso_country_sanitizer::*;
 pub use cellphone_sanitizer::*;
 pub use handle_diacritics::*;
+pub use filter_by_value::*;
