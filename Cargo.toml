@@ -3,6 +3,7 @@ members = [
     "ETL",
     "lambdas/api",
     "lambdas/etl-trigger",
+    "lambdas/authorizer",
 ]
 resolver = "2"
 

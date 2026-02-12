@@ -1,10 +1,10 @@
-.PHONY: build-lambdas build-config-api build-etl-trigger tf-init tf-plan tf-apply deploy clean
+.PHONY: build-lambdas build-config-api build-etl-trigger build-authorizer tf-init tf-plan tf-apply deploy clean
 
 ##──────────────────────────────────────────────────────────────
 ## Build — cross-compile Rust Lambdas with cargo-lambda
 ##──────────────────────────────────────────────────────────────
 
-build-lambdas: build-config-api build-etl-trigger
+build-lambdas: build-config-api build-etl-trigger build-authorizer
 
 build-config-api:
 	@echo "▸ Building config-api Lambda..."
@@ -13,6 +13,10 @@ build-config-api:
 build-etl-trigger:
 	@echo "▸ Building etl-trigger Lambda..."
 	cargo lambda build --release -p etl-trigger --output-format zip
+
+build-authorizer:
+	@echo "▸ Building authorizer Lambda..."
+	cargo lambda build --release -p authorizer --output-format zip
 
 ##──────────────────────────────────────────────────────────────
 ## OpenTofu — infra provisioning

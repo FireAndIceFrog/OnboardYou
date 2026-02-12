@@ -37,9 +37,21 @@ variable "base_path_part" {
 }
 
 variable "authorization" {
-  description = "Default authorization type for all methods"
+  description = "Default authorization type for all methods (NONE or CUSTOM)"
   type        = string
   default     = "NONE"
+}
+
+variable "authorizer_uri" {
+  description = "Invoke ARN of the Lambda Authorizer (required when authorization = CUSTOM)"
+  type        = string
+  default     = null
+}
+
+variable "authorizer_function_name" {
+  description = "Function name of the Lambda Authorizer (for invoke permission)"
+  type        = string
+  default     = null
 }
 
 variable "xray_enabled" {

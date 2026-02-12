@@ -66,6 +66,29 @@ resource "aws_api_gateway_resource" "routes" {
 }
 
 # ══════════════════════════════════════════════════════════════
+# Lambda Authorizer (only created when authorization = CUSTOM)
+# ══════════════════════════════════════════════════════════════
+
+resource "aws_api_gateway_authorizer" "token" {
+  count                            = var.authorization == "CUSTOM" ? 1 : 0
+  rest_api_id                      = aws_api_gateway_rest_api.this.id
+  name                             = "onboardyou-authorizer"
+  type                             = "TOKEN"
+  authorizer_uri                   = var.authorizer_uri
+  authorizer_result_ttl_in_seconds = 300
+  identity_source                  = "method.request.header.Authorization"
+}
+
+resource "aws_lambda_permission" "authorizer" {
+  count         = var.authorization == "CUSTOM" ? 1 : 0
+  statement_id  = "AllowAPIGatewayAuthorizer"
+  action        = "lambda:InvokeFunction"
+  function_name = var.authorizer_function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.this.execution_arn}/*/*"
+}
+
+# ══════════════════════════════════════════════════════════════
 # Methods + Lambda-proxy integrations  (one per route × method)
 # ══════════════════════════════════════════════════════════════
 
@@ -75,6 +98,7 @@ resource "aws_api_gateway_method" "methods" {
   resource_id   = aws_api_gateway_resource.routes[each.value.route_key].id
   http_method   = each.value.method
   authorization = var.authorization
+  authorizer_id = var.authorization == "CUSTOM" ? aws_api_gateway_authorizer.token[0].id : null
 }
 
 resource "aws_api_gateway_integration" "methods" {

@@ -80,6 +80,26 @@ module "etl_trigger" {
   ]
 }
 
+module "authorizer" {
+  source         = "./modules/lambda"
+  project_prefix = "onboardyou"
+  function_name  = "authorizer"
+  description    = "Lambda Authorizer — validates Cognito JWTs and injects organizationId into request context"
+  environment    = var.environment
+  source_binary  = "${path.module}/../target/lambda/authorizer/bootstrap"
+  memory_size    = 128
+  timeout        = 10
+
+  log_retention_days = var.log_retention_days
+
+  environment_variables = {
+    AUTH_DEV_MODE        = var.environment == "dev" ? "true" : "false"
+    COGNITO_USER_POOL_ID = var.cognito_user_pool_id
+    COGNITO_CLIENT_ID    = var.cognito_client_id
+    RUST_LOG             = "info"
+  }
+}
+
 module "config_api" {
   source         = "./modules/lambda"
   project_prefix = "onboardyou"
@@ -131,6 +151,10 @@ module "api" {
   description = "OnboardYou Config API — manage ETL pipeline configurations"
   environment = var.environment
   stage_name  = "v1"
+
+  authorization            = "CUSTOM"
+  authorizer_uri           = module.authorizer.invoke_arn
+  authorizer_function_name = module.authorizer.function_name
 
   routes = {
     config = {
