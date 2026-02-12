@@ -30,11 +30,17 @@ impl PipelineRunner {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::capabilities::logic::traits::ColumnCalculator;
     use crate::domain::engine::manifest::ActionConfig;
     use polars::prelude::*;
 
     /// A trivial pass-through action for testing the runner.
     struct NoopAction;
+    impl ColumnCalculator for NoopAction {
+        fn calculate_columns(&self, ctx: RosterContext) -> Result<RosterContext> {
+            Ok(ctx)
+        }
+    }
     impl OnboardingAction for NoopAction {
         fn id(&self) -> &str {
             "noop"

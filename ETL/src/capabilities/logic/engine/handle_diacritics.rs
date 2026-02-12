@@ -15,6 +15,7 @@
 //! in-place. When set, new columns with the suffix are created alongside
 //! the originals.
 
+use crate::capabilities::logic::traits::ColumnCalculator;
 use crate::domain::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 
@@ -142,6 +143,24 @@ impl HandleDiacritics {
         Self {
             config: HandleDiacriticsConfig::from_json(value),
         }
+    }
+}
+
+impl ColumnCalculator for HandleDiacritics {
+    fn calculate_columns(&self, mut context: RosterContext) -> Result<RosterContext> {
+        // When output_suffix is set, new columns are added alongside originals.
+        // When None, columns are replaced in-place so the schema is unchanged.
+        if let Some(suffix) = &self.config.output_suffix {
+            let lf = std::mem::replace(&mut context.data, LazyFrame::default());
+            let mut lf = lf;
+            for col_name in &self.config.columns {
+                let out_name = format!("{col_name}{suffix}");
+                lf = lf.with_column(col(&col_name).alias(&out_name));
+                context.set_field_source(out_name, "handle_diacritics".into());
+            }
+            context.data = lf;
+        }
+        Ok(context)
     }
 }
 

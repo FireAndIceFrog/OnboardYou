@@ -7,6 +7,7 @@
 //! }
 //! ```
 
+use crate::capabilities::logic::traits::ColumnCalculator;
 use crate::domain::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 use serde::Deserialize;
@@ -79,6 +80,14 @@ impl DropColumn {
         let config: DropConfig = serde_json::from_value(value.clone())?;
         config.validate()?;
         Ok(Self::new(config))
+    }
+}
+
+impl ColumnCalculator for DropColumn {
+    fn calculate_columns(&self, mut context: RosterContext) -> Result<RosterContext> {
+        let lf = std::mem::replace(&mut context.data, LazyFrame::default());
+        context.data = lf.drop(self.config.columns.clone());
+        Ok(context)
     }
 }
 

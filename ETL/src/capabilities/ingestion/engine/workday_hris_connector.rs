@@ -20,6 +20,7 @@
 //! Polars `LazyFrame` suitable for the onboarding pipeline.
 
 use crate::capabilities::ingestion::traits::HrisConnector;
+use crate::capabilities::logic::traits::ColumnCalculator;
 use crate::domain::{Error, OnboardingAction, Result, RosterContext};
 use crate::orchestration::clients::soap_client::{ReqwestSoapClient, SoapClient};
 use polars::prelude::*;
@@ -598,11 +599,52 @@ impl WorkdayHrisConnector {
     }
 }
 
+/// The fixed set of columns produced by the Workday `Get_Workers` connector.
+const WORKDAY_COLUMNS: &[&str] = &[
+    "worker_id",
+    "employee_id",
+    "first_name",
+    "last_name",
+    "email",
+    "phone",
+    "job_title",
+    "business_title",
+    "department",
+    "location",
+    "hire_date",
+    "worker_type",
+    "worker_status",
+    "manager_id",
+    "manager_name",
+    "position_id",
+    "compensation_grade",
+    "pay_rate_type",
+];
+
 impl HrisConnector for WorkdayHrisConnector {
     fn fetch_data(&self) -> Result<LazyFrame> {
         let records = self.fetch_all_workers()?;
         let df = workers_to_dataframe(&records)?;
         Ok(df.lazy())
+    }
+}
+
+impl ColumnCalculator for WorkdayHrisConnector {
+    fn calculate_columns(&self, _context: RosterContext) -> Result<RosterContext> {
+        // Build an empty DataFrame with the known Workday columns (all Utf8)
+        let columns: Vec<Column> = WORKDAY_COLUMNS
+            .iter()
+            .map(|name| Column::new((*name).into(), Vec::<&str>::new()))
+            .collect();
+        let empty_df = DataFrame::new(columns).map_err(|e| {
+            Error::IngestionError(format!("Failed to build empty Workday schema: {}", e))
+        })?;
+
+        let mut ctx = RosterContext::new(empty_df.lazy());
+        for name in WORKDAY_COLUMNS {
+            ctx.set_field_source(name.to_string(), "WORKDAY_HRIS".into());
+        }
+        Ok(ctx)
     }
 }
 

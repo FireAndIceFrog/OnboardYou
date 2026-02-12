@@ -19,6 +19,7 @@
 //! }
 //! ```
 
+use crate::capabilities::logic::traits::ColumnCalculator;
 use crate::domain::{OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 
@@ -115,6 +116,30 @@ impl SCDType2 {
 impl Default for SCDType2 {
     fn default() -> Self {
         Self::new(ScdType2Config::default())
+    }
+}
+
+impl ColumnCalculator for SCDType2 {
+    fn calculate_columns(&self, mut context: RosterContext) -> Result<RosterContext> {
+        let lf = std::mem::replace(&mut context.data, LazyFrame::default());
+
+        // Rename date_column → effective_from
+        let lf = lf.rename(
+            [self.config.date_column.as_str()],
+            ["effective_from"],
+            true,
+        );
+
+        // Add effective_to and is_current columns
+        let lf = lf
+            .with_column(lit(NULL).cast(DataType::String).alias("effective_to"))
+            .with_column(lit(NULL).cast(DataType::Boolean).alias("is_current"));
+
+        context.data = lf;
+        for col_name in ["effective_from", "effective_to", "is_current"] {
+            context.set_field_source(col_name.to_string(), "LOGIC_ACTION".into());
+        }
+        Ok(context)
     }
 }
 

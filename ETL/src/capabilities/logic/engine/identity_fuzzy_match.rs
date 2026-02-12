@@ -19,6 +19,7 @@
 //! { "threshold": 0.85 }
 //! ```
 
+use crate::capabilities::logic::traits::ColumnCalculator;
 use crate::domain::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 
@@ -170,6 +171,20 @@ impl IdentityFuzzyMatch {
 impl Default for IdentityFuzzyMatch {
     fn default() -> Self {
         Self::new(IdentityFuzzyMatchConfig::default())
+    }
+}
+
+impl ColumnCalculator for IdentityFuzzyMatch {
+    fn calculate_columns(&self, mut context: RosterContext) -> Result<RosterContext> {
+        let lf = std::mem::replace(&mut context.data, LazyFrame::default());
+        // Fuzzy match adds match_group_id (string) and match_confidence (float)
+        let lf = lf
+            .with_column(lit(NULL).cast(DataType::String).alias("match_group_id"))
+            .with_column(lit(NULL).cast(DataType::Float64).alias("match_confidence"));
+        context.data = lf;
+        context.set_field_source("match_group_id".into(), "LOGIC_ACTION".into());
+        context.set_field_source("match_confidence".into(), "LOGIC_ACTION".into());
+        Ok(context)
     }
 }
 

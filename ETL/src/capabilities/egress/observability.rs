@@ -1,9 +1,16 @@
 //! Real-time request/response logging and Root Cause Analysis (RCA)
 
+use crate::capabilities::logic::traits::ColumnCalculator;
 use crate::domain::{OnboardingAction, Result, RosterContext};
 
 /// Observability and logging for the pipeline
 pub struct Observability;
+
+impl ColumnCalculator for Observability {
+    fn calculate_columns(&self, context: RosterContext) -> Result<RosterContext> {
+        Ok(context)
+    }
+}
 
 impl OnboardingAction for Observability {
     fn id(&self) -> &str {

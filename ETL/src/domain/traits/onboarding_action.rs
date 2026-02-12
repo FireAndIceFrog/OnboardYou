@@ -2,7 +2,8 @@
 //!
 //! Implementors (capabilities) transform a RosterContext through the pipeline
 
-use crate::domain::engine::{RosterContext};
+use crate::capabilities::logic::traits::ColumnCalculator;
+use crate::domain::engine::RosterContext;
 use crate::domain::engine::errors::Result;
 
 /// Core trait for all onboarding actions
@@ -10,7 +11,10 @@ use crate::domain::engine::errors::Result;
 /// Implementors (capabilities) transform a RosterContext through the pipeline.
 /// Each action receives the current context, transforms it, and returns the
 /// updated context to be passed to the next action in the pipeline.
-pub trait OnboardingAction: Send + Sync {
+///
+/// Every action must also implement [`ColumnCalculator`] so the pipeline can
+/// derive the output schema of each step without executing it.
+pub trait OnboardingAction: ColumnCalculator + Send + Sync {
     /// Unique identifier for this action
     fn id(&self) -> &str;
 

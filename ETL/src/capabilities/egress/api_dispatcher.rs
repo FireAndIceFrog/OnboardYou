@@ -1,9 +1,16 @@
 //! HTTP/JSON delivery to client-facing destination APIs
 
+use crate::capabilities::logic::traits::ColumnCalculator;
 use crate::domain::{OnboardingAction, Result, RosterContext};
 
 /// API dispatcher for sending data to destination systems
 pub struct ApiDispatcher;
+
+impl ColumnCalculator for ApiDispatcher {
+    fn calculate_columns(&self, context: RosterContext) -> Result<RosterContext> {
+        Ok(context)
+    }
+}
 
 impl OnboardingAction for ApiDispatcher {
     fn id(&self) -> &str {

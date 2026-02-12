@@ -22,7 +22,7 @@
 //! For backward compatibility, `{ "mask_ssn": true, "mask_salary": true }` is
 //! still accepted and converted to the column-based format.
 
-use crate::capabilities::logic::traits::Masker;
+use crate::capabilities::logic::traits::{ColumnCalculator, Masker};
 use crate::domain::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 
@@ -201,6 +201,13 @@ impl PIIMasking {
 impl Default for PIIMasking {
     fn default() -> Self {
         Self::new(PIIMaskingConfig::default())
+    }
+}
+
+impl ColumnCalculator for PIIMasking {
+    fn calculate_columns(&self, context: RosterContext) -> Result<RosterContext> {
+        // Masking replaces values in existing columns — schema is unchanged.
+        Ok(context)
     }
 }
 

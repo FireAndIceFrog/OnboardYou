@@ -6,6 +6,7 @@
 //! actions can trace data provenance.
 
 use crate::capabilities::ingestion::traits::HrisConnector;
+use crate::capabilities::logic::traits::ColumnCalculator;
 use crate::domain::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 use std::path::PathBuf;
@@ -92,6 +93,24 @@ impl HrisConnector for CsvHrisConnector {
                 ))
             })?;
         Ok(lf)
+    }
+}
+
+impl ColumnCalculator for CsvHrisConnector {
+    fn calculate_columns(&self, _context: RosterContext) -> Result<RosterContext> {
+        let mut lf = self.fetch_data()?;
+        let schema = lf.collect_schema().map_err(|e| {
+            Error::IngestionError(format!("Failed to collect CSV schema: {}", e))
+        })?;
+
+        // Build an empty LazyFrame with the CSV schema
+        let empty_df = DataFrame::empty_with_schema(&schema);
+        let mut ctx = RosterContext::new(empty_df.lazy());
+
+        for field_name in schema.iter_names() {
+            ctx.set_field_source(field_name.to_string(), "HRIS_CONNECTOR".into());
+        }
+        Ok(ctx)
     }
 }
 

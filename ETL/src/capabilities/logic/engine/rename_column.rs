@@ -10,6 +10,7 @@
 //! }
 //! ```
 
+use crate::capabilities::logic::traits::ColumnCalculator;
 use crate::domain::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 use serde::Deserialize;
@@ -87,6 +88,22 @@ impl RenameColumn {
         let config: RenameConfig = serde_json::from_value(value.clone())?;
         config.validate()?;
         Ok(Self::new(config))
+    }
+}
+
+impl ColumnCalculator for RenameColumn {
+    fn calculate_columns(&self, mut context: RosterContext) -> Result<RosterContext> {
+        let lf = std::mem::replace(&mut context.data, LazyFrame::default());
+
+        let old: Vec<&str> = self.config.mapping.keys().map(|k| k.as_str()).collect();
+        let new: Vec<&str> = self.config.mapping.values().map(|v| v.as_str()).collect();
+
+        context.data = lf.rename(old, new, true);
+
+        for to in self.config.mapping.values() {
+            context.set_field_source(to.clone(), "LOGIC_ACTION".into());
+        }
+        Ok(context)
     }
 }
 

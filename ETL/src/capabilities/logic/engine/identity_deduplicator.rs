@@ -18,7 +18,7 @@
 //! }
 //! ```
 
-use crate::capabilities::logic::traits::Deduplicator;
+use crate::capabilities::logic::traits::{ColumnCalculator, Deduplicator};
 use crate::domain::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 
@@ -123,6 +123,20 @@ impl IdentityDeduplicator {
 impl Default for IdentityDeduplicator {
     fn default() -> Self {
         Self::new(DedupConfig::default())
+    }
+}
+
+impl ColumnCalculator for IdentityDeduplicator {
+    fn calculate_columns(&self, mut context: RosterContext) -> Result<RosterContext> {
+        let lf = std::mem::replace(&mut context.data, LazyFrame::default());
+        // Dedup adds canonical_id (string) and is_duplicate (bool)
+        let lf = lf
+            .with_column(lit(NULL).cast(DataType::String).alias("canonical_id"))
+            .with_column(lit(NULL).cast(DataType::Boolean).alias("is_duplicate"));
+        context.data = lf;
+        context.set_field_source("canonical_id".into(), "LOGIC_ACTION".into());
+        context.set_field_source("is_duplicate".into(), "LOGIC_ACTION".into());
+        Ok(context)
     }
 }
 
