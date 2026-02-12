@@ -5,8 +5,9 @@
 
 use crate::capabilities::ingestion::engine::{CsvHrisConnector, WorkdayHrisConnector};
 use crate::capabilities::logic::engine::{
-    CellphoneSanitizer, IdentityDeduplicator, IdentityFuzzyMatch, IsoCountrySanitizer,
-    PIIMasking, RegexReplace, SCDType2,
+    CellphoneSanitizer, DropColumn, HandleDiacritics, IdentityDeduplicator,
+    IdentityFuzzyMatch, IsoCountrySanitizer, PIIMasking, RegexReplace, RenameColumn,
+    SCDType2,
 };
 use crate::domain::{Error, OnboardingAction, Result};
 use crate::domain::engine::manifest::ActionConfig;
@@ -56,6 +57,18 @@ impl ActionFactory {
             }
             "cellphone_sanitizer" => {
                 let action = CellphoneSanitizer::from_action_config(&action_config.config)?;
+                Ok(Arc::new(action))
+            }
+            "handle_diacritics" => {
+                let action = HandleDiacritics::from_action_config(&action_config.config);
+                Ok(Arc::new(action))
+            }
+            "rename_column" => {
+                let action = RenameColumn::from_action_config(&action_config.config)?;
+                Ok(Arc::new(action))
+            }
+            "drop_column" => {
+                let action = DropColumn::from_action_config(&action_config.config)?;
                 Ok(Arc::new(action))
             }
             other => Err(Error::ConfigurationError(format!(

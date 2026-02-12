@@ -42,13 +42,10 @@ fn transliterate_char(c: char) -> char {
         'Ç' => 'C',
         'ý' | 'ÿ' => 'y',
         'Ý' => 'Y',
-        'ß' => 's',
         'ð' => 'd',
         'Ð' => 'D',
         'ø' => 'o',
         'Ø' => 'O',
-        'æ' => 'a',
-        'Æ' => 'A',
         'þ' => 't',
         'Þ' => 'T',
         'ł' => 'l',
@@ -72,8 +69,21 @@ fn transliterate_char(c: char) -> char {
 }
 
 /// Transliterate a full string to ASCII-safe characters.
+///
+/// Most characters are 1-to-1 via `transliterate_char`, but a few
+/// ligatures expand to multiple ASCII characters (e.g. `ß` → `ss`,
+/// `æ` → `ae`, `Æ` → `AE`).
 fn transliterate(s: &str) -> String {
-    s.chars().map(transliterate_char).collect()
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            'ß' => out.push_str("ss"),
+            'æ' => out.push_str("ae"),
+            'Æ' => out.push_str("AE"),
+            other => out.push(transliterate_char(other)),
+        }
+    }
+    out
 }
 
 // ---------------------------------------------------------------------------
@@ -155,7 +165,7 @@ impl ColumnCalculator for HandleDiacritics {
             let mut lf = lf;
             for col_name in &self.config.columns {
                 let out_name = format!("{col_name}{suffix}");
-                lf = lf.with_column(col(&col_name).alias(&out_name));
+                lf = lf.with_column(col(col_name.as_str()).alias(out_name.as_str()));
                 context.set_field_source(out_name, "handle_diacritics".into());
             }
             context.data = lf;
@@ -183,21 +193,21 @@ impl OnboardingAction for HandleDiacritics {
             .data
             .clone()
             .collect()
-            .map_err(|e| Error::TransformationError(format!("Failed to collect LazyFrame: {e}")))?;
+            .map_err(|e| Error::LogicError(format!("Failed to collect LazyFrame: {e}")))?;
 
         let mut result_df = df.clone();
 
         for col_name in &self.config.columns {
             let col = df.column(col_name).map_err(|e| {
-                Error::TransformationError(format!("Missing column '{col_name}': {e}"))
+                Error::LogicError(format!("Missing column '{col_name}': {e}"))
             })?;
             let ca = col.str().map_err(|e| {
-                Error::TransformationError(format!("Column '{col_name}' is not string: {e}"))
+                Error::LogicError(format!("Column '{col_name}' is not string: {e}"))
             })?;
 
             let transliterated: StringChunked = ca
                 .into_iter()
-                .map(|opt| opt.map(transliterate))
+                .map(|opt: Option<&str>| opt.map(transliterate))
                 .collect();
 
             let out_name = match &self.config.output_suffix {
@@ -209,11 +219,11 @@ impl OnboardingAction for HandleDiacritics {
 
             if self.config.output_suffix.is_some() {
                 result_df = result_df.hstack(&[new_col]).map_err(|e| {
-                    Error::TransformationError(format!("Failed to add column '{out_name}': {e}"))
+                    Error::LogicError(format!("Failed to add column '{out_name}': {e}"))
                 })?;
             } else {
-                result_df.replace(col_name.as_str(), new_col.into_series()).map_err(|e| {
-                    Error::TransformationError(format!(
+                result_df.replace(col_name.as_str(), new_col).map_err(|e| {
+                    Error::LogicError(format!(
                         "Failed to replace column '{col_name}': {e}"
                     ))
                 })?;

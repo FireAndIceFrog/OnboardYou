@@ -29,6 +29,9 @@ tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = "0.3"
 
+[features]
+benchmark = []
+
 [dev-dependencies]
 # Testing utilities
 criterion = "0.5"
