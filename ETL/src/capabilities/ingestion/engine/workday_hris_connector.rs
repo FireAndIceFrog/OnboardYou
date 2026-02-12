@@ -385,7 +385,7 @@ pub fn workers_to_dataframe(records: &[WorkdayWorkerRecord]) -> Result<DataFrame
     let comp_grades: Vec<&str> = records.iter().map(|r| r.compensation_grade.as_str()).collect();
     let pay_rates: Vec<&str> = records.iter().map(|r| r.pay_rate_type.as_str()).collect();
 
-    let df = DataFrame::new(vec![
+    let df = DataFrame::new_infer_height(vec![
         Column::new("worker_id".into(), &worker_ids),
         Column::new("employee_id".into(), &employee_ids),
         Column::new("first_name".into(), &first_names),
@@ -636,7 +636,7 @@ impl ColumnCalculator for WorkdayHrisConnector {
             .iter()
             .map(|name| Column::new((*name).into(), Vec::<&str>::new()))
             .collect();
-        let empty_df = DataFrame::new(columns).map_err(|e| {
+        let empty_df = DataFrame::new_infer_height(columns).map_err(|e| {
             Error::IngestionError(format!("Failed to build empty Workday schema: {}", e))
         })?;
 

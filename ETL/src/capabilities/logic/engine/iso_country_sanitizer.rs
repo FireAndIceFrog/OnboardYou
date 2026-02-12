@@ -456,9 +456,9 @@ impl OnboardingAction for IsoCountrySanitizer {
                             );
                         }
 
-                        Ok(Some(result.into_column()))
+                        Ok(result.into_column())
                     },
-                    GetOutput::from_type(DataType::String),
+                    |_: &Schema, _: &Field| Ok(Field::new("".into(), DataType::String)),
                 )
                 .alias(&self.config.output_column),
         );

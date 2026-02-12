@@ -81,7 +81,14 @@ impl CsvHrisConnector {
 
 impl HrisConnector for CsvHrisConnector {
     fn fetch_data(&self) -> Result<LazyFrame> {
-        let lf = LazyCsvReader::new(&self.config.csv_path)
+        let path = PlRefPath::try_from_path(&self.config.csv_path).map_err(|e| {
+            Error::IngestionError(format!(
+                "Invalid CSV path '{}': {}",
+                self.config.csv_path.display(),
+                e
+            ))
+        })?;
+        let lf = LazyCsvReader::new(path)
             .with_has_header(true)
             .with_try_parse_dates(true)
             .finish()

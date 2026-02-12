@@ -357,7 +357,7 @@ impl OnboardingAction for RegexReplace {
             .with_name(self.config.column.clone().into());
 
         let mut result_df = df.clone();
-        let _ = result_df.replace(&self.config.column, replaced).map_err(|e| {
+        let _ = result_df.replace(&self.config.column, replaced.into_column()).map_err(|e| {
             Error::LogicError(format!(
                 "regex_replace: failed to replace column '{}': {e}",
                 self.config.column
@@ -671,7 +671,7 @@ mod tests {
     #[test]
     fn test_null_values_preserved() {
         let s = Series::new("val".into(), &[Some("abc"), None, Some("def")]);
-        let df = DataFrame::new(vec![s.into()]).unwrap();
+        let df = DataFrame::new_infer_height(vec![s.into()]).unwrap();
         let json = serde_json::json!({
             "column": "val",
             "pattern": "b",

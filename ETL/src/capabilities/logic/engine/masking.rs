@@ -265,7 +265,7 @@ impl OnboardingAction for PIIMasking {
                         })
                         .collect();
                     let masked = masked.with_name(col_mask.name.as_str().into());
-                    let _ = df.replace(col_mask.name.as_str(), masked);
+                    let _ = df.replace(col_mask.name.as_str(), masked.into_column());
                 }
                 MaskStrategy::Zero => {
                     let col_ref = df.column(&col_mask.name).unwrap();
@@ -283,7 +283,7 @@ impl OnboardingAction for PIIMasking {
                         }
                         _ => Series::new(col_mask.name.as_str().into(), vec![0i64; n]),
                     };
-                    let _ = df.replace(col_mask.name.as_str(), zeros);
+                    let _ = df.replace(col_mask.name.as_str(), zeros.into_column());
                 }
             }
 

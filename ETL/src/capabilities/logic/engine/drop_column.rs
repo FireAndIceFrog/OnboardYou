@@ -86,7 +86,11 @@ impl DropColumn {
 impl ColumnCalculator for DropColumn {
     fn calculate_columns(&self, mut context: RosterContext) -> Result<RosterContext> {
         let lf = std::mem::replace(&mut context.data, LazyFrame::default());
-        context.data = lf.drop(self.config.columns.clone());
+        let selector = Selector::ByName {
+            names: self.config.columns.iter().map(|s| PlSmallStr::from(s.as_str())).collect::<Vec<_>>().into(),
+            strict: true,
+        };
+        context.data = lf.drop(selector);
         Ok(context)
     }
 }
@@ -100,7 +104,11 @@ impl OnboardingAction for DropColumn {
         tracing::info!(columns = ?self.config.columns, "DropColumn: dropping columns");
 
         let lf = std::mem::replace(&mut context.data, LazyFrame::default());
-        let lf = lf.drop(self.config.columns.clone());
+        let selector = Selector::ByName {
+            names: self.config.columns.iter().map(|s| PlSmallStr::from(s.as_str())).collect::<Vec<_>>().into(),
+            strict: true,
+        };
+        let lf = lf.drop(selector);
 
         // Optionally, mark columns as dropped in metadata if needed
         for col in &self.config.columns {
