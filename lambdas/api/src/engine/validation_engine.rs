@@ -31,10 +31,8 @@ pub struct ValidationResult {
 /// Validate a pipeline manifest by propagating columns through every step.
 ///
 /// Returns the column set at each step, or an `ApiError` on the first failure.
-pub fn validate_pipeline(pipeline_json: &serde_json::Value) -> Result<ValidationResult, ApiError> {
-    let manifest: Manifest = serde_json::from_value(pipeline_json.clone()).map_err(|e| {
-        ApiError::Validation(format!("Invalid pipeline manifest: {e}"))
-    })?;
+pub fn validate_pipeline(pipeline_json: &Manifest) -> Result<ValidationResult, ApiError> {
+    let manifest: Manifest = pipeline_json.clone();
 
     if manifest.actions.is_empty() {
         return Ok(ValidationResult {
