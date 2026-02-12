@@ -9,6 +9,8 @@ name = "bootstrap"
 path = "src/main.rs"
 
 [dependencies]
+onboard_you = { path = "../../ETL" }
+polars = { version = "0.48", features = ["lazy"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
