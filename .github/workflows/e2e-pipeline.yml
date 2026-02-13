@@ -108,7 +108,7 @@ jobs:
                 echo ""
 
                 printf "| "
-                for col in "${cols[@]}"; do printf "--- | "; done
+                for col in "${cols[@]}"; do printf '%s' "--- | "; done
                 echo ""
 
                 # Data rows (lines after header until blank/separator)
