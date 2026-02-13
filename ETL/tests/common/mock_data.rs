@@ -166,10 +166,11 @@ pub fn sample_csv_manifest(csv_path: &str) -> String {
 ///  4. cellphone_sanitizer  — mobile_phone + country_code → mobile_phone_intl
 ///  5. regex_replace         — strip dashes from SSN
 ///  6. identity_deduplicator — dedup on email + employee_id
-///  7. scd_type_2            — effective dating on start_date
-///  8. pii_masking           — mask ssn, salary
-///  9. rename_column         — rename national_id → nid
-/// 10. drop_column           — drop the is_duplicate helper column
+///  7. filter_by_value       — keep rows where employee_id matches ^E\d+
+///  8. scd_type_2            — effective dating on start_date
+///  9. pii_masking           — mask ssn, salary
+/// 10. rename_column         — rename national_id → nid
+/// 11. drop_column           — drop the is_duplicate helper column
 pub fn full_pipeline_manifest(csv_path: &str) -> String {
     format!(
         r#"{{
@@ -220,6 +221,14 @@ pub fn full_pipeline_manifest(csv_path: &str) -> String {
       "config": {{
         "columns": ["email"],
         "employee_id_column": "employee_id"
+      }}
+    }},
+    {{
+      "id": "filter_active",
+      "action_type": "filter_by_value",
+      "config": {{
+        "column": "employee_id",
+        "pattern": "^E\\d+"
       }}
     }},
     {{
