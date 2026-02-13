@@ -43,9 +43,10 @@ where
             let organization_id = match ctx {
                 RequestContext::ApiGatewayV1(gw) => gw
                     .authorizer
+                    .fields
                     .get("organizationId")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string()),
+                    .and_then(|v: &serde_json::Value| v.as_str())
+                    .map(|s: &str| s.to_string()),
                 _ => None,
             };
 

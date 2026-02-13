@@ -1,5 +1,5 @@
 ##──────────────────────────────────────────────────────────────
-## API Gateway module — variables
+## API Gateway module — variables  (proxy pattern)
 ##──────────────────────────────────────────────────────────────
 
 variable "api_name" {
@@ -31,9 +31,25 @@ variable "endpoint_type" {
 }
 
 variable "base_path_part" {
-  description = "First path segment shared by all routes (e.g. {organizationId})"
+  description = "Root resource path segment (e.g. 'config')"
   type        = string
-  default     = "{organizationId}"
+  default     = "config"
+}
+
+variable "base_methods" {
+  description = "HTTP methods on the base resource itself (e.g. ['GET'] for list)"
+  type        = list(string)
+  default     = []
+}
+
+variable "lambda_invoke_arn" {
+  description = "Invoke ARN of the Lambda that handles all requests"
+  type        = string
+}
+
+variable "lambda_function_name" {
+  description = "Function name of the Lambda (for invoke permission)"
+  type        = string
 }
 
 variable "authorization" {
@@ -58,30 +74,6 @@ variable "xray_enabled" {
   description = "Enable X-Ray tracing on the stage"
   type        = bool
   default     = true
-}
-
-# ── Route definitions ────────────────────────────────────────
-# Each key becomes a child path under /{base_path_part}/{key}
-#
-# Example:
-#   routes = {
-#     config   = { methods = ["GET","POST","PUT"], lambda_invoke_arn = "…", lambda_function_name = "…" }
-#     validate = { methods = ["POST"],             lambda_invoke_arn = "…", lambda_function_name = "…" }
-#   }
-#
-# Produces:
-#   /{organizationId}/config   — GET, POST, PUT, OPTIONS (CORS)
-#   /{organizationId}/validate — POST, OPTIONS (CORS)
-# ─────────────────────────────────────────────────────────────
-
-variable "routes" {
-  description = "Map of route_key → route definition. Key = child path part."
-  type = map(object({
-    methods              = list(string)
-    lambda_invoke_arn    = string
-    lambda_function_name = string
-    enable_cors          = optional(bool, true)
-  }))
 }
 
 # ── CORS defaults ────────────────────────────────────────────

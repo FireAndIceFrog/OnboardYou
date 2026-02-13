@@ -8,8 +8,8 @@ output "api_url" {
 }
 
 output "api_endpoint_example" {
-  description = "Example: POST a pipeline config"
-  value       = "curl -X POST ${module.api.invoke_url}/{organizationId}/config -d '{...}'"
+  description = "Example: list all pipeline configs"
+  value       = "curl -H 'Authorization: Bearer <jwt>' ${module.api.invoke_url}/config"
 }
 
 output "config_table_name" {

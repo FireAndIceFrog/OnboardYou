@@ -113,7 +113,7 @@ module "config_api" {
   source         = "./modules/lambda"
   project_prefix = "onboardyou"
   function_name  = "config-api"
-  description    = "CRUD /{organizationId}/config + validate → DynamoDB + EventBridge Scheduler"
+  description    = "Config API — GET /config, CRUD /config/{id}, POST /config/{id}/validate"
   environment    = var.environment
   source_binary  = "${path.module}/../target/lambda/config-api/bootstrap"
   memory_size    = 256
@@ -161,26 +161,16 @@ module "api" {
   environment = var.environment
   stage_name  = "v1"
 
+  # ── Routing ──────────────────────────────────────────────────
+  # /config       → GET (list)
+  # /config/{…}   → Axum router in the Lambda handles all sub-paths
+  base_path_part   = "config"
+  base_methods     = ["GET"]
+  lambda_invoke_arn    = module.config_api.invoke_arn
+  lambda_function_name = module.config_api.function_name
+
+  # ── Auth ─────────────────────────────────────────────────────
   authorization            = "CUSTOM"
   authorizer_uri           = module.authorizer.invoke_arn
   authorizer_function_name = module.authorizer.function_name
-
-  routes = {
-    config = {
-      methods              = ["GET", "POST", "PUT"]
-      lambda_invoke_arn    = module.config_api.invoke_arn
-      lambda_function_name = module.config_api.function_name
-    }
-    validate = {
-      methods              = ["POST"]
-      lambda_invoke_arn    = module.config_api.invoke_arn
-      lambda_function_name = module.config_api.function_name
-    }
-    # ── Add new routes here ──────────────────────────────────
-    # status = {
-    #   methods              = ["GET"]
-    #   lambda_invoke_arn    = module.some_other_lambda.invoke_arn
-    #   lambda_function_name = module.some_other_lambda.function_name
-    # }
-  }
 }

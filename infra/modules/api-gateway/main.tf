@@ -1,38 +1,16 @@
 ##──────────────────────────────────────────────────────────────
-## API Gateway module
+## API Gateway module  (proxy pattern)
 ##
-## Creates a REST API with dynamic route + method generation.
-## All routes live under /{base_path_part}/{route_key}.
-## CORS OPTIONS are auto-generated for each route.
+## Creates a REST API with:
+##   /{base_path_part}            — explicit methods (e.g. GET for list)
+##   /{base_path_part}/{proxy+}   — ANY catch-all (Lambda framework routes)
+##
+## The Lambda runs an Axum router, so API Gateway only handles
+## auth + CORS; all path matching is done inside the Lambda.
 ##──────────────────────────────────────────────────────────────
 
 locals {
-  # ── Flatten routes × methods into a map for for_each ──────
-  route_methods = merge([
-    for route_key, route in var.routes : {
-      for method in route.methods :
-      "${route_key}_${lower(method)}" => {
-        route_key            = route_key
-        method               = upper(method)
-        lambda_invoke_arn    = route.lambda_invoke_arn
-        lambda_function_name = route.lambda_function_name
-      }
-    }
-  ]...)
-
-  # ── Routes that need CORS ─────────────────────────────────
-  cors_routes = { for k, v in var.routes : k => v if v.enable_cors }
-
-  # ── Build per-route Allow-Methods header value ────────────
-  cors_methods = {
-    for k, v in local.cors_routes : k => join(",", concat(v.methods, ["OPTIONS"]))
-  }
-
-  # ── Unique lambdas (for permissions) ──────────────────────
-  _lambda_grouped = {
-    for k, v in var.routes : v.lambda_function_name => v.lambda_invoke_arn...
-  }
-  lambda_permissions = { for name, arns in local._lambda_grouped : name => arns[0] }
+  base_cors_methods = join(",", concat(var.base_methods, ["OPTIONS"]))
 }
 
 # ══════════════════════════════════════════════════════════════
@@ -48,7 +26,7 @@ resource "aws_api_gateway_rest_api" "this" {
   }
 }
 
-# ── Base path resource (e.g. {organizationId}) ──────────────
+# ── /config ──────────────────────────────────────────────────
 
 resource "aws_api_gateway_resource" "base" {
   rest_api_id = aws_api_gateway_rest_api.this.id
@@ -56,13 +34,12 @@ resource "aws_api_gateway_resource" "base" {
   path_part   = var.base_path_part
 }
 
-# ── Child route resources ────────────────────────────────────
+# ── /config/{proxy+} ────────────────────────────────────────
 
-resource "aws_api_gateway_resource" "routes" {
-  for_each    = var.routes
+resource "aws_api_gateway_resource" "proxy" {
   rest_api_id = aws_api_gateway_rest_api.this.id
   parent_id   = aws_api_gateway_resource.base.id
-  path_part   = each.key
+  path_part   = "{proxy+}"
 }
 
 # ══════════════════════════════════════════════════════════════
@@ -89,45 +66,72 @@ resource "aws_lambda_permission" "authorizer" {
 }
 
 # ══════════════════════════════════════════════════════════════
-# Methods + Lambda-proxy integrations  (one per route × method)
+# Base path methods  (e.g. GET /config → list)
 # ══════════════════════════════════════════════════════════════
 
-resource "aws_api_gateway_method" "methods" {
-  for_each      = local.route_methods
+resource "aws_api_gateway_method" "base" {
+  for_each      = toset(var.base_methods)
   rest_api_id   = aws_api_gateway_rest_api.this.id
-  resource_id   = aws_api_gateway_resource.routes[each.value.route_key].id
-  http_method   = each.value.method
+  resource_id   = aws_api_gateway_resource.base.id
+  http_method   = each.value
   authorization = var.authorization
   authorizer_id = var.authorization == "CUSTOM" ? aws_api_gateway_authorizer.token[0].id : null
 }
 
-resource "aws_api_gateway_integration" "methods" {
-  for_each                = local.route_methods
+resource "aws_api_gateway_integration" "base" {
+  for_each                = toset(var.base_methods)
   rest_api_id             = aws_api_gateway_rest_api.this.id
-  resource_id             = aws_api_gateway_resource.routes[each.value.route_key].id
-  http_method             = aws_api_gateway_method.methods[each.key].http_method
+  resource_id             = aws_api_gateway_resource.base.id
+  http_method             = aws_api_gateway_method.base[each.key].http_method
   integration_http_method = "POST" # Lambda proxy always uses POST
   type                    = "AWS_PROXY"
-  uri                     = each.value.lambda_invoke_arn
+  uri                     = var.lambda_invoke_arn
 }
 
 # ══════════════════════════════════════════════════════════════
-# CORS OPTIONS  (one per route with enable_cors = true)
+# Proxy catch-all  (ANY /config/{proxy+} → Lambda)
 # ══════════════════════════════════════════════════════════════
 
-resource "aws_api_gateway_method" "cors" {
-  for_each      = local.cors_routes
+resource "aws_api_gateway_method" "proxy" {
   rest_api_id   = aws_api_gateway_rest_api.this.id
-  resource_id   = aws_api_gateway_resource.routes[each.key].id
+  resource_id   = aws_api_gateway_resource.proxy.id
+  http_method   = "ANY"
+  authorization = var.authorization
+  authorizer_id = var.authorization == "CUSTOM" ? aws_api_gateway_authorizer.token[0].id : null
+
+  request_parameters = {
+    "method.request.path.proxy" = true
+  }
+}
+
+resource "aws_api_gateway_integration" "proxy" {
+  rest_api_id             = aws_api_gateway_rest_api.this.id
+  resource_id             = aws_api_gateway_resource.proxy.id
+  http_method             = aws_api_gateway_method.proxy.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = var.lambda_invoke_arn
+
+  request_parameters = {
+    "integration.request.path.proxy" = "method.request.path.proxy"
+  }
+}
+
+# ══════════════════════════════════════════════════════════════
+# CORS OPTIONS — base path  (/config)
+# ══════════════════════════════════════════════════════════════
+
+resource "aws_api_gateway_method" "cors_base" {
+  rest_api_id   = aws_api_gateway_rest_api.this.id
+  resource_id   = aws_api_gateway_resource.base.id
   http_method   = "OPTIONS"
   authorization = "NONE"
 }
 
-resource "aws_api_gateway_integration" "cors" {
-  for_each    = local.cors_routes
+resource "aws_api_gateway_integration" "cors_base" {
   rest_api_id = aws_api_gateway_rest_api.this.id
-  resource_id = aws_api_gateway_resource.routes[each.key].id
-  http_method = aws_api_gateway_method.cors[each.key].http_method
+  resource_id = aws_api_gateway_resource.base.id
+  http_method = aws_api_gateway_method.cors_base.http_method
   type        = "MOCK"
 
   request_templates = {
@@ -135,11 +139,10 @@ resource "aws_api_gateway_integration" "cors" {
   }
 }
 
-resource "aws_api_gateway_method_response" "cors_200" {
-  for_each    = local.cors_routes
+resource "aws_api_gateway_method_response" "cors_base_200" {
   rest_api_id = aws_api_gateway_rest_api.this.id
-  resource_id = aws_api_gateway_resource.routes[each.key].id
-  http_method = aws_api_gateway_method.cors[each.key].http_method
+  resource_id = aws_api_gateway_resource.base.id
+  http_method = aws_api_gateway_method.cors_base.http_method
   status_code = "200"
 
   response_parameters = {
@@ -149,18 +152,77 @@ resource "aws_api_gateway_method_response" "cors_200" {
   }
 }
 
-resource "aws_api_gateway_integration_response" "cors_200" {
-  for_each    = local.cors_routes
+resource "aws_api_gateway_integration_response" "cors_base_200" {
   rest_api_id = aws_api_gateway_rest_api.this.id
-  resource_id = aws_api_gateway_resource.routes[each.key].id
-  http_method = aws_api_gateway_method.cors[each.key].http_method
-  status_code = aws_api_gateway_method_response.cors_200[each.key].status_code
+  resource_id = aws_api_gateway_resource.base.id
+  http_method = aws_api_gateway_method.cors_base.http_method
+  status_code = aws_api_gateway_method_response.cors_base_200.status_code
 
   response_parameters = {
     "method.response.header.Access-Control-Allow-Headers" = "'${var.cors_allowed_headers}'"
-    "method.response.header.Access-Control-Allow-Methods" = "'${local.cors_methods[each.key]}'"
+    "method.response.header.Access-Control-Allow-Methods" = "'${local.base_cors_methods}'"
     "method.response.header.Access-Control-Allow-Origin"  = "'${var.cors_allowed_origin}'"
   }
+}
+
+# ══════════════════════════════════════════════════════════════
+# CORS OPTIONS — proxy path  (/config/{proxy+})
+# ══════════════════════════════════════════════════════════════
+
+resource "aws_api_gateway_method" "cors_proxy" {
+  rest_api_id   = aws_api_gateway_rest_api.this.id
+  resource_id   = aws_api_gateway_resource.proxy.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "cors_proxy" {
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  resource_id = aws_api_gateway_resource.proxy.id
+  http_method = aws_api_gateway_method.cors_proxy.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+}
+
+resource "aws_api_gateway_method_response" "cors_proxy_200" {
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  resource_id = aws_api_gateway_resource.proxy.id
+  http_method = aws_api_gateway_method.cors_proxy.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+resource "aws_api_gateway_integration_response" "cors_proxy_200" {
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  resource_id = aws_api_gateway_resource.proxy.id
+  http_method = aws_api_gateway_method.cors_proxy.http_method
+  status_code = aws_api_gateway_method_response.cors_proxy_200.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'${var.cors_allowed_headers}'"
+    "method.response.header.Access-Control-Allow-Methods" = "'GET,POST,PUT,DELETE,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'${var.cors_allowed_origin}'"
+  }
+}
+
+# ══════════════════════════════════════════════════════════════
+# Lambda invoke permission
+# ══════════════════════════════════════════════════════════════
+
+resource "aws_lambda_permission" "apigw" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = var.lambda_function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.this.execution_arn}/*/*"
 }
 
 # ══════════════════════════════════════════════════════════════
@@ -171,16 +233,20 @@ resource "aws_api_gateway_deployment" "this" {
   rest_api_id = aws_api_gateway_rest_api.this.id
 
   depends_on = [
-    aws_api_gateway_integration.methods,
-    aws_api_gateway_integration.cors,
+    aws_api_gateway_integration.base,
+    aws_api_gateway_integration.proxy,
+    aws_api_gateway_integration.cors_base,
+    aws_api_gateway_integration.cors_proxy,
   ]
 
   triggers = {
     redeployment = sha1(jsonencode([
       aws_api_gateway_resource.base.id,
-      { for k, v in aws_api_gateway_resource.routes : k => v.id },
-      { for k, v in aws_api_gateway_method.methods : k => v.id },
-      { for k, v in aws_api_gateway_integration.methods : k => v.id },
+      aws_api_gateway_resource.proxy.id,
+      aws_api_gateway_method.proxy.id,
+      { for k, v in aws_api_gateway_method.base : k => v.id },
+      { for k, v in aws_api_gateway_integration.base : k => v.id },
+      aws_api_gateway_integration.proxy.id,
     ]))
   }
 
@@ -195,17 +261,4 @@ resource "aws_api_gateway_stage" "this" {
   stage_name    = var.stage_name
 
   xray_tracing_enabled = var.xray_enabled
-}
-
-# ══════════════════════════════════════════════════════════════
-# Lambda invoke permissions  (de-duplicated by function name)
-# ══════════════════════════════════════════════════════════════
-
-resource "aws_lambda_permission" "apigw" {
-  for_each      = local.lambda_permissions
-  statement_id  = "AllowAPIGatewayInvoke-${each.key}"
-  action        = "lambda:InvokeFunction"
-  function_name = each.key
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.this.execution_arn}/*/*"
 }
