@@ -30,6 +30,32 @@ struct RunMetrics {
     output_rows: usize,
     output_cols: usize,
     success: bool,
+    rss_delta_bytes: usize,
+    peak_rss_bytes: usize,
+}
+
+/// Read current RSS (Resident Set Size) in bytes from `/proc/self/status`.
+/// Returns 0 on non-Linux platforms or if the read fails.
+fn get_rss_bytes() -> usize {
+    #[cfg(target_os = "linux")]
+    {
+        std::fs::read_to_string("/proc/self/status")
+            .ok()
+            .and_then(|s| {
+                s.lines()
+                    .find(|l| l.starts_with("VmRSS:"))?
+                    .split_whitespace()
+                    .nth(1)?
+                    .parse::<usize>()
+                    .ok()
+            })
+            .map(|kb| kb * 1024)
+            .unwrap_or(0)
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        0
+    }
 }
 
 /// Execute the full pipeline on a generated CSV of `n` rows, returning metrics.
@@ -50,6 +76,7 @@ fn run_full_pipeline(n: usize) -> RunMetrics {
         .collect();
 
     // 4. Run the pipeline, timing each action individually
+    let rss_before = get_rss_bytes();
     let mut context = RosterContext::new(LazyFrame::default());
     let mut action_timings: Vec<(String, f64)> = Vec::with_capacity(actions.len());
     let total_start = Instant::now();
@@ -72,6 +99,7 @@ fn run_full_pipeline(n: usize) -> RunMetrics {
                 eprintln!("  ✗ Action '{}' failed: {}", action_id, e);
                 success = false;
                 // Return partial metrics
+                let rss_after = get_rss_bytes();
                 return RunMetrics {
                     row_count: n,
                     total_ms: total_start.elapsed().as_secs_f64() * 1000.0,
@@ -79,6 +107,8 @@ fn run_full_pipeline(n: usize) -> RunMetrics {
                     output_rows: 0,
                     output_cols: 0,
                     success,
+                    rss_delta_bytes: rss_after.saturating_sub(rss_before),
+                    peak_rss_bytes: rss_after,
                 };
             }
         }
@@ -90,6 +120,7 @@ fn run_full_pipeline(n: usize) -> RunMetrics {
     let df = context.data.collect().expect("collect final dataframe");
     let output_rows = df.height();
     let output_cols = df.width();
+    let rss_after = get_rss_bytes();
 
     RunMetrics {
         row_count: n,
@@ -98,6 +129,8 @@ fn run_full_pipeline(n: usize) -> RunMetrics {
         output_rows,
         output_cols,
         success,
+        rss_delta_bytes: rss_after.saturating_sub(rss_before),
+        peak_rss_bytes: rss_after,
     }
 }
 
@@ -113,6 +146,11 @@ fn print_metrics(m: &RunMetrics) {
         "║  Total pipeline time: {:.2} ms ({:.2} s)",
         m.total_ms,
         m.total_ms / 1000.0,
+    );
+    println!(
+        "║  Memory: RSS Δ {:.2} MB — peak RSS {:.2} MB",
+        m.rss_delta_bytes as f64 / 1_048_576.0,
+        m.peak_rss_bytes as f64 / 1_048_576.0,
     );
     println!("╠══════════════════════════════════════════════════════════════════╣");
     println!("║  {:<45} {:>10}", "Action", "Time (ms)");
@@ -130,29 +168,173 @@ fn print_metrics(m: &RunMetrics) {
     println!("╚══════════════════════════════════════════════════════════════════╝");
 }
 
-/// Print a CSV-style summary for easy copy-paste into a spreadsheet / graphing tool.
-fn print_csv_summary(runs: &[RunMetrics]) {
-    println!("\n── CSV Summary (for graphing) ──────────────────────────────────────");
-    // Header: rows, total_ms, then each action
+/// Print a merged summary table with one column per run size, including memory.
+fn print_merged_summary(runs: &[RunMetrics]) {
+    if runs.is_empty() {
+        return;
+    }
+
+    let label_w: usize = 46;
+    let col_w: usize = 14;
+    let n = runs.len();
+    let inner_w = label_w + 2 + n * (1 + col_w);
+
+    // ── drawing helpers ─────────────────────────────────────────────────
+    let h_line = |left: &str, mid: &str, right: &str, fill: &str| {
+        print!("{}{}", left, fill.repeat(label_w + 2));
+        for _ in 0..n {
+            print!("{}{}", mid, fill.repeat(col_w));
+        }
+        println!("{}", right);
+    };
+
+    let row = |label: &str, values: Vec<String>| {
+        print!("║  {:<width$}", label, width = label_w);
+        for v in &values {
+            print!("│ {:>width$} ", v, width = col_w - 2);
+        }
+        println!("║");
+    };
+
+    // ── title ───────────────────────────────────────────────────────────
+    let title = format!(
+        "Benchmark Summary — {} rows",
+        runs.iter()
+            .map(|r| r.row_count.to_string())
+            .collect::<Vec<_>>()
+            .join(" / ")
+    );
+    println!();
+    h_line("╔", "═", "╗", "═");
+    println!("║  {:<width$}║", title, width = inner_w - 2);
+    h_line("╠", "╤", "╣", "═");
+
+    // ── column headers ──────────────────────────────────────────────────
+    row(
+        "",
+        runs.iter()
+            .map(|r| format!("{} rows", r.row_count))
+            .collect(),
+    );
+    h_line("╟", "┼", "╢", "─");
+
+    // ── result overview ─────────────────────────────────────────────────
+    row(
+        "Status",
+        runs.iter()
+            .map(|r| {
+                if r.success {
+                    "✓ PASS".to_string()
+                } else {
+                    "✗ FAIL".to_string()
+                }
+            })
+            .collect(),
+    );
+    row(
+        "Output rows",
+        runs.iter().map(|r| format!("{}", r.output_rows)).collect(),
+    );
+    row(
+        "Output cols",
+        runs.iter().map(|r| format!("{}", r.output_cols)).collect(),
+    );
+    h_line("╟", "┼", "╢", "─");
+
+    // ── timing ──────────────────────────────────────────────────────────
+    row(
+        "Total time (ms)",
+        runs.iter().map(|r| format!("{:.2}", r.total_ms)).collect(),
+    );
+    row(
+        "Total time (s)",
+        runs.iter()
+            .map(|r| format!("{:.3}", r.total_ms / 1000.0))
+            .collect(),
+    );
+    row(
+        "Throughput (rows/sec)",
+        runs.iter()
+            .map(|r| {
+                if r.total_ms > 0.0 {
+                    format!("{:.0}", r.row_count as f64 / (r.total_ms / 1000.0))
+                } else {
+                    "—".to_string()
+                }
+            })
+            .collect(),
+    );
+    h_line("╟", "┼", "╢", "─");
+
+    // ── memory ──────────────────────────────────────────────────────────
+    row(
+        "Memory RSS Δ (MB)",
+        runs.iter()
+            .map(|r| format!("{:.2}", r.rss_delta_bytes as f64 / 1_048_576.0))
+            .collect(),
+    );
+    row(
+        "Peak RSS (MB)",
+        runs.iter()
+            .map(|r| format!("{:.2}", r.peak_rss_bytes as f64 / 1_048_576.0))
+            .collect(),
+    );
+    h_line("╟", "┼", "╢", "─");
+
+    // ── per-action timings (ms) ─────────────────────────────────────────
+    if let Some(first) = runs.first() {
+        for (i, (name, _)) in first.action_timings.iter().enumerate() {
+            row(
+                name,
+                runs.iter()
+                    .map(|r| {
+                        r.action_timings
+                            .get(i)
+                            .map(|(_, ms)| format!("{:.2}", ms))
+                            .unwrap_or_else(|| "—".to_string())
+                    })
+                    .collect(),
+            );
+        }
+    }
+    row(
+        "overhead (collect / framework)",
+        runs.iter()
+            .map(|r| {
+                let accounted: f64 = r.action_timings.iter().map(|(_, ms)| ms).sum();
+                format!("{:.2}", r.total_ms - accounted)
+            })
+            .collect(),
+    );
+    h_line("╚", "╧", "╝", "═");
+
+    // ── CSV (for graphing / spreadsheet) ────────────────────────────────
+    println!("\n── CSV Summary ────────────────────────────────────────────────────");
     if let Some(first) = runs.first() {
         let action_names: Vec<&str> = first
             .action_timings
             .iter()
             .map(|(n, _)| n.as_str())
             .collect();
-        print!("rows,total_ms,rows_per_sec");
+        print!("rows,total_ms,rows_per_sec,rss_delta_mb,peak_rss_mb");
         for name in &action_names {
             print!(",{}", name);
         }
         println!();
-
         for m in runs {
             let rps = if m.total_ms > 0.0 {
                 m.row_count as f64 / (m.total_ms / 1000.0)
             } else {
                 0.0
             };
-            print!("{},{:.2},{:.0}", m.row_count, m.total_ms, rps);
+            print!(
+                "{},{:.2},{:.0},{:.2},{:.2}",
+                m.row_count,
+                m.total_ms,
+                rps,
+                m.rss_delta_bytes as f64 / 1_048_576.0,
+                m.peak_rss_bytes as f64 / 1_048_576.0,
+            );
             for (_, ms) in &m.action_timings {
                 print!(",{:.2}", ms);
             }
@@ -186,6 +368,12 @@ fn test_full_pipeline_smoke() {
 #[test]
 #[cfg(feature = "benchmark")]
 fn test_benchmark_1k_5k_10k() {
+    // Warm-up: run a tiny pipeline to force one-time initialisation
+    // (Polars thread pool, regex cache, page faults) so it doesn't
+    // inflate the RSS Δ of the first real run.
+    println!(">>> Warm-up run (50 rows) …");
+    let _ = run_full_pipeline(50);
+
     let sizes = [1_000, 5_000, 10_000];
     let mut all_metrics: Vec<RunMetrics> = Vec::with_capacity(sizes.len());
 
@@ -197,12 +385,11 @@ fn test_benchmark_1k_5k_10k() {
             "pipeline should succeed for {} rows",
             n
         );
-        print_metrics(&m);
         all_metrics.push(m);
     }
 
-    // Comparative summary
-    print_csv_summary(&all_metrics);
+    // Full run summary (merged table with columns per size + memory)
+    print_merged_summary(&all_metrics);
 
     // Sanity: row counts should be non-decreasing
     for pair in all_metrics.windows(2) {
