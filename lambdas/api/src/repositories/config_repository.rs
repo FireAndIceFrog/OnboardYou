@@ -55,3 +55,32 @@ pub async fn get(
 
     Ok(Some(config))
 }
+
+/// List all PipelineConfigs for an organization (Query on PK).
+pub async fn list(
+    state: &AppState,
+    organization_id: &str,
+) -> Result<Vec<PipelineConfig>, ApiError> {
+    let result = state
+        .dynamo
+        .query()
+        .table_name(&state.table_name)
+        .key_condition_expression("organizationId = :pk")
+        .expression_attribute_values(
+            ":pk",
+            AttributeValue::S(organization_id.to_string()),
+        )
+        .send()
+        .await
+        .map_err(|e| ApiError::Repository(format!("query failed: {e}")))?;
+
+    let items = result.items.unwrap_or_default();
+
+    items
+        .into_iter()
+        .map(|item| {
+            dynamo_serde::from_item(item)
+                .map_err(|e| ApiError::Repository(format!("Failed to deserialize config: {e}")))
+        })
+        .collect()
+}

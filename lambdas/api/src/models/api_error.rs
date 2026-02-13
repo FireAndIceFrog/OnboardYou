@@ -13,6 +13,7 @@ pub struct ErrorResponse {
 /// Typed API errors — auto-mapped to HTTP status codes via IntoResponse.
 #[derive(Debug)]
 pub enum ApiError {
+    Unauthorized(String),
     NotFound(String),
     Validation(String),
     Repository(String),
@@ -21,6 +22,7 @@ pub enum ApiError {
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let (status, message) = match &self {
+            ApiError::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, msg.clone()),
             ApiError::NotFound(id) => {
                 (StatusCode::NOT_FOUND, format!("Config not found for org: {id}"))
             }

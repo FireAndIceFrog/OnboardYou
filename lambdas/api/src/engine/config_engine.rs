@@ -19,6 +19,14 @@ pub async fn get(
         })
 }
 
+/// List all pipeline configs owned by an organization.
+pub async fn list(
+    state: &AppState,
+    organization_id: &str,
+) -> Result<Vec<PipelineConfig>, ApiError> {
+    config_repository::list(state, organization_id).await
+}
+
 /// Validate, persist, and schedule a pipeline config.
 pub async fn upsert(
     state: &AppState,

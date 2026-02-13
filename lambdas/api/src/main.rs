@@ -12,7 +12,7 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use controllers::{create_config, get_config, update_config, validate_config};
+use controllers::{create_config, get_config, list_configs, update_config, validate_config};
 use models::{AppState, ErrorResponse, PipelineConfig};
 use tracing_subscriber::{fmt, EnvFilter};
 use utoipa::OpenApi;
@@ -31,6 +31,7 @@ use onboard_you::{ActionConfig, Manifest};
         license(name = "Proprietary"),
     ),
     paths(
+        controllers::config_controller::list_configs,
         controllers::config_controller::get_config,
         controllers::config_controller::create_config,
         controllers::config_controller::update_config,
@@ -47,9 +48,35 @@ use onboard_you::{ActionConfig, Manifest};
     tags(
         (name = "Configuration", description = "Pipeline configuration CRUD operations"),
         (name = "Validation", description = "Dry-run pipeline validation"),
-    )
+    ),
+    security(
+        ("bearer" = []),
+    ),
+    modifiers(&SecurityAddon),
 )]
 struct ApiDoc;
+
+/// Adds the Bearer security scheme to the OpenAPI document.
+struct SecurityAddon;
+
+impl utoipa::Modify for SecurityAddon {
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        let components = openapi.components.get_or_insert_with(Default::default);
+        components.add_security_scheme(
+            "bearer",
+            utoipa::openapi::security::SecurityScheme::Http(
+                utoipa::openapi::security::HttpBuilder::new()
+                    .scheme(utoipa::openapi::security::HttpAuthScheme::Bearer)
+                    .bearer_format("JWT")
+                    .description(Some(
+                        "Cognito JWT — the `custom:organizationId` claim is extracted \
+                         by the Lambda authorizer and injected into the request context.",
+                    ))
+                    .build(),
+            ),
+        );
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<(), lambda_http::Error> {
@@ -68,12 +95,13 @@ async fn main() -> Result<(), lambda_http::Error> {
 
 fn router(state: AppState) -> Router {
     Router::new()
+        .route("/config", get(list_configs))
         .route(
-            "/{organization_id}/{customer_company_id}/config",
+            "/config/{customer_company_id}",
             get(get_config).post(create_config).put(update_config),
         )
         .route(
-            "/{organization_id}/{customer_company_id}/config/validate",
+            "/config/{customer_company_id}/validate",
             post(validate_config),
         )
         .with_state(state)
