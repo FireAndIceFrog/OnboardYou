@@ -1,0 +1,125 @@
+name: E2E Pipeline
+
+on:
+  pull_request:
+    branches: ["*"]
+  workflow_dispatch:
+    inputs:
+      run_benchmarks:
+        description: "Run full benchmarks (1k/5k/10k rows) in addition to the smoke test"
+        required: false
+        default: false
+        type: boolean
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  e2e:
+    name: E2E Smoke & Benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry & build artefacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: e2e
+          # Save cache even when tests fail so the next run doesn't rebuild
+          save-if: "true"
+          cache-on-failure: true
+
+      # ── Smoke test (always) ──────────────────────────────────────────
+      - name: Run E2E smoke test
+        id: smoke
+        run: |
+          set -o pipefail
+          cargo test --release -p onboard_you \
+            -- test_full_pipeline_smoke --nocapture 2>&1 | tee smoke_output.txt
+
+      # ── Full benchmarks (manual trigger only) ────────────────────────
+      - name: Run full benchmarks (1k / 5k / 10k)
+        id: bench
+        if: github.event_name == 'workflow_dispatch' && inputs.run_benchmarks
+        run: |
+          set -o pipefail
+          cargo test --release -p onboard_you --features benchmark \
+            -- test_benchmark_1k_5k_10k --nocapture 2>&1 | tee bench_output.txt
+
+      - name: Run CSV generator correctness test
+        if: github.event_name == 'workflow_dispatch' && inputs.run_benchmarks
+        run: |
+          cargo test --release -p onboard_you --features benchmark \
+            -- test_csv_generator_correctness --nocapture
+
+      # ── Publish results to GitHub Summary ────────────────────────────
+      - name: Publish results to summary
+        if: always()
+        run: |
+          {
+            echo "## 🚀 E2E Pipeline Results"
+            echo ""
+            echo "| Detail | Value |"
+            echo "|--------|-------|"
+            echo "| **Trigger** | \`${{ github.event_name }}\` |"
+            echo "| **Ref** | \`${{ github.ref_name }}\` |"
+            echo "| **Commit** | \`${{ github.sha }}\` |"
+            echo ""
+
+            # ── Smoke test ──────────────────────────────────────────────
+            echo "### 🔬 Smoke Test (100 rows)"
+            echo ""
+            if [ -f smoke_output.txt ]; then
+              echo '```'
+              # Print only the metrics box (lines starting with ║ or ╔ or ╠ or ╚)
+              grep -E '^[║╔╠╚]' smoke_output.txt || cat smoke_output.txt
+              echo '```'
+            else
+              echo "⚠️ No smoke test output captured."
+            fi
+            echo ""
+
+            # ── Benchmark ───────────────────────────────────────────────
+            if [ -f bench_output.txt ]; then
+              echo "### 📊 Full Benchmark (1k / 5k / 10k rows)"
+              echo ""
+              echo '```'
+              grep -E '^[║╔╠╚╟]|^rows,|^E[0-9]|^── CSV' bench_output.txt || cat bench_output.txt
+              echo '```'
+              echo ""
+
+              # Extract CSV section for a markdown table
+              csv_start=$(grep -n '^rows,' bench_output.txt | head -1 | cut -d: -f1)
+              if [ -n "$csv_start" ]; then
+                echo "### 📈 Summary Table"
+                echo ""
+
+                # Read the CSV header and data lines
+                header=$(sed -n "${csv_start}p" bench_output.txt)
+                IFS=',' read -ra cols <<< "$header"
+
+                # Build markdown header
+                printf "| "
+                for col in "${cols[@]}"; do printf "%s | " "$col"; done
+                echo ""
+
+                printf "| "
+                for col in "${cols[@]}"; do printf "--- | "; done
+                echo ""
+
+                # Data rows (lines after header until blank/separator)
+                csv_end=$((csv_start + 10))
+                for line in $(sed -n "$((csv_start+1)),${csv_end}p" bench_output.txt | grep -E '^[0-9]'); do
+                  IFS=',' read -ra vals <<< "$line"
+                  printf "| "
+                  for val in "${vals[@]}"; do printf "%s | " "$val"; done
+                  echo ""
+                done
+                echo ""
+              fi
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
