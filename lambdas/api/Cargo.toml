@@ -24,3 +24,5 @@ aws-sdk-scheduler = { workspace = true }
 serde_dynamo = { workspace = true }
 chrono = { workspace = true }
 uuid = { workspace = true }
+utoipa = { workspace = true }
+utoipa-swagger-ui = { workspace = true }

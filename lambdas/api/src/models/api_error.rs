@@ -1,6 +1,14 @@
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
+use utoipa::ToSchema;
+
+/// JSON error envelope returned to clients.
+#[derive(Debug, serde::Serialize, ToSchema)]
+pub struct ErrorResponse {
+    /// Human-readable error description
+    pub error: String,
+}
 
 /// Typed API errors — auto-mapped to HTTP status codes via IntoResponse.
 #[derive(Debug)]

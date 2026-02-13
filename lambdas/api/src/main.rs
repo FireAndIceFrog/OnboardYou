@@ -1,20 +1,55 @@
 //! Config API Lambda
 //!
 //! Bootstrap + route declarations. Read the router() function to know what this API does.
+//! Serves an OpenAPI specification at `/swagger-ui` for interactive API documentation.
 
+mod controllers;
 mod engine;
 mod models;
 mod repositories;
 
 use axum::{
-    extract::{Path, State},
-    http::StatusCode,
-    response::IntoResponse,
     routing::{get, post},
-    Json, Router,
+    Router,
 };
-use models::{AppState, PipelineConfig};
+use controllers::{create_config, get_config, update_config, validate_config};
+use models::{AppState, ErrorResponse, PipelineConfig};
 use tracing_subscriber::{fmt, EnvFilter};
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
+
+use engine::validation_engine::{StepValidation, ValidationResult};
+use onboard_you::{ActionConfig, Manifest};
+
+/// OpenAPI documentation for the OnboardYou Config API.
+#[derive(OpenApi)]
+#[openapi(
+    info(
+        title = "OnboardYou Config API",
+        version = "1.0.0",
+        description = "REST API for managing OnboardYou ETL pipeline configurations.\n\nSupports CRUD operations on pipeline configs stored in DynamoDB and \ndry-run validation of pipeline manifests via column propagation.",
+        license(name = "Proprietary"),
+    ),
+    paths(
+        controllers::config_controller::get_config,
+        controllers::config_controller::create_config,
+        controllers::config_controller::update_config,
+        controllers::config_controller::validate_config,
+    ),
+    components(schemas(
+        PipelineConfig,
+        Manifest,
+        ActionConfig,
+        ValidationResult,
+        StepValidation,
+        ErrorResponse,
+    )),
+    tags(
+        (name = "Configuration", description = "Pipeline configuration CRUD operations"),
+        (name = "Validation", description = "Dry-run pipeline validation"),
+    )
+)]
+struct ApiDoc;
 
 #[tokio::main]
 async fn main() -> Result<(), lambda_http::Error> {
@@ -35,50 +70,15 @@ fn router(state: AppState) -> Router {
     Router::new()
         .route(
             "/{organization_id}/{customer_company_id}/config",
-            get(get_config).post(upsert_config).put(upsert_config),
+            get(get_config).post(create_config).put(update_config),
         )
         .route(
             "/{organization_id}/{customer_company_id}/config/validate",
             post(validate_config),
         )
         .with_state(state)
-}
-
-// ── Handlers ────────────────────────────────────────────────
-
-/// GET /{organizationId}/{customerCompanyId}/config
-async fn get_config(
-    State(state): State<AppState>,
-    Path((organization_id, customer_company_id)): Path<(String, String)>,
-) -> Result<impl IntoResponse, models::ApiError> {
-    let config = engine::config_engine::get(&state, &organization_id, &customer_company_id).await?;
-    Ok(Json(config))
-}
-
-/// POST/PUT /{organizationId}/{customerCompanyId}/config
-async fn upsert_config(
-    State(state): State<AppState>,
-    Path((organization_id, customer_company_id)): Path<(String, String)>,
-    Json(body): Json<PipelineConfig>,
-) -> Result<impl IntoResponse, models::ApiError> {
-    // Dry-run column propagation — reject before persisting if any action
-    // is misconfigured or produces a schema conflict.
-    engine::validation_engine::validate_pipeline(&body.pipeline)?;
-
-    let saved = engine::config_engine::upsert(&state, &organization_id, &customer_company_id, body).await?;
-    Ok((StatusCode::OK, Json(saved)))
-}
-
-/// POST /{organizationId}/{customerCompanyId}/config/validate
-///
-/// Dry-run column propagation: parses the pipeline manifest, builds every
-/// action, and folds `calculate_columns` through the chain. Returns the
-/// column set after each step without executing any real transformations.
-async fn validate_config(
-    Path((_organization_id, _customer_company_id)): Path<(String, String)>,
-    Json(body): Json<PipelineConfig>,
-) -> Result<impl IntoResponse, models::ApiError> {
-    // Validation is pure computation — no async I/O needed.
-    let result = engine::validation_engine::validate_pipeline(&body.pipeline)?;
-    Ok(Json(result))
+        .merge(
+            SwaggerUi::new("/swagger-ui")
+                .url("/api-docs/openapi.json", ApiDoc::openapi()),
+        )
 }

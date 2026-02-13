@@ -7,9 +7,10 @@
 use crate::models::ApiError;
 use onboard_you::{ActionFactory, Manifest, RosterContext};
 use polars::prelude::*;
+use utoipa::ToSchema;
 
 /// Result of validating a single step in the pipeline.
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize, ToSchema)]
 pub struct StepValidation {
     /// Action id from the manifest.
     pub action_id: String,
@@ -20,7 +21,7 @@ pub struct StepValidation {
 }
 
 /// Overall validation result for the entire pipeline.
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize, ToSchema)]
 pub struct ValidationResult {
     /// Per-step column snapshots (in execution order).
     pub steps: Vec<StepValidation>,

@@ -16,6 +16,9 @@ thiserror = "1.0"
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+
+# OpenAPI schema generation
+utoipa = "5"
 serde_yaml = "0.9"
 
 # HTTP client (Workday SOAP API) — uses rustls to avoid system OpenSSL dependency

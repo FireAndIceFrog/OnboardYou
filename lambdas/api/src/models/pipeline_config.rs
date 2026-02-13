@@ -1,5 +1,6 @@
 use onboard_you::Manifest;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// The pipeline config as stored in DynamoDB and exchanged via the API.
 ///
@@ -13,12 +14,13 @@ use serde::{Deserialize, Serialize};
 ///   "pipeline": { "version": "1.0", "actions": [...] }
 /// }
 /// ```
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PipelineConfig {
     /// Name of the pipeline
     pub name: String,
 
+    /// Optional image/icon for the pipeline
     pub image: Option<String>,
 
     /// EventBridge-compatible schedule expression (cron or rate)
