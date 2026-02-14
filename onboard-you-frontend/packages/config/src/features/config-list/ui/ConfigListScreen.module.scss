@@ -1,0 +1,153 @@
+@use '../../../styles/variables' as *;
+
+.configListScreen {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: $spacing-6 $spacing-6 $spacing-8;
+}
+
+.listHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-6;
+}
+
+.title {
+  font-size: $text-2xl;
+  font-weight: $font-bold;
+  color: $text-primary;
+}
+
+.searchBar {
+  position: relative;
+  margin-bottom: $spacing-4;
+}
+
+.searchIcon {
+  position: absolute;
+  left: $spacing-3;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: $text-sm;
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  padding: $spacing-2 $spacing-4 $spacing-2 $spacing-8;
+  font-size: $text-sm;
+  border: 1px solid $neutral-200;
+  border-radius: $radius-lg;
+  background: $bg-primary;
+  color: $text-primary;
+  outline: none;
+  transition: border-color $transition-fast, box-shadow $transition-fast;
+
+  &::placeholder {
+    color: $text-muted;
+  }
+
+  &:focus {
+    border-color: $color-primary;
+    box-shadow: 0 0 0 3px rgba($color-primary, 0.1);
+  }
+}
+
+.filterTabs {
+  display: flex;
+  gap: $spacing-1;
+  margin-bottom: $spacing-5;
+  border-bottom: 1px solid $neutral-200;
+  padding-bottom: 0;
+}
+
+.filterTab {
+  padding: $spacing-2 $spacing-3;
+  font-size: $text-sm;
+  font-weight: $font-medium;
+  color: $text-secondary;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color $transition-fast, border-color $transition-fast;
+  margin-bottom: -1px;
+
+  &:hover {
+    color: $text-primary;
+  }
+
+  &--active {
+    color: $color-primary;
+    border-bottom-color: $color-primary;
+  }
+}
+
+.configGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-4;
+
+  @media (max-width: $breakpoint-lg) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: $breakpoint-md) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-12 $spacing-4;
+  text-align: center;
+}
+
+.emptyIcon {
+  font-size: $text-4xl;
+  margin-bottom: $spacing-3;
+  opacity: 0.6;
+}
+
+.emptyTitle {
+  font-size: $text-lg;
+  font-weight: $font-semibold;
+  color: $text-primary;
+  margin-bottom: $spacing-2;
+}
+
+.emptyDesc {
+  font-size: $text-sm;
+  color: $text-secondary;
+  max-width: 400px;
+}
+
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-12 $spacing-4;
+  gap: $spacing-3;
+  color: $text-secondary;
+  font-size: $text-sm;
+}
+
+.errorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-8 $spacing-4;
+  gap: $spacing-2;
+  color: $color-error;
+  font-size: $text-sm;
+}
+
+.errorIcon {
+  font-size: $text-2xl;
+}

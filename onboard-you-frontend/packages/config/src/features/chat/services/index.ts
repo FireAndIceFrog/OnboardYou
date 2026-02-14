@@ -1,0 +1,1 @@
+export { generateResponse } from './chatService';

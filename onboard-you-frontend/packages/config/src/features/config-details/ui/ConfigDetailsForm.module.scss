@@ -1,0 +1,97 @@
+@use '../../../styles/variables' as *;
+
+.formPanel {
+  position: absolute;
+  top: $spacing-4;
+  right: $spacing-4;
+  width: 320px;
+  max-height: calc(100% - #{$spacing-8});
+  background: #FFFFFF;
+  border: 1px solid $neutral-200;
+  border-radius: $radius-xl;
+  box-shadow: $shadow-lg;
+  z-index: 10;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.formHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-3 $spacing-4;
+  border-bottom: 1px solid $neutral-100;
+  position: sticky;
+  top: 0;
+  background: #FFFFFF;
+}
+
+.formTitle {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  font-size: $text-sm;
+  font-weight: $font-semibold;
+  color: $text-primary;
+}
+
+.closeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: none;
+  border-radius: $radius-md;
+  cursor: pointer;
+  color: $text-muted;
+  font-size: $text-lg;
+  transition: background-color $transition-fast, color $transition-fast;
+
+  &:hover {
+    background: $neutral-100;
+    color: $text-primary;
+  }
+}
+
+.formBody {
+  padding: $spacing-4;
+}
+
+.configField {
+  margin-bottom: $spacing-3;
+}
+
+.configLabel {
+  font-size: $text-xs;
+  font-weight: $font-medium;
+  color: $text-muted;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: $spacing-1;
+}
+
+.configValue {
+  font-size: $text-sm;
+  color: $text-primary;
+  word-break: break-word;
+}
+
+.jsonBlock {
+  margin-top: $spacing-3;
+  padding: $spacing-3;
+  background: $neutral-50;
+  border-radius: $radius-lg;
+  overflow-x: auto;
+
+  pre {
+    margin: 0;
+    font-family: $font-family-mono;
+    font-size: $text-xs;
+    color: $text-primary;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+}

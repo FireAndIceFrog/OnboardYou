@@ -1,0 +1,22 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+.layout {
+  min-height: 100vh;
+}
+
+.main {
+  margin-top: $header-height;
+  margin-left: $sidebar-width;
+  padding: $spacing-6;
+  min-height: calc(100vh - $header-height);
+  @include transition(margin-left);
+
+  &--collapsed {
+    margin-left: $sidebar-collapsed-width;
+  }
+
+  @include respond-below('lg') {
+    margin-left: 0;
+  }
+}

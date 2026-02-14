@@ -1,0 +1,148 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+.header {
+  @include flex-between;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: $header-height;
+  padding: 0 $spacing-5;
+  background-color: $bg-primary;
+  border-bottom: 1px solid $neutral-200;
+  z-index: $z-fixed;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: $spacing-3;
+}
+
+.header-hamburger {
+  @include flex-center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: none;
+  font-size: $text-lg;
+  cursor: pointer;
+  border-radius: $radius-lg;
+  color: $text-secondary;
+  @include transition(background-color color);
+
+  &:hover {
+    background-color: $neutral-100;
+    color: $text-primary;
+  }
+
+  @include respond-to('lg') {
+    display: none;
+  }
+}
+
+.header-brand {
+  @include gradient-text($color-primary, $color-secondary);
+  font-size: $text-xl;
+  font-weight: $font-bold;
+  letter-spacing: -0.02em;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-3;
+}
+
+.theme-toggle {
+  @include flex-center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: none;
+  font-size: $text-lg;
+  cursor: pointer;
+  border-radius: $radius-lg;
+  @include transition(background-color);
+
+  &:hover {
+    background-color: $neutral-100;
+  }
+}
+
+.avatar-wrapper {
+  position: relative;
+}
+
+.avatar {
+  @include flex-center;
+  width: 36px;
+  height: 36px;
+  border-radius: $radius-full;
+  background-color: $color-primary;
+  color: $text-inverse;
+  font-size: $text-xs;
+  font-weight: $font-semibold;
+  border: none;
+  cursor: pointer;
+  @include transition(box-shadow);
+
+  &:hover {
+    box-shadow: 0 0 0 3px rgba($color-primary, 0.2);
+  }
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + $spacing-2);
+  right: 0;
+  min-width: 220px;
+  background-color: $bg-primary;
+  border: 1px solid $neutral-200;
+  border-radius: $radius-xl;
+  box-shadow: $shadow-lg;
+  z-index: $z-dropdown;
+  overflow: hidden;
+}
+
+.dropdown-header {
+  @include flex-column;
+  padding: $spacing-3 $spacing-4;
+}
+
+.dropdown-name {
+  font-size: $text-sm;
+  font-weight: $font-semibold;
+  color: $text-primary;
+}
+
+.dropdown-email {
+  font-size: $text-xs;
+  color: $text-muted;
+  margin-top: $spacing-1;
+}
+
+.dropdown-divider {
+  border: none;
+  border-top: 1px solid $neutral-200;
+  margin: 0;
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: $spacing-3 $spacing-4;
+  font-size: $text-sm;
+  color: $text-secondary;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  @include transition(background-color color);
+
+  &:hover {
+    background-color: $neutral-50;
+    color: $text-primary;
+  }
+}

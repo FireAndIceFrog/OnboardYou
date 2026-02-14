@@ -1,9 +1,22 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import federation from '@originjs/vite-plugin-federation';
 import { resolve } from 'path';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    federation({
+      name: 'configApp',
+      filename: 'remoteEntry.js',
+      exposes: {
+        './App': './src/app/App.tsx',
+        './ConfigListScreen': './src/features/config-list/ui/ConfigListScreen.tsx',
+        './ConfigDetailsPage': './src/features/config-details/ui/ConfigDetailsPage.tsx',
+      },
+      shared: ['react', 'react-dom', 'react-router-dom'],
+    }),
+  ],
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
@@ -18,9 +31,13 @@ export default defineConfig({
   },
   server: {
     port: 5174,
-    strictPort: false,
+    strictPort: true,
   },
   build: {
+    modulePreload: false,
+    target: 'esnext',
+    minify: false,
+    cssCodeSplit: false,
     outDir: 'dist',
     sourcemap: true,
   },

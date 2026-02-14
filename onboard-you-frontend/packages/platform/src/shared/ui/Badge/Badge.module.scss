@@ -1,0 +1,37 @@
+@use '../../../styles/variables' as *;
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: $spacing-1 $spacing-2;
+  font-size: $text-xs;
+  font-weight: $font-medium;
+  line-height: 1;
+  border-radius: $radius-full;
+  white-space: nowrap;
+
+  &--active {
+    background-color: rgba($color-success, 0.1);
+    color: darken($color-success, 10%);
+  }
+
+  &--draft {
+    background-color: $neutral-100;
+    color: $neutral-600;
+  }
+
+  &--paused {
+    background-color: rgba($color-warning, 0.1);
+    color: darken($color-warning, 15%);
+  }
+
+  &--error {
+    background-color: rgba($color-error, 0.1);
+    color: darken($color-error, 5%);
+  }
+
+  &--info {
+    background-color: rgba($color-info, 0.1);
+    color: darken($color-info, 10%);
+  }
+}

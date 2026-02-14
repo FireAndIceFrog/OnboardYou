@@ -1,0 +1,84 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+.home-screen {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.welcome-section {
+  margin-bottom: $spacing-7;
+}
+
+.welcome-title {
+  font-size: $text-2xl;
+  font-weight: $font-bold;
+  color: $text-primary;
+  margin-bottom: $spacing-1;
+}
+
+.welcome-subtitle {
+  font-size: $text-sm;
+  color: $text-secondary;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: $spacing-5;
+
+  @include respond-to('md') {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @include respond-to('lg') {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.stat-card {
+  @include flex-column;
+}
+
+.stat-header {
+  @include flex-between;
+  margin-bottom: $spacing-3;
+}
+
+.stat-icon {
+  font-size: $text-2xl;
+}
+
+.stat-change {
+  font-size: $text-xs;
+  font-weight: $font-medium;
+  padding: $spacing-1 $spacing-2;
+  border-radius: $radius-full;
+}
+
+.trend--up {
+  color: darken($color-success, 10%);
+  background-color: rgba($color-success, 0.1);
+}
+
+.trend--down {
+  color: darken($color-error, 5%);
+  background-color: rgba($color-error, 0.1);
+}
+
+.trend--neutral {
+  color: $neutral-500;
+  background-color: $neutral-100;
+}
+
+.stat-value {
+  font-size: $text-3xl;
+  font-weight: $font-bold;
+  color: $text-primary;
+  margin-bottom: $spacing-1;
+}
+
+.stat-label {
+  font-size: $text-sm;
+  color: $text-secondary;
+}
