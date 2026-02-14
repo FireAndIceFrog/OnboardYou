@@ -1,10 +1,12 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import federation from '@originjs/vite-plugin-federation';
+import { federation } from '@module-federation/vite';
+import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 import { resolve } from 'path';
 export default defineConfig({
     plugins: [
         react(),
+        cssInjectedByJsPlugin({ relativeCSSInjection: true }),
         federation({
             name: 'configApp',
             filename: 'remoteEntry.js',
@@ -14,11 +16,11 @@ export default defineConfig({
                 './ConfigDetailsPage': './src/features/config-details/ui/ConfigDetailsPage.tsx',
             },
             shared: {
-                react: { singleton: true, requiredVersion: false },
-                'react-dom': { singleton: true, requiredVersion: false },
-                'react-router-dom': { singleton: true, requiredVersion: false },
-                '@xyflow/react': { singleton: true, requiredVersion: false },
+                react: { singleton: true },
+                'react-dom': { singleton: true },
+                'react-router-dom': { singleton: true },
             },
+            bundleAllCSS: true,
         }),
     ],
     resolve: {
@@ -36,12 +38,13 @@ export default defineConfig({
     server: {
         port: 5174,
         strictPort: true,
+        origin: 'http://localhost:5174',
     },
     build: {
         modulePreload: false,
-        target: 'esnext',
+        target: 'chrome89',
         minify: false,
-        cssCodeSplit: false,
+        cssCodeSplit: true,
         outDir: 'dist',
         sourcemap: true,
     },

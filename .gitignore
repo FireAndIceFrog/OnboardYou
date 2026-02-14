@@ -5,3 +5,5 @@ onboard-you-frontend/packages/config/node_modules/
 onboard-you-frontend/packages/config/dist/
 onboard-you-frontend/packages/platform/dist/
 onboard-you-frontend/packages/platform/node_modules/
+onboard-you-frontend/packages/platform/@mf-types/
+onboard-you-frontend/packages/platform/.__mf__temp/

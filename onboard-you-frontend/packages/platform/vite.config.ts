@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import federation from '@originjs/vite-plugin-federation';
+import { federation } from '@module-federation/vite';
 import { resolve } from 'path';
 
 export default defineConfig({
@@ -8,13 +8,20 @@ export default defineConfig({
     react(),
     federation({
       name: 'platform',
+      filename: 'remoteEntry.js',
       remotes: {
-        configApp: 'http://localhost:5174/assets/remoteEntry.js',
+        configApp: {
+          type: 'module',
+          name: 'configApp',
+          entry: 'http://localhost:5174/remoteEntry.js',
+          entryGlobalName: 'configApp',
+          shareScope: 'default',
+        },
       },
       shared: {
-        react: { singleton: true, requiredVersion: false },
-        'react-dom': { singleton: true, requiredVersion: false },
-        'react-router-dom': { singleton: true, requiredVersion: false },
+        react: { singleton: true },
+        'react-dom': { singleton: true },
+        'react-router-dom': { singleton: true },
       },
     }),
   ],
@@ -36,7 +43,7 @@ export default defineConfig({
   },
   build: {
     modulePreload: false,
-    target: 'esnext',
+    target: 'chrome89',
     minify: false,
     cssCodeSplit: false,
     outDir: 'dist',
