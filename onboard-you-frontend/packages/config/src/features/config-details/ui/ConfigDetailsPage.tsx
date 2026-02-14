@@ -6,7 +6,11 @@ import {
   Controls,
   Background,
   BackgroundVariant,
+  applyNodeChanges,
+  applyEdgeChanges,
   type NodeMouseHandler,
+  type NodeChange,
+  type EdgeChange,
   type Node,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -40,6 +44,20 @@ function ConfigDetailsContent() {
   const handlePaneClick = useCallback(() => {
     dispatch({ type: 'DESELECT_NODE' });
   }, [dispatch]);
+
+  const handleNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      dispatch({ type: 'SET_NODES', payload: applyNodeChanges(changes, nodes) });
+    },
+    [dispatch, nodes],
+  );
+
+  const handleEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
+      dispatch({ type: 'SET_EDGES', payload: applyEdgeChanges(changes, edges) });
+    },
+    [dispatch, edges],
+  );
 
   const handleToggleChat = useCallback(() => {
     dispatch({ type: 'TOGGLE_CHAT' });
@@ -104,6 +122,8 @@ function ConfigDetailsContent() {
             nodes={nodes}
             edges={edges}
             nodeTypes={memoizedNodeTypes}
+            onNodesChange={handleNodesChange}
+            onEdgesChange={handleEdgesChange}
             onNodeClick={handleNodeClick}
             onPaneClick={handlePaneClick}
             fitView
