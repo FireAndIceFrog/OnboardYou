@@ -1,24 +1,14 @@
 import { useNavigate } from 'react-router-dom';
 import type { PipelineConfig } from '@/shared/domain/types';
 import { Badge } from '@/shared/ui/Badge';
-import type { BadgeVariant } from '@/shared/ui/Badge';
 import styles from './ConfigListItem.module.scss';
 
 interface ConfigListItemProps {
   config: PipelineConfig;
 }
 
-function statusToVariant(status: PipelineConfig['status']): BadgeVariant {
-  const map: Record<PipelineConfig['status'], BadgeVariant> = {
-    active: 'active',
-    draft: 'draft',
-    paused: 'paused',
-    error: 'error',
-  };
-  return map[status];
-}
-
 function relativeTime(dateStr: string): string {
+  if (!dateStr) return '';
   const now = Date.now();
   const then = new Date(dateStr).getTime();
   const diffMs = now - then;
@@ -41,30 +31,31 @@ function relativeTime(dateStr: string): string {
 
 export function ConfigListItem({ config }: ConfigListItemProps) {
   const navigate = useNavigate();
+  const actionCount = config.pipeline.actions.length;
 
   return (
     <div
       className={styles.configItem}
-      onClick={() => navigate(`/${config.id}`)}
+      onClick={() => navigate(`/${config.customerCompanyId}`)}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          navigate(`/${config.id}`);
+          navigate(`/${config.customerCompanyId}`);
         }
       }}
     >
       <h3 className={styles.configItemName}>{config.name}</h3>
-      <p className={styles.configItemDesc}>{config.description}</p>
+      <p className={styles.configItemDesc}>{config.customerCompanyId}</p>
 
       <div className={styles.configItemMeta}>
         <div className={styles.metaLeft}>
-          <span className={styles.sourceTag}>{config.sourceSystem}</span>
+          <span className={styles.sourceTag}>{config.cron}</span>
         </div>
         <div className={styles.metaRight}>
-          <Badge variant={statusToVariant(config.status)}>{config.status}</Badge>
-          <span className={styles.updatedAt}>{relativeTime(config.updatedAt)}</span>
+          <Badge variant="active">{actionCount} steps</Badge>
+          <span className={styles.updatedAt}>{relativeTime(config.lastEdited)}</span>
         </div>
       </div>
     </div>

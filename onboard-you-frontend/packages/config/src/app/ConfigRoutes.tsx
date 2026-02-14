@@ -16,7 +16,7 @@ export function ConfigRoutes() {
         }
       />
       <Route
-        path=":configId"
+        path=":customerCompanyId"
         element={
           <ChatProvider pipelineConfig={null}>
             <ConfigDetailsPage />

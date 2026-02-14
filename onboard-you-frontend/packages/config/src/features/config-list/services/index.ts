@@ -1,1 +1,1 @@
-export { fetchConfigs, deleteConfig } from './configListService';
+export { fetchConfigs } from './configListService';

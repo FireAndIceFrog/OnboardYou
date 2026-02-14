@@ -4,7 +4,7 @@
   "scripts": {
     "dev:platform": "pnpm --filter @onboard-you/platform dev",
     "dev:config": "pnpm --filter @onboard-you/config dev",
-    "dev:mock": "pnpm -r --parallel dev:mock",
+    "dev:mock": "pnpm --filter @onboard-you/config run dev:mock:build && pnpm -r --parallel dev:mock",
     "build:platform": "pnpm --filter @onboard-you/platform build",
     "build:config": "pnpm --filter @onboard-you/config build",
     "dev": "pnpm -r --parallel dev",

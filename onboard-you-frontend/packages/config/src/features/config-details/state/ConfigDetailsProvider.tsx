@@ -7,10 +7,10 @@ import { convertToFlow } from '../services/pipelineLayoutService';
 
 interface ConfigDetailsProviderProps {
   children: ReactNode;
-  configId: string;
+  customerCompanyId: string;
 }
 
-export function ConfigDetailsProvider({ children, configId }: ConfigDetailsProviderProps) {
+export function ConfigDetailsProvider({ children, customerCompanyId }: ConfigDetailsProviderProps) {
   const { apiClient, showNotification } = useGlobal();
   const [state, dispatch] = useReducer(configDetailsReducer, configDetailsInitialState);
 
@@ -20,7 +20,7 @@ export function ConfigDetailsProvider({ children, configId }: ConfigDetailsProvi
     async function load() {
       dispatch({ type: 'FETCH_START' });
       try {
-        const config = await fetchConfig(apiClient, configId);
+        const config = await fetchConfig(apiClient, customerCompanyId);
         if (cancelled) return;
 
         const { nodes, edges } = convertToFlow(config.pipeline);
@@ -39,7 +39,7 @@ export function ConfigDetailsProvider({ children, configId }: ConfigDetailsProvi
     return () => {
       cancelled = true;
     };
-  }, [apiClient, configId, showNotification]);
+  }, [apiClient, customerCompanyId, showNotification]);
 
   const value = useMemo(() => ({ state, dispatch }), [state]);
 

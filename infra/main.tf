@@ -145,6 +145,18 @@ module "config_api" {
 }
 
 # ══════════════════════════════════════════════════════════════
+# Frontend Hosting (S3 + CloudFront)
+# ══════════════════════════════════════════════════════════════
+
+module "frontend" {
+  source         = "./modules/frontend-hosting"
+  project_prefix = "onboardyou"
+  environment    = var.environment
+  api_origin     = module.api.invoke_url
+  price_class    = "PriceClass_100"
+}
+
+# ══════════════════════════════════════════════════════════════
 # API Gateway
 # ══════════════════════════════════════════════════════════════
 #
@@ -164,8 +176,8 @@ module "api" {
   # ── Routing ──────────────────────────────────────────────────
   # /config       → GET (list)
   # /config/{…}   → Axum router in the Lambda handles all sub-paths
-  base_path_part   = "config"
-  base_methods     = ["GET"]
+  base_path_part       = "config"
+  base_methods         = ["GET"]
   lambda_invoke_arn    = module.config_api.invoke_arn
   lambda_function_name = module.config_api.function_name
 

@@ -5,16 +5,13 @@ export type ConfigListAction =
   | { type: 'FETCH_START' }
   | { type: 'FETCH_SUCCESS'; payload: PipelineConfig[] }
   | { type: 'FETCH_ERROR'; payload: string }
-  | { type: 'SET_SEARCH_QUERY'; payload: string }
-  | { type: 'SET_STATUS_FILTER'; payload: string | null }
-  | { type: 'DELETE_CONFIG'; payload: string };
+  | { type: 'SET_SEARCH_QUERY'; payload: string };
 
 export const configListInitialState: ConfigListState = {
   configs: [],
   isLoading: false,
   error: null,
   searchQuery: '',
-  statusFilter: null,
 };
 
 export function configListReducer(
@@ -33,15 +30,6 @@ export function configListReducer(
 
     case 'SET_SEARCH_QUERY':
       return { ...state, searchQuery: action.payload };
-
-    case 'SET_STATUS_FILTER':
-      return { ...state, statusFilter: action.payload };
-
-    case 'DELETE_CONFIG':
-      return {
-        ...state,
-        configs: state.configs.filter((c) => c.id !== action.payload),
-      };
 
     default:
       return state;

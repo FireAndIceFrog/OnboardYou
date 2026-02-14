@@ -9,9 +9,7 @@ export interface ConfigListContextValue {
   dispatch: Dispatch<ConfigListAction>;
   filteredConfigs: PipelineConfig[];
   fetchConfigs: () => Promise<void>;
-  deleteConfig: (id: string) => Promise<void>;
   setSearchQuery: (query: string) => void;
-  setStatusFilter: (status: string | null) => void;
 }
 
 export const ConfigListContext = createContext<ConfigListContextValue | null>(null);

@@ -36,3 +36,20 @@ output "scheduler_role_arn" {
   description = "EventBridge Scheduler execution role ARN"
   value       = aws_iam_role.scheduler_execution.arn
 }
+
+# ── Frontend Hosting ──────────────────────────────────────────
+
+output "frontend_bucket_name" {
+  description = "S3 bucket for frontend build artefacts"
+  value       = module.frontend.bucket_name
+}
+
+output "frontend_cloudfront_id" {
+  description = "CloudFront distribution ID (for cache invalidation)"
+  value       = module.frontend.cloudfront_distribution_id
+}
+
+output "frontend_url" {
+  description = "Frontend website URL"
+  value       = module.frontend.website_url
+}

@@ -1,15 +1,15 @@
 import { useConfigDetails } from '../state/ConfigDetailsContext';
 import styles from './ConfigDetailsForm.module.scss';
 
-const NODE_ICONS: Record<string, string> = {
+const CATEGORY_ICONS: Record<string, string> = {
   ingestion: '📥',
-  transformation: '⚙️',
+  logic: '⚙️',
   egress: '📤',
 };
 
-const NODE_LABELS: Record<string, string> = {
+const CATEGORY_LABELS: Record<string, string> = {
   ingestion: 'Ingestion',
-  transformation: 'Transformation',
+  logic: 'Logic / Transform',
   egress: 'Egress',
 };
 
@@ -19,8 +19,9 @@ export function ConfigDetailsForm() {
 
   if (!selectedNode) return null;
 
-  const nodeType = (selectedNode.type ?? 'transformation') as string;
   const nodeData = selectedNode.data as Record<string, unknown>;
+  const category = (nodeData.category as string) ?? 'logic';
+  const actionType = (nodeData.actionType as string) ?? '';
   const config = nodeData.config as Record<string, unknown> | undefined;
 
   const handleClose = () => {
@@ -34,8 +35,8 @@ export function ConfigDetailsForm() {
       {/* Header */}
       <div className={styles.formHeader}>
         <div className={styles.formTitle}>
-          <span>{NODE_ICONS[nodeType] ?? '🔧'}</span>
-          <span>{nodeData.label as string ?? NODE_LABELS[nodeType] ?? 'Node Details'}</span>
+          <span>{CATEGORY_ICONS[category] ?? '🔧'}</span>
+          <span>{(nodeData.label as string) ?? CATEGORY_LABELS[category] ?? 'Node Details'}</span>
         </div>
         <button type="button" className={styles.closeBtn} onClick={handleClose} aria-label="Close">
           ×
@@ -44,10 +45,16 @@ export function ConfigDetailsForm() {
 
       {/* Body */}
       <div className={styles.formBody}>
-        {/* Type field */}
+        {/* Action type field */}
         <div className={styles.configField}>
-          <div className={styles.configLabel}>Type</div>
-          <div className={styles.configValue}>{nodeData.stageType as string ?? nodeType}</div>
+          <div className={styles.configLabel}>Action Type</div>
+          <div className={styles.configValue}>{actionType}</div>
+        </div>
+
+        {/* Category field */}
+        <div className={styles.configField}>
+          <div className={styles.configLabel}>Category</div>
+          <div className={styles.configValue}>{CATEGORY_LABELS[category] ?? category}</div>
         </div>
 
         {/* Config key-value pairs */}

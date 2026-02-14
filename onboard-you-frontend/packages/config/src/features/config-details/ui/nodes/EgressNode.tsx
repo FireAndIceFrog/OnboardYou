@@ -9,7 +9,7 @@ export function EgressNode({ data }: NodeProps) {
         <span className={styles.nodeTitle}>Egress</span>
       </div>
       <div className={styles.nodeBody}>{data.label as string}</div>
-      <span className={styles.nodeBadge}>{data.stageType as string}</span>
+      <span className={styles.nodeBadge}>{data.actionType as string}</span>
       <Handle type="target" position={Position.Left} />
     </div>
   );

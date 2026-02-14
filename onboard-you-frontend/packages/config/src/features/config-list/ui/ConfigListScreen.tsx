@@ -5,16 +5,8 @@ import { Button } from '@/shared/ui/Button';
 import { Spinner } from '@/shared/ui/Spinner';
 import styles from './ConfigListScreen.module.scss';
 
-const STATUS_TABS = [
-  { label: 'All', value: null },
-  { label: 'Active', value: 'active' },
-  { label: 'Draft', value: 'draft' },
-  { label: 'Paused', value: 'paused' },
-  { label: 'Error', value: 'error' },
-] as const;
-
 function ConfigListScreenInner() {
-  const { state, filteredConfigs, setSearchQuery, setStatusFilter } = useConfigList();
+  const { state, filteredConfigs, setSearchQuery } = useConfigList();
 
   return (
     <div className={styles.configListScreen}>
@@ -30,24 +22,10 @@ function ConfigListScreenInner() {
         <input
           type="text"
           className={styles.searchInput}
-          placeholder="Search configurations..."
+          placeholder="Search by name or company…"
           value={state.searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
-      </div>
-
-      <div className={styles.filterTabs}>
-        {STATUS_TABS.map((tab) => (
-          <button
-            key={tab.label}
-            className={`${styles.filterTab} ${
-              state.statusFilter === tab.value ? styles['filterTab--active'] : ''
-            }`}
-            onClick={() => setStatusFilter(tab.value)}
-          >
-            {tab.label}
-          </button>
-        ))}
       </div>
 
       {state.isLoading && (
@@ -69,8 +47,8 @@ function ConfigListScreenInner() {
           <span className={styles.emptyIcon}>📋</span>
           <h3 className={styles.emptyTitle}>No configurations found</h3>
           <p className={styles.emptyDesc}>
-            {state.searchQuery || state.statusFilter
-              ? 'Try adjusting your search or filter criteria.'
+            {state.searchQuery
+              ? 'Try adjusting your search criteria.'
               : 'Create your first ETL pipeline configuration to get started.'}
           </p>
         </div>
@@ -79,7 +57,7 @@ function ConfigListScreenInner() {
       {!state.isLoading && !state.error && filteredConfigs.length > 0 && (
         <div className={styles.configGrid}>
           {filteredConfigs.map((config) => (
-            <ConfigListItem key={config.id} config={config} />
+            <ConfigListItem key={config.customerCompanyId} config={config} />
           ))}
         </div>
       )}

@@ -9,7 +9,7 @@ export function IngestionNode({ data }: NodeProps) {
         <span className={styles.nodeTitle}>Ingestion</span>
       </div>
       <div className={styles.nodeBody}>{data.label as string}</div>
-      <span className={styles.nodeBadge}>{data.stageType as string}</span>
+      <span className={styles.nodeBadge}>{data.actionType as string}</span>
       <Handle type="source" position={Position.Right} />
     </div>
   );

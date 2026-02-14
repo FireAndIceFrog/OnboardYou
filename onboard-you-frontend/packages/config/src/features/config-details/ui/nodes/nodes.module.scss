@@ -21,7 +21,7 @@
 }
 
 .ingestionNode { border-left-color: $color-primary; }
-.transformationNode { border-left-color: $color-secondary; }
+.logicNode { border-left-color: $color-secondary; }
 .egressNode { border-left-color: $color-success; }
 
 .nodeHeader {
@@ -62,7 +62,7 @@
   color: $color-primary-dark;
 }
 
-.transformationNode .nodeBadge {
+.logicNode .nodeBadge {
   background: rgba($color-secondary, 0.08);
   color: $color-secondary;
 }

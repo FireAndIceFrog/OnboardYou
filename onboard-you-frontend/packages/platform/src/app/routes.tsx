@@ -52,11 +52,11 @@ export const router = createBrowserRouter([
             element: <HomeScreen />,
           },
           {
-            path: 'configs',
+            path: 'config',
             element: <ConfigRemote />,
           },
           {
-            path: 'configs/:configId',
+            path: 'config/:customerCompanyId',
             element: <ConfigRemote />,
           },
           {

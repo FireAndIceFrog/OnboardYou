@@ -1,23 +1,33 @@
-import { ApiClient } from '@/shared/services';
-import type { PipelineConfig } from '@/shared/domain/types';
-
-interface ConfigResponse {
-  data: PipelineConfig;
-}
+import type { ApiClient } from '@/shared/services';
+import type { PipelineConfig, ValidationResult } from '@/shared/domain/types';
 
 export async function fetchConfig(
   apiClient: ApiClient,
-  configId: string,
+  customerCompanyId: string,
 ): Promise<PipelineConfig> {
-  const response = await apiClient.get<ConfigResponse>(`/configs/${configId}`);
-  return response.data;
+  return apiClient.get<PipelineConfig>(`/config/${customerCompanyId}`);
+}
+
+export async function createConfig(
+  apiClient: ApiClient,
+  customerCompanyId: string,
+  data: PipelineConfig,
+): Promise<PipelineConfig> {
+  return apiClient.post<PipelineConfig>(`/config/${customerCompanyId}`, data);
 }
 
 export async function saveConfig(
   apiClient: ApiClient,
-  configId: string,
-  data: Partial<PipelineConfig>,
+  customerCompanyId: string,
+  data: PipelineConfig,
 ): Promise<PipelineConfig> {
-  const response = await apiClient.put<ConfigResponse>(`/configs/${configId}`, data);
-  return response.data;
+  return apiClient.put<PipelineConfig>(`/config/${customerCompanyId}`, data);
+}
+
+export async function validateConfig(
+  apiClient: ApiClient,
+  customerCompanyId: string,
+  data: PipelineConfig,
+): Promise<ValidationResult> {
+  return apiClient.post<ValidationResult>(`/config/${customerCompanyId}/validate`, data);
 }

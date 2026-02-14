@@ -14,7 +14,7 @@ export const router = createBrowserRouter([
     ),
   },
   {
-    path: '/:configId',
+    path: '/:customerCompanyId',
     element: (
       <ChatProvider pipelineConfig={null}>
         <ConfigDetailsPage />

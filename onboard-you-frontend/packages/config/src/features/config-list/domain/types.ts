@@ -5,5 +5,4 @@ export interface ConfigListState {
   isLoading: boolean;
   error: string | null;
   searchQuery: string;
-  statusFilter: string | null;
 }

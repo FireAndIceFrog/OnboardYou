@@ -20,24 +20,9 @@ import styles from './ConfigDetailsPage.module.scss';
 
 const nodeTypes = {
   ingestion: IngestionNode,
-  transformation: TransformationNode,
+  logic: TransformationNode,
   egress: EgressNode,
 };
-
-function statusToBadgeVariant(status: string): 'active' | 'draft' | 'paused' | 'error' | 'info' {
-  switch (status) {
-    case 'active':
-      return 'active';
-    case 'draft':
-      return 'draft';
-    case 'paused':
-      return 'paused';
-    case 'error':
-      return 'error';
-    default:
-      return 'info';
-  }
-}
 
 function ConfigDetailsContent() {
   const { state, dispatch } = useConfigDetails();
@@ -98,7 +83,8 @@ function ConfigDetailsContent() {
             ← Back
           </button>
           <h1 className={styles.configName}>{config.name}</h1>
-          <Badge variant={statusToBadgeVariant(config.status)}>{config.status}</Badge>
+          <Badge variant="info">{config.cron}</Badge>
+          <Badge variant="active">{config.pipeline.actions.length} steps</Badge>
         </div>
         <div className={styles.headerRight}>
           <button type="button" className={styles.chatToggle} onClick={handleToggleChat}>
@@ -154,9 +140,9 @@ function ConfigDetailsContent() {
 }
 
 export function ConfigDetailsPage() {
-  const { configId } = useParams<{ configId: string }>();
+  const { customerCompanyId } = useParams<{ customerCompanyId: string }>();
 
-  if (!configId) {
+  if (!customerCompanyId) {
     return (
       <div className={styles.errorState}>
         <span className={styles.errorIcon}>⚠️</span>
@@ -166,7 +152,7 @@ export function ConfigDetailsPage() {
   }
 
   return (
-    <ConfigDetailsProvider configId={configId}>
+    <ConfigDetailsProvider customerCompanyId={customerCompanyId}>
       <ConfigDetailsContent />
     </ConfigDetailsProvider>
   );
