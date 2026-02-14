@@ -3,6 +3,7 @@ import { createBrowserRouter } from 'react-router-dom';
 import { LoginPage, CallbackPage, ProtectedRoute } from '@/features/auth';
 import { AppLayout } from '@/features/layout';
 import { HomeScreen } from '@/features/home';
+import { SettingsPage } from '@/features/settings';
 import { Spinner } from '@/shared/ui/Spinner';
 
 const ConfigApp = lazy(async () => {
@@ -21,17 +22,6 @@ function ConfigRemote() {
     >
       <ConfigApp />
     </Suspense>
-  );
-}
-
-function SettingsPlaceholder() {
-  return (
-    <div style={{ padding: '2rem' }}>
-      <h2>Settings</h2>
-      <p style={{ color: '#64748B', marginTop: '0.5rem' }}>
-        Settings page coming soon.
-      </p>
-    </div>
   );
 }
 
@@ -60,7 +50,7 @@ export const router = createBrowserRouter([
           },
           {
             path: 'settings',
-            element: <SettingsPlaceholder />,
+            element: <SettingsPage />,
           },
         ],
       },

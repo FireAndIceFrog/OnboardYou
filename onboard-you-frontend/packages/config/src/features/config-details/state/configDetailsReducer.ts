@@ -1,6 +1,17 @@
 import type { Node, Edge } from '@xyflow/react';
-import type { PipelineConfig } from '@/shared/domain/types';
+import type { PipelineConfig, ActionConfig } from '@/shared/domain/types';
 import type { ConfigDetailsState } from '../domain/types';
+import { actionCategory } from '@/shared/domain/types';
+
+const NODE_GAP_X = 300;
+const START_X = 50;
+const START_Y = 100;
+
+const CATEGORY_STYLES: Record<string, { stroke: string }> = {
+  ingestion: { stroke: '#2563EB' },
+  logic: { stroke: '#7C3AED' },
+  egress: { stroke: '#10B981' },
+};
 
 export type ConfigDetailsAction =
   | { type: 'FETCH_START' }
@@ -11,7 +22,8 @@ export type ConfigDetailsAction =
   | { type: 'SELECT_NODE'; payload: Node }
   | { type: 'DESELECT_NODE' }
   | { type: 'TOGGLE_CHAT' }
-  | { type: 'SET_CHAT_OPEN'; payload: boolean };
+  | { type: 'SET_CHAT_OPEN'; payload: boolean }
+  | { type: 'ADD_FLOW_ACTION'; payload: ActionConfig };
 
 export const configDetailsInitialState: ConfigDetailsState = {
   config: null,
@@ -61,6 +73,43 @@ export function configDetailsReducer(
 
     case 'SET_CHAT_OPEN':
       return { ...state, chatOpen: action.payload };
+
+    case 'ADD_FLOW_ACTION': {
+      const actionCfg = action.payload;
+      const category = actionCategory(actionCfg.actionType);
+      const idx = state.nodes.length;
+
+      const newNode: Node = {
+        id: actionCfg.id,
+        type: category,
+        position: { x: START_X + idx * NODE_GAP_X, y: START_Y },
+        data: {
+          label: (actionCfg.config.name as string) ?? actionCfg.id,
+          actionType: actionCfg.actionType,
+          category,
+          config: actionCfg.config,
+        },
+      };
+
+      const newEdges = [...state.edges];
+      if (state.nodes.length > 0) {
+        const prevNode = state.nodes[state.nodes.length - 1];
+        const style = CATEGORY_STYLES[category] ?? CATEGORY_STYLES.logic;
+        newEdges.push({
+          id: `edge-${prevNode.id}-${actionCfg.id}`,
+          source: prevNode.id,
+          target: actionCfg.id,
+          animated: true,
+          style: { ...style, strokeWidth: 2 },
+        });
+      }
+
+      return {
+        ...state,
+        nodes: [...state.nodes, newNode],
+        edges: newEdges,
+      };
+    }
 
     default:
       return state;

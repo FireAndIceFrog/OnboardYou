@@ -9,10 +9,12 @@ interface ChatWindowProps {
 }
 
 const SUGGESTION_CHIPS = [
-  'Explain this pipeline',
-  'Check status',
-  'Describe transformations',
-  'What can you do?',
+  'Clean up my address data',
+  'Format all phone numbers to international',
+  'Remove duplicate employee records',
+  'Mask sensitive personal information',
+  'Standardise country codes',
+  'What can you help me with?',
 ];
 
 export function ChatWindow({ onClose }: ChatWindowProps) {
@@ -40,9 +42,9 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
         <div className={styles.chatHeaderLeft}>
           <span className={styles.chatHeaderIcon}>🤖</span>
           <div>
-            <h3 className={styles.chatTitle}>Pipeline Assistant</h3>
+            <h3 className={styles.chatTitle}>Onboarding Assistant</h3>
             <span className={styles.chatSubtitle}>
-              {pipelineConfig ? pipelineConfig.name : 'No pipeline selected'}
+              {pipelineConfig ? pipelineConfig.name : 'No system selected'}
             </span>
           </div>
         </div>
@@ -77,8 +79,8 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
             <span className={styles.welcomeIcon}>💬</span>
             <h4 className={styles.welcomeTitle}>How can I help?</h4>
             <p className={styles.welcomeText}>
-              Ask me anything about this pipeline — its stages, status, transformations, or how to
-              improve it.
+              Tell me what you'd like to do with your data — I'll update the flow for you
+              automatically.
             </p>
             <div className={styles.suggestions}>
               {SUGGESTION_CHIPS.map((chip) => (

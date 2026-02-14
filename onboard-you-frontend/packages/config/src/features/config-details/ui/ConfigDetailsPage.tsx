@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useContext, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ReactFlow,
@@ -16,10 +16,13 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import { Button, Spinner, Badge } from '@/shared/ui';
+import { humanFrequency } from '@/shared/domain/types';
 import { useConfigDetails } from '../state/ConfigDetailsContext';
 import { ConfigDetailsProvider } from '../state/ConfigDetailsProvider';
 import { ConfigDetailsForm } from './ConfigDetailsForm';
 import { IngestionNode, TransformationNode, EgressNode } from './nodes';
+import { ChatContext } from '@/features/chat/state/ChatContext';
+import { ChatWindow } from '@/features/chat/ui';
 import styles from './ConfigDetailsPage.module.scss';
 
 const nodeTypes = {
@@ -31,8 +34,20 @@ const nodeTypes = {
 function ConfigDetailsContent() {
   const { state, dispatch } = useConfigDetails();
   const navigate = useNavigate();
+  const chatCtx = useContext(ChatContext);
 
   const { config, nodes, edges, selectedNode, isLoading, error, chatOpen } = state;
+
+  // ── Real-time flow updates from chat ──────────────────────
+  const lastFlowAction = chatCtx?.lastFlowAction ?? null;
+  const processedActionsRef = useRef(new Set<string>());
+
+  useEffect(() => {
+    if (lastFlowAction && !processedActionsRef.current.has(lastFlowAction.id)) {
+      processedActionsRef.current.add(lastFlowAction.id);
+      dispatch({ type: 'ADD_FLOW_ACTION', payload: lastFlowAction });
+    }
+  }, [lastFlowAction, dispatch]);
 
   const handleNodeClick: NodeMouseHandler = useCallback(
     (_event, node) => {
@@ -94,6 +109,19 @@ function ConfigDetailsContent() {
 
   return (
     <div className={styles.detailsPage}>
+      {/* Step indicator bar */}
+      <div className={styles.stepBar}>
+        <div className={styles.stepItem}>
+          <span className={styles.stepDot} data-completed="">✓</span>
+          <span className={styles.stepText}>Connection Details</span>
+        </div>
+        <div className={styles.stepLine} data-active="" />
+        <div className={styles.stepItem}>
+          <span className={styles.stepDot} data-active="">2</span>
+          <span className={styles.stepTextActive}>Flow Customization</span>
+        </div>
+      </div>
+
       {/* Header */}
       <header className={styles.detailHeader}>
         <div className={styles.headerLeft}>
@@ -101,8 +129,7 @@ function ConfigDetailsContent() {
             ← Back
           </button>
           <h1 className={styles.configName}>{config.name}</h1>
-          <Badge variant="info">{config.cron}</Badge>
-          <Badge variant="active">{config.pipeline.actions.length} steps</Badge>
+          <Badge variant="info">{humanFrequency(config.cron)}</Badge>
         </div>
         <div className={styles.headerRight}>
           <button type="button" className={styles.chatToggle} onClick={handleToggleChat}>
@@ -147,11 +174,7 @@ function ConfigDetailsContent() {
           className={`${styles.chatPanel} ${!chatOpen ? styles.chatPanelHidden : ''}`}
         >
           {chatOpen && (
-            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '1rem' }}>
-              <p style={{ color: '#64748B', textAlign: 'center', marginTop: '2rem' }}>
-                Chat assistant coming soon…
-              </p>
-            </div>
+            <ChatWindow onClose={handleToggleChat} />
           )}
         </div>
       </div>

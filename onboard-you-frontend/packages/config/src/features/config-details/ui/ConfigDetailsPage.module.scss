@@ -1,5 +1,67 @@
 @use '../../../styles/variables' as *;
 
+/* ── Step indicator bar ──────────────────────── */
+.stepBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-3;
+  padding: $spacing-3 $spacing-6;
+  background: $bg-tertiary;
+  border-bottom: 1px solid $neutral-200;
+  flex-shrink: 0;
+}
+
+.stepItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+}
+
+.stepDot {
+  width: 26px;
+  height: 26px;
+  border-radius: $radius-full;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $text-xs;
+  font-weight: $font-bold;
+  background: $neutral-200;
+  color: $text-secondary;
+
+  &[data-active] {
+    background: $color-primary;
+    color: $text-inverse;
+  }
+
+  &[data-completed] {
+    background: $color-success;
+    color: $text-inverse;
+  }
+}
+
+.stepText {
+  font-size: $text-sm;
+  color: $text-muted;
+}
+
+.stepTextActive {
+  font-size: $text-sm;
+  font-weight: $font-semibold;
+  color: $text-primary;
+}
+
+.stepLine {
+  width: 40px;
+  height: 2px;
+  background: $neutral-200;
+
+  &[data-active] {
+    background: $color-primary;
+  }
+}
+
 .detailsPage {
   display: flex;
   flex-direction: column;

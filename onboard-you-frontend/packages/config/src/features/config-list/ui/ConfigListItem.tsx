@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import type { PipelineConfig } from '@/shared/domain/types';
+import { humanFrequency, deriveStatus, STATUS_DISPLAY } from '@/shared/domain/types';
 import { Badge } from '@/shared/ui/Badge';
 import styles from './ConfigListItem.module.scss';
 
@@ -29,9 +30,19 @@ function relativeTime(dateStr: string): string {
   return `${Math.floor(diffMonths / 12)}y ago`;
 }
 
+function fullDate(dateStr: string): string {
+  if (!dateStr) return '';
+  return new Date(dateStr).toLocaleString(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+}
+
 export function ConfigListItem({ config }: ConfigListItemProps) {
   const navigate = useNavigate();
-  const actionCount = config.pipeline.actions.length;
+  const status = deriveStatus(config);
+  const statusInfo = STATUS_DISPLAY[status];
+  const frequency = humanFrequency(config.cron);
 
   return (
     <div
@@ -51,11 +62,18 @@ export function ConfigListItem({ config }: ConfigListItemProps) {
 
       <div className={styles.configItemMeta}>
         <div className={styles.metaLeft}>
-          <span className={styles.sourceTag}>{config.cron}</span>
+          <span className={styles.frequencyTag} title={`Cron: ${config.cron}`}>
+            🔄 {frequency}
+          </span>
         </div>
         <div className={styles.metaRight}>
-          <Badge variant="active">{actionCount} steps</Badge>
-          <span className={styles.updatedAt}>{relativeTime(config.lastEdited)}</span>
+          <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+          <span
+            className={styles.updatedAt}
+            title={`Last edited: ${fullDate(config.lastEdited)}`}
+          >
+            {relativeTime(config.lastEdited)}
+          </span>
         </div>
       </div>
     </div>

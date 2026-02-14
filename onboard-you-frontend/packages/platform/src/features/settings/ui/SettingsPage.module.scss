@@ -1,0 +1,173 @@
+@use '../../../styles/variables' as *;
+
+.page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: $spacing-8 $spacing-6;
+}
+
+/* ── Header ────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: $spacing-7;
+}
+
+.title {
+  font-size: $text-2xl;
+  font-weight: $font-bold;
+  color: $text-primary;
+  margin: 0 0 $spacing-1;
+}
+
+.subtitle {
+  font-size: $text-sm;
+  color: $text-secondary;
+  margin: 0;
+  max-width: 480px;
+}
+
+.headerActions {
+  display: flex;
+  gap: $spacing-2;
+  align-items: center;
+}
+
+/* ── Section cards ──────────────────────────── */
+.section {
+  margin-bottom: $spacing-5;
+  padding: $spacing-6 !important;
+}
+
+.sectionTitle {
+  font-size: $text-lg;
+  font-weight: $font-semibold;
+  color: $text-primary;
+  margin: 0 0 $spacing-1;
+}
+
+.sectionDesc {
+  font-size: $text-sm;
+  color: $text-secondary;
+  margin: 0 0 $spacing-5;
+}
+
+/* ── Auth type toggle ───────────────────────── */
+.authToggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-3;
+}
+
+.authOption {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: $spacing-1;
+  padding: $spacing-4;
+  background: $bg-primary;
+  border: 2px solid $neutral-200;
+  border-radius: $radius-xl;
+  cursor: pointer;
+  text-align: left;
+  font-family: $font-family-sans;
+  transition: border-color $transition-fast, box-shadow $transition-fast;
+
+  &:hover {
+    border-color: $neutral-300;
+    box-shadow: $shadow-sm;
+  }
+}
+
+.authOptionActive {
+  border-color: $color-primary;
+  box-shadow: 0 0 0 3px rgba($color-primary, 0.12);
+}
+
+.authIcon {
+  font-size: $text-xl;
+}
+
+.authLabel {
+  font-size: $text-sm;
+  font-weight: $font-semibold;
+  color: $text-primary;
+}
+
+.authDesc {
+  font-size: $text-xs;
+  color: $text-muted;
+}
+
+/* ── Form fields ────────────────────────────── */
+.formGroup {
+  margin-bottom: $spacing-4;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-4;
+
+  @media (max-width: $breakpoint-sm) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.formLabel {
+  display: block;
+  font-size: $text-sm;
+  font-weight: $font-medium;
+  color: $text-primary;
+  margin-bottom: $spacing-1;
+}
+
+.formHint {
+  display: block;
+  font-size: $text-xs;
+  color: $text-muted;
+  margin-top: $spacing-1;
+}
+
+.formInput,
+.formSelect {
+  width: 100%;
+  padding: $spacing-2 $spacing-3;
+  font-size: $text-sm;
+  border: 1px solid $neutral-200;
+  border-radius: $radius-lg;
+  background: $bg-primary;
+  color: $text-primary;
+  font-family: $font-family-sans;
+  outline: none;
+  transition: border-color $transition-fast, box-shadow $transition-fast;
+
+  &::placeholder {
+    color: $text-muted;
+  }
+
+  &:focus {
+    border-color: $color-primary;
+    box-shadow: 0 0 0 3px rgba($color-primary, 0.1);
+  }
+}
+
+.formSelect {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+  background-position: right $spacing-2 center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  padding-right: $spacing-8;
+}
+
+/* ── Footer actions ─────────────────────────── */
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-3;
+  margin-top: $spacing-6;
+  padding-top: $spacing-5;
+  border-top: 1px solid $neutral-200;
+}

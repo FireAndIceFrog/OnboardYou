@@ -1,9 +1,9 @@
-import { useCallback, useRef, type ReactNode } from 'react';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { useReducer } from 'react';
 import { ChatContext } from './ChatContext';
 import { chatReducer, initialChatState } from './chatReducer';
-import { generateResponse } from '../services/chatService';
-import type { PipelineConfig, ChatMessage } from '@/shared/domain/types';
+import { generateResponse, deriveFlowAction } from '../services/chatService';
+import type { PipelineConfig, ChatMessage, ActionConfig } from '@/shared/domain/types';
 
 interface ChatProviderProps {
   children: ReactNode;
@@ -22,6 +22,7 @@ function createMessage(role: 'user' | 'assistant', content: string): ChatMessage
 export function ChatProvider({ children, pipelineConfig }: ChatProviderProps) {
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
   const typingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [lastFlowAction, setLastFlowAction] = useState<ActionConfig | null>(null);
 
   const sendMessage = useCallback(
     (content: string) => {
@@ -30,6 +31,12 @@ export function ChatProvider({ children, pipelineConfig }: ChatProviderProps) {
       const userMsg = createMessage('user', content.trim());
       dispatch({ type: 'ADD_USER_MESSAGE', payload: userMsg });
       dispatch({ type: 'SET_TYPING', payload: true });
+
+      // Check if this message implies a flow change
+      const flowAction = deriveFlowAction(content);
+      if (flowAction) {
+        setLastFlowAction(flowAction);
+      }
 
       // Simulate AI response with delay
       const delay = 400 + Math.random() * 800;
@@ -48,10 +55,11 @@ export function ChatProvider({ children, pipelineConfig }: ChatProviderProps) {
       typingRef.current = null;
     }
     dispatch({ type: 'CLEAR_CHAT' });
+    setLastFlowAction(null);
   }, []);
 
   return (
-    <ChatContext.Provider value={{ state, sendMessage, clearChat, pipelineConfig }}>
+    <ChatContext.Provider value={{ state, sendMessage, clearChat, pipelineConfig, lastFlowAction }}>
       {children}
     </ChatContext.Provider>
   );

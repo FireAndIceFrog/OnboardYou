@@ -1,4 +1,5 @@
 import { useConfigDetails } from '../state/ConfigDetailsContext';
+import { businessLabel } from '@/shared/domain/types';
 import styles from './ConfigDetailsForm.module.scss';
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -8,9 +9,9 @@ const CATEGORY_ICONS: Record<string, string> = {
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
-  ingestion: 'Ingestion',
-  logic: 'Logic / Transform',
-  egress: 'Egress',
+  ingestion: 'Data Source',
+  logic: 'Business Rule',
+  egress: 'Destination',
 };
 
 export function ConfigDetailsForm() {
@@ -47,8 +48,8 @@ export function ConfigDetailsForm() {
       <div className={styles.formBody}>
         {/* Action type field */}
         <div className={styles.configField}>
-          <div className={styles.configLabel}>Action Type</div>
-          <div className={styles.configValue}>{actionType}</div>
+          <div className={styles.configLabel}>Step Type</div>
+          <div className={styles.configValue}>{businessLabel(actionType)}</div>
         </div>
 
         {/* Category field */}

@@ -1,6 +1,6 @@
 import type { Node, Edge } from '@xyflow/react';
 import type { Manifest } from '@/shared/domain/types';
-import { actionCategory } from '@/shared/domain/types';
+import { actionCategory, businessLabel } from '@/shared/domain/types';
 
 const NODE_GAP_X = 300;
 const START_X = 50;
@@ -28,7 +28,7 @@ export function convertToFlow(manifest: Manifest): { nodes: Node[]; edges: Edge[
       type: category,
       position: { x: START_X + idx * NODE_GAP_X, y: START_Y },
       data: {
-        label: (action.config.name as string) ?? action.id,
+        label: (action.config.name as string) ?? businessLabel(action.actionType),
         actionType: action.actionType,
         category,
         config: action.config,

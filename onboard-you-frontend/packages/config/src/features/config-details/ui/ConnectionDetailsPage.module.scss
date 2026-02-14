@@ -1,0 +1,251 @@
+@use '../../../styles/variables' as *;
+
+.wizardPage {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: $spacing-8 $spacing-6;
+}
+
+/* ── Step indicator ───────────────────────────── */
+.stepIndicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-3;
+  margin-bottom: $spacing-8;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+}
+
+.stepCircle {
+  width: 32px;
+  height: 32px;
+  border-radius: $radius-full;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $text-sm;
+  font-weight: $font-bold;
+  background: $neutral-200;
+  color: $text-secondary;
+  transition: background-color $transition-fast, color $transition-fast;
+}
+
+.stepCircleActive {
+  background: $color-primary;
+  color: $text-inverse;
+}
+
+.stepCircleCompleted {
+  background: $color-success;
+  color: $text-inverse;
+}
+
+.stepLabel {
+  font-size: $text-sm;
+  font-weight: $font-medium;
+  color: $text-secondary;
+}
+
+.stepLabelActive {
+  color: $text-primary;
+  font-weight: $font-semibold;
+}
+
+.stepConnector {
+  width: 48px;
+  height: 2px;
+  background: $neutral-200;
+}
+
+.stepConnectorActive {
+  background: $color-primary;
+}
+
+/* ── Form card ──────────────────────────────── */
+.card {
+  background: $bg-primary;
+  border: 1px solid $neutral-200;
+  border-radius: $radius-xl;
+  padding: $spacing-6;
+  box-shadow: $shadow-sm;
+}
+
+.cardTitle {
+  font-size: $text-xl;
+  font-weight: $font-bold;
+  color: $text-primary;
+  margin: 0 0 $spacing-1;
+}
+
+.cardSubtitle {
+  font-size: $text-sm;
+  color: $text-secondary;
+  margin: 0 0 $spacing-6;
+}
+
+/* ── Section headers ────────────────────────── */
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  font-size: $text-sm;
+  font-weight: $font-semibold;
+  color: $text-primary;
+  margin: $spacing-6 0 $spacing-4;
+  padding-bottom: $spacing-2;
+  border-bottom: 1px solid $neutral-100;
+}
+
+.sectionIcon {
+  font-size: $text-base;
+}
+
+/* ── Form fields ────────────────────────────── */
+.formGroup {
+  margin-bottom: $spacing-5;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-4;
+
+  @media (max-width: $breakpoint-sm) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.formLabel {
+  display: block;
+  font-size: $text-sm;
+  font-weight: $font-medium;
+  color: $text-primary;
+  margin-bottom: $spacing-1;
+}
+
+.formHint {
+  display: block;
+  font-size: $text-xs;
+  color: $text-muted;
+  margin-top: $spacing-1;
+}
+
+.formInput,
+.formSelect {
+  width: 100%;
+  padding: $spacing-2 $spacing-3;
+  font-size: $text-sm;
+  border: 1px solid $neutral-200;
+  border-radius: $radius-lg;
+  background: $bg-primary;
+  color: $text-primary;
+  font-family: $font-family-sans;
+  outline: none;
+  transition: border-color $transition-fast, box-shadow $transition-fast;
+
+  &::placeholder {
+    color: $text-muted;
+  }
+
+  &:focus {
+    border-color: $color-primary;
+    box-shadow: 0 0 0 3px rgba($color-primary, 0.1);
+  }
+}
+
+.formSelect {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+  background-position: right $spacing-2 center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  padding-right: $spacing-8;
+}
+
+/* ── System selector grid ─────────────────────── */
+.systemGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $spacing-3;
+  margin-bottom: $spacing-5;
+}
+
+.systemCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-2;
+  padding: $spacing-4;
+  background: $bg-primary;
+  border: 2px solid $neutral-200;
+  border-radius: $radius-xl;
+  cursor: pointer;
+  transition: border-color $transition-fast, box-shadow $transition-fast;
+  font-family: $font-family-sans;
+
+  &:hover {
+    border-color: $neutral-300;
+    box-shadow: $shadow-sm;
+  }
+}
+
+.systemCardSelected {
+  border-color: $color-primary;
+  box-shadow: 0 0 0 3px rgba($color-primary, 0.12);
+}
+
+.systemIcon {
+  font-size: $text-2xl;
+}
+
+.systemName {
+  font-size: $text-sm;
+  font-weight: $font-medium;
+  color: $text-primary;
+  text-align: center;
+}
+
+/* ── Chip / tag group (response groups) ─────── */
+.chipGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-2;
+  margin-top: $spacing-1;
+}
+
+.chip {
+  padding: $spacing-1 $spacing-3;
+  font-size: $text-xs;
+  font-weight: $font-medium;
+  font-family: $font-family-sans;
+  border: 1px solid $neutral-200;
+  border-radius: $radius-full;
+  background: $bg-secondary;
+  color: $text-secondary;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    border-color: $color-primary;
+    color: $color-primary;
+  }
+}
+
+.chipActive {
+  background: rgba($color-primary, 0.08);
+  border-color: $color-primary;
+  color: $color-primary;
+  font-weight: $font-semibold;
+}
+
+/* ── Actions bar ────────────────────────────── */
+.actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: $spacing-6;
+}

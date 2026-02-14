@@ -54,7 +54,7 @@ export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
         value={value}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
-        placeholder="Ask about this pipeline..."
+        placeholder="Tell me what to do with your data..."
         disabled={disabled}
         rows={1}
       />
