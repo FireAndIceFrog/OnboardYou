@@ -14,7 +14,12 @@ export default defineConfig({
         './ConfigListScreen': './src/features/config-list/ui/ConfigListScreen.tsx',
         './ConfigDetailsPage': './src/features/config-details/ui/ConfigDetailsPage.tsx',
       },
-      shared: ['react', 'react-dom', 'react-router-dom'],
+      shared: {
+        react: { singleton: true, requiredVersion: false },
+        'react-dom': { singleton: true, requiredVersion: false },
+        'react-router-dom': { singleton: true, requiredVersion: false },
+        '@xyflow/react': { singleton: true, requiredVersion: false },
+      },
     }),
   ],
   resolve: {

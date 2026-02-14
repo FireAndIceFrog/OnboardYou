@@ -36,13 +36,13 @@ export function ConfigListItem({ config }: ConfigListItemProps) {
   return (
     <div
       className={styles.configItem}
-      onClick={() => navigate(`/${config.customerCompanyId}`)}
+      onClick={() => navigate(config.customerCompanyId)}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          navigate(`/${config.customerCompanyId}`);
+          navigate(config.customerCompanyId);
         }
       }}
     >

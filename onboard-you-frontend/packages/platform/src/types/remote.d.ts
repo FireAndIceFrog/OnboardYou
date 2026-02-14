@@ -2,6 +2,7 @@ declare module 'configApp/App' {
   import type { ComponentType } from 'react';
   const App: ComponentType;
   export default App;
+  export const ConfigRoutes: ComponentType;
 }
 
 declare module 'configApp/ConfigListScreen' {

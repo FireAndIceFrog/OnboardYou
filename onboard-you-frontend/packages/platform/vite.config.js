@@ -6,18 +6,14 @@ export default defineConfig({
     plugins: [
         react(),
         federation({
-            name: 'configApp',
-            filename: 'remoteEntry.js',
-            exposes: {
-                './App': './src/app/App.tsx',
-                './ConfigListScreen': './src/features/config-list/ui/ConfigListScreen.tsx',
-                './ConfigDetailsPage': './src/features/config-details/ui/ConfigDetailsPage.tsx',
+            name: 'platform',
+            remotes: {
+                configApp: 'http://localhost:5174/assets/remoteEntry.js',
             },
             shared: {
                 react: { singleton: true, requiredVersion: false },
                 'react-dom': { singleton: true, requiredVersion: false },
                 'react-router-dom': { singleton: true, requiredVersion: false },
-                '@xyflow/react': { singleton: true, requiredVersion: false },
             },
         }),
     ],
@@ -34,8 +30,8 @@ export default defineConfig({
         },
     },
     server: {
-        port: 5174,
-        strictPort: true,
+        port: 5173,
+        strictPort: false,
     },
     build: {
         modulePreload: false,

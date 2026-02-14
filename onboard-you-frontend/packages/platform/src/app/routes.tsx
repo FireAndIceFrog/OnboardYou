@@ -5,7 +5,10 @@ import { AppLayout } from '@/features/layout';
 import { HomeScreen } from '@/features/home';
 import { Spinner } from '@/shared/ui/Spinner';
 
-const ConfigApp = lazy(() => import('configApp/App'));
+const ConfigApp = lazy(async () => {
+  const m = await import('configApp/App');
+  return { default: m.ConfigRoutes };
+});
 
 function ConfigRemote() {
   return (
@@ -52,11 +55,7 @@ export const router = createBrowserRouter([
             element: <HomeScreen />,
           },
           {
-            path: 'config',
-            element: <ConfigRemote />,
-          },
-          {
-            path: 'config/:customerCompanyId',
+            path: 'config/*',
             element: <ConfigRemote />,
           },
           {
