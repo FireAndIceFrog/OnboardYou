@@ -1,0 +1,57 @@
+@use 'variables' as *;
+
+// ============================================================================
+// Config Package — Base Styles
+// ============================================================================
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  font-family: $font-family-sans;
+  font-size: $text-base;
+  color: $text-primary;
+  background-color: $bg-secondary;
+  line-height: $leading-normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: $color-primary;
+  text-decoration: none;
+
+  &:hover {
+    color: $color-primary-dark;
+  }
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+  background: none;
+}
+
+input,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+code {
+  font-family: $font-family-mono;
+  font-size: $text-sm;
+  background-color: $bg-tertiary;
+  padding: $spacing-1 $spacing-2;
+  border-radius: $radius-sm;
+}

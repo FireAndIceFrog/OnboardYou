@@ -1,0 +1,109 @@
+// ============================================================================
+// OnboardYou Design System — Typography Utilities
+// ============================================================================
+
+@use 'variables' as *;
+
+// ---------------------------------------------------------------------------
+// Font Size Utilities
+// ---------------------------------------------------------------------------
+
+.text-xs   { font-size: $text-xs;   line-height: $leading-normal; }
+.text-sm   { font-size: $text-sm;   line-height: $leading-normal; }
+.text-base { font-size: $text-base; line-height: $leading-normal; }
+.text-lg   { font-size: $text-lg;   line-height: $leading-snug;   }
+.text-xl   { font-size: $text-xl;   line-height: $leading-snug;   }
+.text-2xl  { font-size: $text-2xl;  line-height: $leading-tight;  }
+.text-3xl  { font-size: $text-3xl;  line-height: $leading-tight;  }
+.text-4xl  { font-size: $text-4xl;  line-height: $leading-tight;  }
+
+// ---------------------------------------------------------------------------
+// Font Weight Utilities
+// ---------------------------------------------------------------------------
+
+.font-light    { font-weight: $font-light;    }
+.font-normal   { font-weight: $font-normal;   }
+.font-medium   { font-weight: $font-medium;   }
+.font-semibold { font-weight: $font-semibold; }
+.font-bold     { font-weight: $font-bold;     }
+
+// ---------------------------------------------------------------------------
+// Text Color Utilities
+// ---------------------------------------------------------------------------
+
+.text-primary   { color: $text-primary;   }
+.text-secondary { color: $text-secondary; }
+.text-muted     { color: $text-muted;     }
+.text-inverse   { color: $text-inverse;   }
+
+.text-success { color: $color-success; }
+.text-warning { color: $color-warning; }
+.text-error   { color: $color-error;   }
+.text-info    { color: $color-info;    }
+
+// ---------------------------------------------------------------------------
+// Font Family Utilities
+// ---------------------------------------------------------------------------
+
+.font-sans { font-family: $font-family-sans; }
+.font-mono { font-family: $font-family-mono; }
+
+// ---------------------------------------------------------------------------
+// Text Alignment
+// ---------------------------------------------------------------------------
+
+.text-left   { text-align: left;   }
+.text-center { text-align: center; }
+.text-right  { text-align: right;  }
+
+// ---------------------------------------------------------------------------
+// Text Transform
+// ---------------------------------------------------------------------------
+
+.uppercase  { text-transform: uppercase;  }
+.lowercase  { text-transform: lowercase;  }
+.capitalize { text-transform: capitalize; }
+.normal-case { text-transform: none;      }
+
+// ---------------------------------------------------------------------------
+// Text Overflow
+// ---------------------------------------------------------------------------
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+// ---------------------------------------------------------------------------
+// Line Height Utilities
+// ---------------------------------------------------------------------------
+
+.leading-tight   { line-height: $leading-tight;   }
+.leading-snug    { line-height: $leading-snug;     }
+.leading-normal  { line-height: $leading-normal;   }
+.leading-relaxed { line-height: $leading-relaxed;  }
+.leading-loose   { line-height: $leading-loose;    }
+
+// ---------------------------------------------------------------------------
+// Letter Spacing
+// ---------------------------------------------------------------------------
+
+.tracking-tight  { letter-spacing: -0.025em; }
+.tracking-normal { letter-spacing: 0;        }
+.tracking-wide   { letter-spacing: 0.025em;  }
+.tracking-wider  { letter-spacing: 0.05em;   }

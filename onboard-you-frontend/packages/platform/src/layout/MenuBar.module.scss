@@ -1,0 +1,91 @@
+// ============================================================================
+// OnboardYou — MenuBar Styles
+// ============================================================================
+
+@use '../styles/variables' as *;
+
+// ---------------------------------------------------------------------------
+// Nav wrapper
+// ---------------------------------------------------------------------------
+
+.nav {
+  padding: $spacing-3 $spacing-2;
+}
+
+.list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-1;
+}
+
+// ---------------------------------------------------------------------------
+// Nav item (link)
+// ---------------------------------------------------------------------------
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-3;
+  height: 40px;
+  padding: 0 $spacing-3;
+  border-radius: $radius-lg;
+  color: $text-secondary;
+  text-decoration: none;
+  font-family: $font-family-sans;
+  font-size: $text-sm;
+  font-weight: $font-medium;
+  transition:
+    background-color $transition-fast,
+    color $transition-fast;
+  white-space: nowrap;
+  overflow: hidden;
+
+  &:hover {
+    background-color: $neutral-100;
+    color: $text-primary;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $color-primary;
+    outline-offset: -2px;
+  }
+}
+
+// Active state
+.navItem--active {
+  background-color: rgba($color-primary, 0.08);
+  color: $color-primary;
+
+  &:hover {
+    background-color: rgba($color-primary, 0.12);
+    color: $color-primary;
+  }
+}
+
+// Collapsed state — center the icon
+.navItem--collapsed {
+  justify-content: center;
+  padding: 0;
+}
+
+// ---------------------------------------------------------------------------
+// Icon
+// ---------------------------------------------------------------------------
+
+.navIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+// ---------------------------------------------------------------------------
+// Label — hidden when collapsed via parent class
+// ---------------------------------------------------------------------------
+
+.navLabel {
+  transition: opacity $transition-fast;
+}

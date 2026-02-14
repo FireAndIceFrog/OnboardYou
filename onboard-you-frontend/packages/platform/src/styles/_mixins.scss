@@ -1,0 +1,254 @@
+// ============================================================================
+// OnboardYou Design System — Mixins
+// ============================================================================
+
+@use 'variables' as *;
+
+// ---------------------------------------------------------------------------
+// Flexbox Helpers
+// ---------------------------------------------------------------------------
+
+/// Center items on both axes
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/// Space items to opposite ends, vertically centered
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/// Flex column layout
+@mixin flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+// ---------------------------------------------------------------------------
+// Responsive Breakpoints
+// ---------------------------------------------------------------------------
+
+/// Apply styles from a given breakpoint upward (mobile-first).
+/// @param {String} $name - Breakpoint name (sm, md, lg, xl, 2xl)
+@mixin respond-to($name) {
+  @if map-has-key($breakpoints, $name) {
+    @media (min-width: map-get($breakpoints, $name)) {
+      @content;
+    }
+  } @else {
+    @warn "Unknown breakpoint `#{$name}`. Available: sm, md, lg, xl, 2xl.";
+  }
+}
+
+/// Apply styles below a given breakpoint.
+/// @param {String} $name - Breakpoint name
+@mixin respond-below($name) {
+  @if map-has-key($breakpoints, $name) {
+    @media (max-width: (map-get($breakpoints, $name) - 0.02px)) {
+      @content;
+    }
+  } @else {
+    @warn "Unknown breakpoint `#{$name}`. Available: sm, md, lg, xl, 2xl.";
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Text Utilities
+// ---------------------------------------------------------------------------
+
+/// Truncate single-line text with ellipsis
+@mixin truncate-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/// Clamp text to N visible lines
+/// @param {Number} $lines - Number of lines to show
+@mixin line-clamp($lines) {
+  display: -webkit-box;
+  -webkit-line-clamp: $lines;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+// ---------------------------------------------------------------------------
+// Button Mixins
+// ---------------------------------------------------------------------------
+
+/// Base button reset + common styles
+@mixin button-base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-2;
+  padding: $spacing-2 $spacing-4;
+  font-family: $font-family-sans;
+  font-size: $text-sm;
+  font-weight: $font-medium;
+  line-height: $leading-normal;
+  border: 1px solid transparent;
+  border-radius: $radius-lg;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color $transition-fast,
+              color $transition-fast,
+              border-color $transition-fast,
+              box-shadow $transition-fast;
+
+  &:focus-visible {
+    outline: 2px solid $color-primary;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+}
+
+/// Generate a colored button variant
+/// @param {Color} $bg - Background color
+/// @param {Color} $color - Text color
+/// @param {Color} $hover-bg - Hover background color
+@mixin button-variant($bg, $color, $hover-bg) {
+  background-color: $bg;
+  color: $color;
+
+  &:hover {
+    background-color: $hover-bg;
+  }
+
+  &:active {
+    background-color: darken($hover-bg, 5%);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Card
+// ---------------------------------------------------------------------------
+
+/// Base card surface
+@mixin card-base {
+  background-color: $bg-primary;
+  border: 1px solid $neutral-200;
+  border-radius: $radius-xl;
+  box-shadow: $shadow-sm;
+}
+
+// ---------------------------------------------------------------------------
+// Inputs
+// ---------------------------------------------------------------------------
+
+/// Base input / textarea styles
+@mixin input-base {
+  width: 100%;
+  padding: $spacing-2 $spacing-3;
+  font-family: $font-family-sans;
+  font-size: $text-sm;
+  line-height: $leading-normal;
+  color: $text-primary;
+  background-color: $bg-primary;
+  border: 1px solid $neutral-300;
+  border-radius: $radius-lg;
+  transition: border-color $transition-fast, box-shadow $transition-fast;
+
+  &::placeholder {
+    color: $text-muted;
+  }
+
+  &:hover {
+    border-color: $neutral-400;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $color-primary;
+    box-shadow: 0 0 0 3px rgba($color-primary, 0.15);
+  }
+
+  &:disabled {
+    background-color: $neutral-100;
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Scrollbar
+// ---------------------------------------------------------------------------
+
+/// Thin, styled scrollbar (Webkit + Firefox)
+@mixin scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: $neutral-300 transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: $neutral-300;
+    border-radius: $radius-full;
+
+    &:hover {
+      background-color: $neutral-400;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Transition Helper
+// ---------------------------------------------------------------------------
+
+/// Apply a consistent transition to given properties
+/// @param {List} $properties - CSS properties to transition
+/// @param {String} $duration [$transition-normal] - Duration + easing
+@mixin transition($properties, $duration: $transition-normal) {
+  $value: ();
+  @each $prop in $properties {
+    $value: append($value, #{$prop} #{$duration}, comma);
+  }
+  transition: $value;
+}
+
+// ---------------------------------------------------------------------------
+// Accessibility
+// ---------------------------------------------------------------------------
+
+/// Visually hide an element while keeping it accessible to screen readers
+@mixin visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+// ---------------------------------------------------------------------------
+// Decorative
+// ---------------------------------------------------------------------------
+
+/// Apply a gradient to text
+/// @param {Color} $from - Start color
+/// @param {Color} $to - End color
+@mixin gradient-text($from, $to) {
+  background: linear-gradient(135deg, $from, $to);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}

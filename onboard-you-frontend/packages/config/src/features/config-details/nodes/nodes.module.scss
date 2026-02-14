@@ -1,0 +1,127 @@
+@use 'sass:color';
+@use '../../../styles/variables' as *;
+
+// ============================================================================
+// Custom React Flow Nodes
+// ============================================================================
+
+.pipelineNode {
+  min-width: 200px;
+  max-width: 240px;
+  background: $bg-primary;
+  border: 1px solid $neutral-200;
+  border-radius: $radius-xl;
+  box-shadow: $shadow-sm;
+  padding: $spacing-3 $spacing-4;
+  font-family: $font-family-sans;
+  cursor: pointer;
+  transition:
+    box-shadow $transition-fast,
+    border-color $transition-fast,
+    transform $transition-fast;
+  border-left: 4px solid transparent;
+
+  &:hover {
+    box-shadow: $shadow-md;
+    transform: translateY(-1px);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Node Variants — colored left border
+// ---------------------------------------------------------------------------
+
+.ingestionNode {
+  border-left-color: $color-primary;
+
+  .nodeBadge {
+    background: rgba($color-primary, 0.08);
+    color: $color-primary-dark;
+  }
+}
+
+.transformationNode {
+  border-left-color: $color-secondary;
+
+  .nodeBadge {
+    background: rgba($color-secondary, 0.08);
+    color: $color-secondary;
+  }
+}
+
+.egressNode {
+  border-left-color: $color-success;
+
+  .nodeBadge {
+    background: rgba($color-success, 0.08);
+    color: color.adjust($color-success, $lightness: -10%);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Node Layout
+// ---------------------------------------------------------------------------
+
+.nodeHeader {
+  display: flex;
+  align-items: center;
+  gap: $spacing-2;
+  margin-bottom: $spacing-2;
+}
+
+.nodeIcon {
+  font-size: $text-base;
+  line-height: 1;
+}
+
+.nodeLabel {
+  font-size: $text-sm;
+  font-weight: $font-semibold;
+  color: $text-primary;
+  line-height: $leading-tight;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nodeBody {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-1;
+}
+
+.nodeDetail {
+  font-size: $text-xs;
+  color: $text-secondary;
+  line-height: $leading-snug;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nodeBadge {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 2px $spacing-2;
+  font-size: 0.6875rem;
+  font-weight: $font-medium;
+  border-radius: $radius-md;
+  text-transform: lowercase;
+  letter-spacing: 0.01em;
+}
+
+// ---------------------------------------------------------------------------
+// Handles
+// ---------------------------------------------------------------------------
+
+.handle {
+  width: 10px !important;
+  height: 10px !important;
+  background: $neutral-400 !important;
+  border: 2px solid $bg-primary !important;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: $color-primary !important;
+  }
+}

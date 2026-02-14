@@ -1,0 +1,1 @@
+export { useGlobal } from './useGlobal';

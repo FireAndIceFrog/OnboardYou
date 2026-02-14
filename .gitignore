@@ -1,2 +1,4 @@
 target/
 target/debug/.fingerprint/config-api-22a3cb9a54ad5ba7/dep-test-bin-bootstrap
+onboard-you-frontend/node_modules/
+onboard-you-frontend/packages/config/node_modules/

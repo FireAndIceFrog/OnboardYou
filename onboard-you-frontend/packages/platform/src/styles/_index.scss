@@ -1,0 +1,12 @@
+// ============================================================================
+// OnboardYou Design System — Barrel File
+//
+// Other packages can consume the entire design system with:
+//   @use '@onboard-you/platform/src/styles' as platform;
+// ============================================================================
+
+@forward 'variables';
+@forward 'mixins';
+@forward 'reset';
+@forward 'typography';
+@forward 'animations';
