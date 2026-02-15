@@ -1,4 +1,5 @@
-import { useMemo, useCallback, useContext, useEffect, useRef } from 'react';
+import { useMemo, useCallback, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ReactFlow,
@@ -6,8 +7,6 @@ import {
   Controls,
   Background,
   BackgroundVariant,
-  applyNodeChanges,
-  applyEdgeChanges,
   type NodeMouseHandler,
   type NodeChange,
   type EdgeChange,
@@ -15,13 +14,29 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
+import { useAppDispatch, useAppSelector } from '@/store';
+import { useGlobal } from '@/shared/hooks';
 import { Button, Spinner, Badge } from '@/shared/ui';
 import { humanFrequency } from '@/shared/domain/types';
-import { useConfigDetails } from '../state/ConfigDetailsContext';
-import { ConfigDetailsProvider } from '../state/ConfigDetailsProvider';
+import {
+  fetchConfigDetails,
+  onNodesChange as onNodesChangeAction,
+  onEdgesChange as onEdgesChangeAction,
+  selectNode as selectNodeAction,
+  deselectNode,
+  toggleChat,
+  addFlowAction,
+  selectConfig,
+  selectNodes,
+  selectEdges,
+  selectSelectedNode,
+  selectIsChatOpen,
+  selectConfigDetailsLoading,
+  selectConfigDetailsError,
+} from '../state/configDetailsSlice';
+import { selectLastFlowAction } from '@/features/chat/state/chatSlice';
 import { ConfigDetailsForm } from './ConfigDetailsForm';
 import { IngestionNode, TransformationNode, EgressNode } from './nodes';
-import { ChatContext } from '@/features/chat/state/ChatContext';
 import { ChatWindow } from '@/features/chat/ui';
 import styles from './ConfigDetailsPage.module.scss';
 
@@ -31,51 +46,68 @@ const nodeTypes = {
   egress: EgressNode,
 };
 
-function ConfigDetailsContent() {
-  const { state, dispatch } = useConfigDetails();
+function ConfigDetailsContent({ customerCompanyId }: { customerCompanyId: string }) {
+  const { t } = useTranslation();
+  const dispatch = useAppDispatch();
+  const { apiClient, showNotification } = useGlobal();
   const navigate = useNavigate();
-  const chatCtx = useContext(ChatContext);
 
-  const { config, nodes, edges, selectedNode, isLoading, error, chatOpen } = state;
+  const config = useAppSelector(selectConfig);
+  const nodes = useAppSelector(selectNodes);
+  const edges = useAppSelector(selectEdges);
+  const selectedNode = useAppSelector(selectSelectedNode);
+  const isLoading = useAppSelector(selectConfigDetailsLoading);
+  const error = useAppSelector(selectConfigDetailsError);
+  const chatOpen = useAppSelector(selectIsChatOpen);
+  const lastFlowAction = useAppSelector(selectLastFlowAction);
+
+  // ── Fetch config on mount ─────────────────────────────────
+  useEffect(() => {
+    dispatch(fetchConfigDetails({ apiClient, customerCompanyId }));
+  }, [dispatch, apiClient, customerCompanyId]);
+
+  // ── Show error notifications ──────────────────────────────
+  useEffect(() => {
+    if (error) showNotification(error, 'error');
+  }, [error, showNotification]);
 
   // ── Real-time flow updates from chat ──────────────────────
-  const lastFlowAction = chatCtx?.lastFlowAction ?? null;
   const processedActionsRef = useRef(new Set<string>());
 
   useEffect(() => {
     if (lastFlowAction && !processedActionsRef.current.has(lastFlowAction.id)) {
       processedActionsRef.current.add(lastFlowAction.id);
-      dispatch({ type: 'ADD_FLOW_ACTION', payload: lastFlowAction });
+      dispatch(addFlowAction(lastFlowAction));
     }
   }, [lastFlowAction, dispatch]);
 
   const handleNodeClick: NodeMouseHandler = useCallback(
     (_event, node) => {
-      dispatch({ type: 'SELECT_NODE', payload: node });
+      dispatch(selectNodeAction(node));
     },
     [dispatch],
   );
 
   const handlePaneClick = useCallback(() => {
-    dispatch({ type: 'DESELECT_NODE' });
+    dispatch(deselectNode());
   }, [dispatch]);
 
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      dispatch({ type: 'SET_NODES', payload: applyNodeChanges(changes, nodes) });
+      dispatch(onNodesChangeAction(changes));
     },
-    [dispatch, nodes],
+    [dispatch],
   );
 
   const handleEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
-      dispatch({ type: 'SET_EDGES', payload: applyEdgeChanges(changes, edges) });
+      dispatch(onEdgesChangeAction(changes));
     },
-    [dispatch, edges],
+    [dispatch],
   );
 
   const handleToggleChat = useCallback(() => {
-    dispatch({ type: 'TOGGLE_CHAT' });
+    dispatch(toggleChat());
   }, [dispatch]);
 
   const handleBack = useCallback(() => {
@@ -88,7 +120,7 @@ function ConfigDetailsContent() {
     return (
       <div className={styles.loadingState}>
         <Spinner size="lg" />
-        <span>Loading configuration…</span>
+        <span>{t('configDetails.loading')}</span>
       </div>
     );
   }
@@ -99,7 +131,7 @@ function ConfigDetailsContent() {
         <span className={styles.errorIcon}>⚠️</span>
         <p>{error}</p>
         <Button variant="secondary" onClick={handleBack}>
-          ← Back to Configurations
+          {t('configDetails.backToConfigurations')}
         </Button>
       </div>
     );
@@ -110,33 +142,33 @@ function ConfigDetailsContent() {
   return (
     <div className={styles.detailsPage}>
       {/* Step indicator bar */}
-      <div className={styles.stepBar}>
+      <nav className={styles.stepBar} aria-label="Configuration steps">
         <div className={styles.stepItem}>
           <span className={styles.stepDot} data-completed="">✓</span>
-          <span className={styles.stepText}>Connection Details</span>
+          <span className={styles.stepText}>{t('configDetails.steps.connectionDetails')}</span>
         </div>
         <div className={styles.stepLine} data-active="" />
-        <div className={styles.stepItem}>
+        <div className={styles.stepItem} aria-current="step">
           <span className={styles.stepDot} data-active="">2</span>
-          <span className={styles.stepTextActive}>Flow Customization</span>
+          <span className={styles.stepTextActive}>{t('configDetails.steps.flowCustomization')}</span>
         </div>
-      </div>
+      </nav>
 
       {/* Header */}
       <header className={styles.detailHeader}>
         <div className={styles.headerLeft}>
           <button type="button" className={styles.backBtn} onClick={handleBack}>
-            ← Back
+            {t('configDetails.back')}
           </button>
           <h1 className={styles.configName}>{config.name}</h1>
           <Badge variant="info">{humanFrequency(config.cron)}</Badge>
         </div>
         <div className={styles.headerRight}>
           <button type="button" className={styles.chatToggle} onClick={handleToggleChat}>
-            💬 {chatOpen ? 'Close Chat' : 'Open Chat'}
+            💬 {chatOpen ? t('configDetails.closeChat') : t('configDetails.openChat')}
           </button>
           <Button variant="primary" size="sm">
-            Save
+            {t('configDetails.save')}
           </Button>
         </div>
       </header>
@@ -144,7 +176,7 @@ function ConfigDetailsContent() {
       {/* Body */}
       <div className={styles.body}>
         {/* Canvas */}
-        <div className={styles.canvasArea}>
+        <div className={styles.canvasArea} role="application" aria-label="Pipeline flow editor">
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -170,33 +202,32 @@ function ConfigDetailsContent() {
         </div>
 
         {/* Chat Panel */}
-        <div
+        <aside
           className={`${styles.chatPanel} ${!chatOpen ? styles.chatPanelHidden : ''}`}
         >
           {chatOpen && (
             <ChatWindow onClose={handleToggleChat} />
           )}
-        </div>
+        </aside>
       </div>
     </div>
   );
 }
 
 export function ConfigDetailsPage() {
+  const { t } = useTranslation();
   const { customerCompanyId } = useParams<{ customerCompanyId: string }>();
 
   if (!customerCompanyId) {
     return (
       <div className={styles.errorState}>
         <span className={styles.errorIcon}>⚠️</span>
-        <p>No configuration ID provided.</p>
+        <p>{t('configDetails.noConfigId')}</p>
       </div>
     );
   }
 
   return (
-    <ConfigDetailsProvider customerCompanyId={customerCompanyId}>
-      <ConfigDetailsContent />
-    </ConfigDetailsProvider>
+    <ConfigDetailsContent customerCompanyId={customerCompanyId} />
   );
 }

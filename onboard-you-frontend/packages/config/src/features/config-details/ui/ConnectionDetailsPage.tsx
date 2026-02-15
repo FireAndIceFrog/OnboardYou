@@ -1,11 +1,21 @@
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/Button';
 import { HR_SYSTEMS, RESPONSE_GROUP_OPTIONS } from '../domain/types';
 import { useConnectionForm } from '../state/useConnectionForm';
+import { FieldError } from './FieldError';
 import styles from './ConnectionDetailsPage.module.scss';
+
+/** Return the combined className for an input, adding the invalid class when an error exists. */
+function inputClass(error?: string) {
+  return error
+    ? `${styles.formInput} ${styles.formInputInvalid}`
+    : styles.formInput;
+}
 
 export function ConnectionDetailsPage() {
   const {
     form,
+    errors,
     isValid,
     activeGroups,
     handleSystemSelect,
@@ -15,34 +25,36 @@ export function ConnectionDetailsPage() {
     handleResponseGroupToggle,
     handleNext,
     handleBack,
+    validateField,
   } = useConnectionForm();
+  const { t } = useTranslation();
 
   return (
     <div className={styles.wizardPage}>
       {/* Step indicator */}
-      <div className={styles.stepIndicator}>
-        <div className={styles.step}>
+      <nav className={styles.stepIndicator} aria-label="Configuration steps">
+        <div className={styles.step} aria-current="step">
           <span className={`${styles.stepCircle} ${styles.stepCircleActive}`}>1</span>
-          <span className={`${styles.stepLabel} ${styles.stepLabelActive}`}>Connection Details</span>
+          <span className={`${styles.stepLabel} ${styles.stepLabelActive}`}>{t('configDetails.steps.connectionDetails')}</span>
         </div>
         <div className={styles.stepConnector} />
         <div className={styles.step}>
           <span className={styles.stepCircle}>2</span>
-          <span className={styles.stepLabel}>Flow Customization</span>
+          <span className={styles.stepLabel}>{t('configDetails.steps.flowCustomization')}</span>
         </div>
-      </div>
+      </nav>
 
       {/* Form card */}
-      <div className={styles.card}>
-        <h2 className={styles.cardTitle}>Connect Your HR System</h2>
+      <form className={styles.card} onSubmit={(e) => e.preventDefault()}>
+        <h2 className={styles.cardTitle}>{t('configDetails.connection.title')}</h2>
         <p className={styles.cardSubtitle}>
-          Choose your HR platform and provide the connection details.
+          {t('configDetails.connection.subtitle')}
         </p>
 
         {/* System selector */}
         <div className={styles.formGroup}>
-          <label className={styles.formLabel}>HR System</label>
-          <div className={styles.systemGrid}>
+          <label className={styles.formLabel}>{t('configDetails.connection.hrSystem')}</label>
+          <div className={`${styles.systemGrid} ${errors.system ? styles.systemGridInvalid : ''}`}>
             {HR_SYSTEMS.map((sys) => (
               <button
                 key={sys.id}
@@ -55,87 +67,114 @@ export function ConnectionDetailsPage() {
               </button>
             ))}
           </div>
+          <FieldError id="system-error" error={errors.system} />
         </div>
 
         {/* Display name (always shown once a system is picked) */}
         {form.system && (
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Display Name</label>
+            <label className={styles.formLabel} htmlFor="conn-display-name">{t('configDetails.connection.displayName')}</label>
             <input
+              id="conn-display-name"
               className={styles.formInput}
               type="text"
-              placeholder="e.g. Acme Corp — Workday Sync"
+              placeholder={t('configDetails.connection.displayNamePlaceholder')}
               value={form.displayName}
               onChange={handleChange('displayName')}
             />
-            <span className={styles.formHint}>A friendly name to identify this connection.</span>
+            <span className={styles.formHint}>{t('configDetails.connection.displayNameHint')}</span>
           </div>
         )}
 
         {/* ── Workday-specific fields (WS-Security) ──────── */}
         {form.system === 'workday' && (
           <>
-            <div className={styles.sectionHeader}>
+            <fieldset>
+            <legend className={styles.sectionHeader}>
               <span className={styles.sectionIcon}>🔐</span>
-              <span>WS-Security Credentials</span>
-            </div>
+              <span>{t('configDetails.connection.workday.credentialsTitle')}</span>
+            </legend>
 
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Tenant URL</label>
+              <label className={styles.formLabel} htmlFor="conn-tenant-url">{t('configDetails.connection.workday.tenantUrl')}</label>
               <input
-                className={styles.formInput}
+                id="conn-tenant-url"
+                className={inputClass(errors['workday.tenantUrl'])}
                 type="url"
-                placeholder="https://wd5-impl.workday.com/ccx/service/your_tenant"
+                placeholder={t('configDetails.connection.workday.tenantUrlPlaceholder')}
                 value={form.workday.tenantUrl}
                 onChange={handleWorkdayChange('tenantUrl')}
+                onBlur={() => validateField('workday.tenantUrl')}
+                aria-invalid={!!errors['workday.tenantUrl']}
+                aria-describedby={errors['workday.tenantUrl'] ? 'conn-tenant-url-error' : undefined}
               />
+              <FieldError id="conn-tenant-url-error" error={errors['workday.tenantUrl']} />
               <span className={styles.formHint}>
-                Your Workday SOAP endpoint including the tenant path.
+                {t('configDetails.connection.workday.tenantUrlHint')}
               </span>
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Tenant ID</label>
+              <label className={styles.formLabel} htmlFor="conn-tenant-id">{t('configDetails.connection.workday.tenantId')}</label>
               <input
-                className={styles.formInput}
+                id="conn-tenant-id"
+                className={inputClass(errors['workday.tenantId'])}
                 type="text"
-                placeholder="your_tenant"
+                placeholder={t('configDetails.connection.workday.tenantIdPlaceholder')}
                 value={form.workday.tenantId}
                 onChange={handleWorkdayChange('tenantId')}
+                onBlur={() => validateField('workday.tenantId')}
+                aria-invalid={!!errors['workday.tenantId']}
+                aria-describedby={errors['workday.tenantId'] ? 'conn-tenant-id-error' : undefined}
               />
+              <FieldError id="conn-tenant-id-error" error={errors['workday.tenantId']} />
             </div>
 
             <div className={styles.formRow}>
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Username</label>
+                <label className={styles.formLabel} htmlFor="conn-username">{t('configDetails.connection.workday.username')}</label>
                 <input
-                  className={styles.formInput}
+                  id="conn-username"
+                  className={inputClass(errors['workday.username'])}
                   type="text"
-                  placeholder="ISU_user@your_tenant"
+                  placeholder={t('configDetails.connection.workday.usernamePlaceholder')}
                   value={form.workday.username}
                   onChange={handleWorkdayChange('username')}
+                  onBlur={() => validateField('workday.username')}
+                  aria-invalid={!!errors['workday.username']}
+                  aria-describedby={errors['workday.username'] ? 'conn-username-error' : undefined}
                 />
+                <FieldError id="conn-username-error" error={errors['workday.username']} />
               </div>
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Password</label>
+                <label className={styles.formLabel} htmlFor="conn-password">{t('configDetails.connection.workday.password')}</label>
                 <input
-                  className={styles.formInput}
+                  id="conn-password"
+                  className={inputClass(errors['workday.password'])}
                   type="password"
-                  placeholder="••••••••"
+                  placeholder={t('configDetails.connection.workday.passwordPlaceholder')}
                   value={form.workday.password}
                   onChange={handleWorkdayChange('password')}
+                  onBlur={() => validateField('workday.password')}
+                  aria-invalid={!!errors['workday.password']}
+                  aria-describedby={errors['workday.password'] ? 'conn-password-error' : undefined}
                 />
+                <FieldError id="conn-password-error" error={errors['workday.password']} />
               </div>
             </div>
 
-            <div className={styles.sectionHeader}>
+            </fieldset>
+
+            <fieldset>
+            <legend className={styles.sectionHeader}>
               <span className={styles.sectionIcon}>⚙️</span>
-              <span>Query Options</span>
-            </div>
+              <span>{t('configDetails.connection.workday.queryOptionsTitle')}</span>
+            </legend>
 
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Worker Count Limit</label>
+              <label className={styles.formLabel} htmlFor="conn-worker-count">{t('configDetails.connection.workday.workerCountLimit')}</label>
               <input
+                id="conn-worker-count"
                 className={styles.formInput}
                 type="number"
                 min={1}
@@ -144,63 +183,73 @@ export function ConnectionDetailsPage() {
                 onChange={handleWorkdayChange('workerCountLimit')}
               />
               <span className={styles.formHint}>
-                Maximum workers per page (default 200).
+                {t('configDetails.connection.workday.workerCountLimitHint')}
               </span>
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Response Groups</label>
-              <div className={styles.chipGroup}>
+              <label className={styles.formLabel}>{t('configDetails.connection.workday.responseGroups')}</label>
+              <div className={`${styles.chipGroup} ${errors['workday.responseGroup'] ? styles.chipGroupInvalid : ''}`}>
                 {RESPONSE_GROUP_OPTIONS.map((opt) => (
                   <button
                     key={opt.value}
                     type="button"
                     className={`${styles.chip} ${activeGroups.has(opt.value) ? styles.chipActive : ''}`}
+                    aria-pressed={activeGroups.has(opt.value)}
                     onClick={() => handleResponseGroupToggle(opt.value)}
                   >
                     {opt.label}
                   </button>
                 ))}
               </div>
+              <FieldError id="response-group-error" error={errors['workday.responseGroup']} />
               <span className={styles.formHint}>
-                Select which data groups to pull from Workday.
+                {t('configDetails.connection.workday.responseGroupsHint')}
               </span>
             </div>
+            </fieldset>
           </>
         )}
 
         {/* ── CSV-specific fields ────────────────────────── */}
         {form.system === 'csv' && (
           <>
-            <div className={styles.sectionHeader}>
+            <fieldset>
+            <legend className={styles.sectionHeader}>
               <span className={styles.sectionIcon}>📁</span>
-              <span>File Location</span>
-            </div>
+              <span>{t('configDetails.connection.csv.fileLocationTitle')}</span>
+            </legend>
 
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>CSV File Path</label>
+              <label className={styles.formLabel} htmlFor="conn-csv-path">{t('configDetails.connection.csv.csvFilePath')}</label>
               <input
-                className={styles.formInput}
+                id="conn-csv-path"
+                className={inputClass(errors['csv.csvPath'])}
                 type="text"
-                placeholder="/data/uploads/employees.csv"
+                placeholder={t('configDetails.connection.csv.csvFilePathPlaceholder')}
                 value={form.csv.csvPath}
                 onChange={handleCsvChange('csvPath')}
+                onBlur={() => validateField('csv.csvPath')}
+                aria-invalid={!!errors['csv.csvPath']}
+                aria-describedby={errors['csv.csvPath'] ? 'csv-path-error' : undefined}
               />
+              <FieldError id="csv-path-error" error={errors['csv.csvPath']} />
               <span className={styles.formHint}>
-                Path to the CSV file that will be ingested by the pipeline.
+                {t('configDetails.connection.csv.csvFilePathHint')}
               </span>
             </div>
+            </fieldset>
           </>
         )}
-      </div>
+      </form>
 
       {/* Actions */}
       <div className={styles.actions}>
         <Button variant="secondary" size="md" onClick={handleBack}>
-          ← Back
+          {t('configDetails.connection.backButton')}
         </Button>
         <Button variant="primary" size="md" disabled={!isValid} onClick={handleNext}>
-          Next: Customize Flow →
+          {t('configDetails.connection.nextButton')}
         </Button>
       </div>
     </div>

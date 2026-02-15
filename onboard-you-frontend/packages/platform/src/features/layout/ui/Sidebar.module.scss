@@ -9,8 +9,8 @@
   left: 0;
   height: calc(100vh - $header-height);
   width: $sidebar-width;
-  background-color: $bg-primary;
-  border-right: 1px solid $neutral-200;
+  background-color: var(--color-bg);
+  border-right: 1px solid var(--color-border);
   z-index: $z-sticky;
   overflow-y: auto;
   @include transition(width transform);
@@ -33,7 +33,7 @@
 
     &--open {
       transform: translateX(0);
-      box-shadow: $shadow-xl;
+      box-shadow: var(--shadow-xl);
     }
   }
 }
@@ -51,21 +51,21 @@
   padding: $spacing-3 $spacing-3;
   border-radius: $radius-lg;
   text-decoration: none;
-  color: $text-secondary;
+  color: var(--color-text-secondary);
   font-size: $text-sm;
   font-weight: $font-medium;
   border-left: 3px solid transparent;
   @include transition(background-color color border-color);
 
   &:hover {
-    background-color: $neutral-50;
-    color: $text-primary;
+    background-color: var(--color-neutral-50);
+    color: var(--color-text);
   }
 
   &--active {
-    background-color: rgba($color-primary, 0.05);
-    color: $color-primary;
-    border-left-color: $color-primary;
+    background-color: var(--color-primary-alpha-5);
+    color: var(--color-primary);
+    border-left-color: var(--color-primary);
     font-weight: $font-semibold;
   }
 }
@@ -86,17 +86,17 @@
   @include flex-center;
   margin: $spacing-3;
   padding: $spacing-2;
-  border: 1px solid $neutral-200;
+  border: 1px solid var(--color-border);
   background: none;
   border-radius: $radius-lg;
   cursor: pointer;
-  color: $text-muted;
+  color: var(--color-text-muted);
   font-size: $text-sm;
   @include transition(background-color color);
 
   &:hover {
-    background-color: $neutral-50;
-    color: $text-primary;
+    background-color: var(--color-neutral-50);
+    color: var(--color-text);
   }
 
   @include respond-below('lg') {
@@ -107,7 +107,7 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: var(--color-overlay);
   z-index: calc($z-sticky - 1);
   backdrop-filter: blur(2px);
 

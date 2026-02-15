@@ -11,7 +11,9 @@
     "declaration": true,
     "declarationMap": true,
     "allowImportingTsExtensions": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "emitDeclarationOnly": true,
+    "types": ["node"]
   },
   "include": ["vite.config.ts"]
 }

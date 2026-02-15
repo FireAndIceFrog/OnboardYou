@@ -9,8 +9,8 @@
   right: 0;
   height: $header-height;
   padding: 0 $spacing-5;
-  background-color: $bg-primary;
-  border-bottom: 1px solid $neutral-200;
+  background-color: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
   z-index: $z-fixed;
 }
 
@@ -29,12 +29,12 @@
   font-size: $text-lg;
   cursor: pointer;
   border-radius: $radius-lg;
-  color: $text-secondary;
+  color: var(--color-text-secondary);
   @include transition(background-color color);
 
   &:hover {
-    background-color: $neutral-100;
-    color: $text-primary;
+    background-color: var(--color-neutral-100);
+    color: var(--color-text);
   }
 
   @include respond-to('lg') {
@@ -67,7 +67,7 @@
   @include transition(background-color);
 
   &:hover {
-    background-color: $neutral-100;
+    background-color: var(--color-neutral-100);
   }
 }
 
@@ -81,7 +81,7 @@
   height: 36px;
   border-radius: $radius-full;
   background-color: $color-primary;
-  color: $text-inverse;
+  color: var(--color-text-inverse);
   font-size: $text-xs;
   font-weight: $font-semibold;
   border: none;
@@ -89,7 +89,7 @@
   @include transition(box-shadow);
 
   &:hover {
-    box-shadow: 0 0 0 3px rgba($color-primary, 0.2);
+    box-shadow: 0 0 0 3px var(--color-primary-alpha-20);
   }
 }
 
@@ -98,10 +98,10 @@
   top: calc(100% + $spacing-2);
   right: 0;
   min-width: 220px;
-  background-color: $bg-primary;
-  border: 1px solid $neutral-200;
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
   border-radius: $radius-xl;
-  box-shadow: $shadow-lg;
+  box-shadow: var(--shadow-lg);
   z-index: $z-dropdown;
   overflow: hidden;
 }
@@ -114,18 +114,18 @@
 .dropdown-name {
   font-size: $text-sm;
   font-weight: $font-semibold;
-  color: $text-primary;
+  color: var(--color-text);
 }
 
 .dropdown-email {
   font-size: $text-xs;
-  color: $text-muted;
+  color: var(--color-text-muted);
   margin-top: $spacing-1;
 }
 
 .dropdown-divider {
   border: none;
-  border-top: 1px solid $neutral-200;
+  border-top: 1px solid var(--color-border);
   margin: 0;
 }
 
@@ -134,7 +134,7 @@
   width: 100%;
   padding: $spacing-3 $spacing-4;
   font-size: $text-sm;
-  color: $text-secondary;
+  color: var(--color-text-secondary);
   background: none;
   border: none;
   text-align: left;
@@ -142,7 +142,7 @@
   @include transition(background-color color);
 
   &:hover {
-    background-color: $neutral-50;
-    color: $text-primary;
+    background-color: var(--color-neutral-50);
+    color: var(--color-text);
   }
 }

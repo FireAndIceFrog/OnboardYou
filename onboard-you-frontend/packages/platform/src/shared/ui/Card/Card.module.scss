@@ -10,7 +10,7 @@
     cursor: pointer;
 
     &:hover {
-      box-shadow: $shadow-md;
+      box-shadow: var(--shadow-md);
       transform: translateY(-2px);
     }
 

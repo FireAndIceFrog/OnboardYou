@@ -1,5 +1,25 @@
-export { ConfigDetailsContext, useConfigDetails } from './ConfigDetailsContext';
-export { ConfigDetailsProvider } from './ConfigDetailsProvider';
-export { configDetailsReducer, configDetailsInitialState } from './configDetailsReducer';
-export type { ConfigDetailsAction } from './configDetailsReducer';
+export {
+  fetchConfigDetails,
+  saveConfigThunk,
+  validateConfigThunk,
+  setNodes,
+  setEdges,
+  onNodesChange,
+  onEdgesChange,
+  selectNode,
+  deselectNode,
+  toggleChat,
+  setChatOpen,
+  addFlowAction,
+  resetConfigDetails,
+  selectConfigDetails,
+  selectConfig,
+  selectNodes,
+  selectEdges,
+  selectSelectedNode,
+  selectIsChatOpen,
+  selectConfigDetailsLoading,
+  selectConfigDetailsError,
+} from './configDetailsSlice';
+export { default as configDetailsReducer } from './configDetailsSlice';
 export { useConnectionForm } from './useConnectionForm';

@@ -1,12 +1,3 @@
-import { createContext } from 'react';
-import type { AuthState } from '@/features/auth/domain/types';
-
-export interface AuthContextValue {
-  state: AuthState;
-  login: () => void;
-  logout: () => void;
-  getToken: () => string | null;
-  exchangeCode: (code: string) => Promise<void>;
-}
-
-export const AuthContext = createContext<AuthContextValue | null>(null);
+// Legacy file — auth state is now managed by Redux (authSlice).
+// Kept for backwards-compatible type exports only.
+export type { AuthState } from '@/features/auth/domain/types';

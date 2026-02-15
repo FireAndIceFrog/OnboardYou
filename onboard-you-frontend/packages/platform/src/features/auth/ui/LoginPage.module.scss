@@ -4,7 +4,7 @@
 .login-page {
   @include flex-center;
   min-height: 100vh;
-  background-color: $bg-secondary;
+  background-color: var(--color-bg-secondary);
   padding: $spacing-4;
 }
 
@@ -16,7 +16,7 @@
   max-width: 420px;
   padding: $spacing-9 $spacing-7;
   text-align: center;
-  box-shadow: $shadow-lg;
+  box-shadow: var(--shadow-lg);
 }
 
 .login-brand {
@@ -40,13 +40,13 @@
 .login-title {
   font-size: $text-xl;
   font-weight: $font-semibold;
-  color: $text-primary;
+  color: var(--color-text);
   margin-bottom: $spacing-1;
 }
 
 .login-subtitle {
   font-size: $text-sm;
-  color: $text-secondary;
+  color: var(--color-text-secondary);
   margin-bottom: $spacing-7;
 }
 
@@ -61,5 +61,5 @@
 
 .login-footer {
   font-size: $text-xs;
-  color: $text-muted;
+  color: var(--color-text-muted);
 }

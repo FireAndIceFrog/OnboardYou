@@ -167,6 +167,28 @@
   padding-right: $spacing-8;
 }
 
+/* ── Validation error styles ─────────────────── */
+.formInputInvalid {
+  border-color: $color-error;
+
+  &:focus {
+    border-color: $color-error;
+    box-shadow: 0 0 0 3px rgba($color-error, 0.1);
+  }
+}
+
+.systemGridInvalid {
+  border: 2px solid $color-error;
+  border-radius: $radius-xl;
+  padding: $spacing-2;
+}
+
+.chipGroupInvalid {
+  border: 1px solid $color-error;
+  border-radius: $radius-lg;
+  padding: $spacing-2;
+}
+
 /* ── System selector grid ─────────────────────── */
 .systemGrid {
   display: grid;

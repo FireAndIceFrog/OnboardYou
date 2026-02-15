@@ -135,10 +135,10 @@
 
 /// Base card surface
 @mixin card-base {
-  background-color: $bg-primary;
-  border: 1px solid $neutral-200;
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
   border-radius: $radius-xl;
-  box-shadow: $shadow-sm;
+  box-shadow: var(--shadow-sm);
 }
 
 // ---------------------------------------------------------------------------
@@ -152,28 +152,28 @@
   font-family: $font-family-sans;
   font-size: $text-sm;
   line-height: $leading-normal;
-  color: $text-primary;
-  background-color: $bg-primary;
-  border: 1px solid $neutral-300;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border-strong);
   border-radius: $radius-lg;
   transition: border-color $transition-fast, box-shadow $transition-fast;
 
   &::placeholder {
-    color: $text-muted;
+    color: var(--color-text-muted);
   }
 
   &:hover {
-    border-color: $neutral-400;
+    border-color: var(--color-neutral-400);
   }
 
   &:focus {
     outline: none;
-    border-color: $color-primary;
-    box-shadow: 0 0 0 3px rgba($color-primary, 0.15);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-alpha-15);
   }
 
   &:disabled {
-    background-color: $neutral-100;
+    background-color: var(--color-neutral-100);
     cursor: not-allowed;
     opacity: 0.7;
   }
@@ -186,7 +186,7 @@
 /// Thin, styled scrollbar (Webkit + Firefox)
 @mixin scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: $neutral-300 transparent;
+  scrollbar-color: var(--color-scrollbar) transparent;
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -198,11 +198,11 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background-color: $neutral-300;
+    background-color: var(--color-scrollbar);
     border-radius: $radius-full;
 
     &:hover {
-      background-color: $neutral-400;
+      background-color: var(--color-scrollbar-hover);
     }
   }
 }

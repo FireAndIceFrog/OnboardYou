@@ -1,5 +1,16 @@
-export { GlobalContext } from './GlobalContext';
-export type { GlobalContextValue } from './GlobalContext';
-export { GlobalProvider } from './GlobalProvider';
-export { globalReducer, initialGlobalState } from './globalReducer';
-export type { GlobalState, GlobalAction } from './globalReducer';
+export { default as globalReducer } from './globalSlice';
+export {
+  setOrganization,
+  setTheme,
+  toggleTheme,
+  addNotification,
+  showNotification,
+  dismissNotification,
+  selectGlobal,
+  selectOrganization,
+  selectTheme,
+  selectNotifications,
+} from './globalSlice';
+export type { GlobalState } from './globalSlice';
+export { initialGlobalState } from './globalReducer';
+export type { GlobalAction } from './globalReducer';

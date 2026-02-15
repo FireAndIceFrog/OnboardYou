@@ -1,18 +1,19 @@
-import { useContext } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutContext } from '@/features/layout/state/LayoutContext';
+import { useTranslation } from 'react-i18next';
+import { useAppSelector, useAppDispatch } from '@/store';
+import {
+  selectLayout,
+  setSidebarOpen,
+  toggleSidebarCollapsed,
+} from '@/features/layout/state/layoutSlice';
 import { NAVIGATION_ITEMS } from '@/features/layout/domain/navigation';
 import styles from './Sidebar.module.scss';
 
 export function Sidebar() {
-  const layoutCtx = useContext(LayoutContext);
+  const { t } = useTranslation();
+  const dispatch = useAppDispatch();
+  const { sidebarOpen, sidebarCollapsed } = useAppSelector(selectLayout);
   const location = useLocation();
-
-  if (!layoutCtx) {
-    throw new Error('Sidebar must be used within a LayoutProvider');
-  }
-
-  const { state, dispatch } = layoutCtx;
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -22,10 +23,10 @@ export function Sidebar() {
   return (
     <>
       {/* Mobile overlay backdrop */}
-      {state.sidebarOpen && (
+      {sidebarOpen && (
         <div
           className={styles.overlay}
-          onClick={() => dispatch({ type: 'SET_SIDEBAR_OPEN', payload: false })}
+          onClick={() => dispatch(setSidebarOpen(false))}
           aria-hidden="true"
         />
       )}
@@ -33,13 +34,13 @@ export function Sidebar() {
       <aside
         className={[
           styles.sidebar,
-          state.sidebarCollapsed ? styles['sidebar--collapsed'] : '',
-          state.sidebarOpen ? styles['sidebar--open'] : '',
+          sidebarCollapsed ? styles['sidebar--collapsed'] : '',
+          sidebarOpen ? styles['sidebar--open'] : '',
         ]
           .filter(Boolean)
           .join(' ')}
       >
-        <nav className={styles.nav}>
+        <nav className={styles.nav} aria-label="Main navigation">
           {NAVIGATION_ITEMS.map((item) => (
             <NavLink
               key={item.id}
@@ -52,14 +53,14 @@ export function Sidebar() {
                 .join(' ')}
               onClick={() => {
                 // Close mobile sidebar on navigation
-                if (state.sidebarOpen) {
-                  dispatch({ type: 'SET_SIDEBAR_OPEN', payload: false });
+                if (sidebarOpen) {
+                  dispatch(setSidebarOpen(false));
                 }
               }}
             >
               <span className={styles['nav-icon']}>{item.icon}</span>
-              {!state.sidebarCollapsed && (
-                <span className={styles['nav-label']}>{item.label}</span>
+              {!sidebarCollapsed && (
+                <span className={styles['nav-label']}>{t(item.label)}</span>
               )}
             </NavLink>
           ))}
@@ -67,10 +68,10 @@ export function Sidebar() {
 
         <button
           className={styles['collapse-btn']}
-          onClick={() => dispatch({ type: 'TOGGLE_SIDEBAR_COLLAPSED' })}
-          aria-label={state.sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          onClick={() => dispatch(toggleSidebarCollapsed())}
+          aria-label={sidebarCollapsed ? t('layout.sidebar.expandSidebar') : t('layout.sidebar.collapseSidebar')}
         >
-          {state.sidebarCollapsed ? '→' : '←'}
+          {sidebarCollapsed ? '→' : '←'}
         </button>
       </aside>
     </>

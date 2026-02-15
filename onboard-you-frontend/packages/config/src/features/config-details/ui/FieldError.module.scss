@@ -1,0 +1,8 @@
+@use '../../../styles/variables' as *;
+
+.fieldError {
+  display: block;
+  font-size: $text-xs;
+  color: $color-error;
+  margin-top: $spacing-1;
+}

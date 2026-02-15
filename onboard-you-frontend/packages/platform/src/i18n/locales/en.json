@@ -1,0 +1,130 @@
+{
+  "auth": {
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to your workspace",
+      "demoButton": "🧪 Demo Mode — Continue as Demo User",
+      "ssoButton": "Sign in with SSO",
+      "footer": "Secure authentication powered by AWS Cognito"
+    },
+    "callback": {
+      "errorTitle": "Authentication Error",
+      "returnToLogin": "Return to login",
+      "completingSignIn": "Completing sign in…"
+    }
+  },
+  "home": {
+    "welcome": "Welcome back, {{name}}",
+    "subtitle": "Here's an overview of your client portfolio and connected systems.",
+    "stats": {
+      "connectedSystems": "Connected Systems",
+      "pendingReviews": "Pending Reviews",
+      "teamMembers": "Team Members",
+      "activityToday": "Activity Today",
+      "plusOneThisWeek": "+1 this week",
+      "plusThreeToday": "+3 today",
+      "noChange": "No change",
+      "plusTwelvePercent": "+12%"
+    }
+  },
+  "layout": {
+    "navigation": {
+      "clientPortfolio": "Client Portfolio",
+      "connectedSystems": "Connected Systems",
+      "mySettings": "My Systems"
+    },
+    "header": {
+      "toggleNavigation": "Toggle navigation",
+      "toggleTheme": "Toggle theme",
+      "switchToMode": "Switch to {{mode}} mode",
+      "userMenu": "User menu",
+      "signOut": "Sign out"
+    },
+    "sidebar": {
+      "expandSidebar": "Expand sidebar",
+      "collapseSidebar": "Collapse sidebar"
+    }
+  },
+  "settings": {
+    "title": "My Systems",
+    "subtitle": "Configure where processed employee data is dispatched after each pipeline run.",
+    "saved": "Saved ✓",
+    "unsaved": "Unsaved",
+    "authType": {
+      "title": "Authentication Type",
+      "description": "Select how the dispatcher authenticates with your destination API.",
+      "bearer": "Bearer Token",
+      "bearerDesc": "Static token, API key, or no auth",
+      "oauth2": "OAuth 2.0",
+      "oauth2Desc": "Client credentials or authorization code"
+    },
+    "bearer": {
+      "title": "Bearer / API Key Configuration",
+      "destinationUrl": "Destination URL",
+      "destinationUrlPlaceholder": "https://api.example.com/employees",
+      "destinationUrlHint": "The endpoint that receives the JSON payload after each pipeline run.",
+      "token": "Token",
+      "tokenPlaceholder": "Bearer sk-…  (leave blank for unauthenticated)",
+      "tokenPlacement": "Token Placement",
+      "placementKey": "Placement Key",
+      "placementKeyPlaceholder": "Authorization",
+      "placementKeyHint": "Header name or query parameter key."
+    },
+    "oauth2": {
+      "title": "OAuth 2.0 Configuration",
+      "destinationUrl": "Destination URL",
+      "destinationUrlPlaceholder": "https://api.example.com/employees",
+      "clientId": "Client ID",
+      "clientIdPlaceholder": "client-id",
+      "clientSecret": "Client Secret",
+      "clientSecretPlaceholder": "••••••••",
+      "tokenUrl": "Token URL",
+      "tokenUrlPlaceholder": "https://auth.example.com/oauth2/token",
+      "grantType": "Grant Type",
+      "scopes": "Scopes",
+      "scopesPlaceholder": "read write (space-separated)",
+      "refreshToken": "Refresh Token",
+      "refreshTokenPlaceholder": "refresh-token"
+    },
+    "retry": {
+      "title": "Retry Policy",
+      "description": "Controls automatic retries on transient failures.",
+      "maxAttempts": "Max Attempts",
+      "initialBackoff": "Initial Back-off (ms)",
+      "retryableStatusCodes": "Retryable Status Codes",
+      "retryableStatusCodesPlaceholder": "429, 502, 503, 504",
+      "retryableStatusCodesHint": "Comma-separated HTTP status codes that trigger a retry."
+    },
+    "placementOptions": {
+      "authorization_header": "Authorization Header",
+      "custom_header": "Custom Header",
+      "query_param": "Query Parameter"
+    },
+    "grantTypeOptions": {
+      "client_credentials": "Client Credentials",
+      "authorization_code": "Authorization Code"
+    },
+    "testConnection": "🔗 Test Connection",
+    "saveSettings": "Save Settings"
+  },
+  "validation": {
+    "required": "This field is required",
+    "invalidUrl": "Please enter a valid URL",
+    "retryRange": "Must be between {{min}} and {{max}}",
+    "positiveInteger": "Must be a positive integer"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "tryAgain": "Try Again",
+    "dark": "dark",
+    "light": "light"
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "message": "An unexpected error occurred. Please try again.",
+    "tryAgain": "Try Again",
+    "remoteLoadTitle": "Failed to load module",
+    "remoteLoadMessage": "The configuration module could not be loaded. Please check your connection and try again."
+  }
+}

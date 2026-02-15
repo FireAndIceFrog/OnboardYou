@@ -1,0 +1,51 @@
+# Normal development
+
+## Packages & Platform.
+
+We are using a federated module format. The platform project handles the overarching authentication, home page and navigation. All other packages handle business logic. 
+
+We should try to keep the software configuration-based as much as possible for the platoform so that future developers only need to adjust the json and not the core application. 
+
+## Use Global hook
+We expose a hook called useGlobal. the details of this hook should also be exposed via the store extras - everything in this store is what you need to make api calls including authorization and authentication checks. 
+
+## Config package. 
+This is the package we are using to manage, upgrade and store client integrations. 
+
+# Folder structure
+We are using a feature-first folder structure. 
+
+The idea here is that a feature defines a well-known entrypoint and all of its internals are hidden to the rest of the application. Features are considered epic-level work.
+
+The folder strcuture should follow the following format:
+features/my-feature/
+- ui (display logic, no business logic)
+- domain (models - one per file)
+- services (api fetching, no business logic)
+- state (business logic - ideally everything should be contained in redux toolkit however it is acceptable to put hooks here too)
+
+All files created should have simple and manageable tests. We follow a simple paradigm for least code. The person reviewing your code does not want to scroll through thousands of tests or code for that matter - they want to know "does it work" and when something changes it should not break.
+
+# State management
+In order to make this manageable we need to use redux toolkit so that the state management is shared accross the application. 
+
+Before application startup we should load all shared package states into one large reducer. Please follow best practices here - never use react context. Hooks are acceptable only if they are handling form data or non-serializable data that cannot be injested int redux.
+
+# TDD
+When modifying existing code always develop tests first then the code to break them. 
+
+When creating new features it is acceptable to create tests after the feature is validated - do not create tests early because it adds lots of noise
+
+UI components should make use of hooks or redux so that the business logic is separate to displaying logic, test both idependantly of each other.
+
+# A11y
+We care about accessibility. Keyboard navigation is important as is screen reader etc. 
+
+Using accessible tags allows users to read our code easier - instead of reading a div tag we should use sections
+
+When we need to create a readable list of items we should use <dd> and <dt> for items. Follow best practices as much as possible here. 
+
+# Translations
+We should create a translations file per package. React-i18next is the package of choice here
+
+https://www.npmjs.com/package/react-i18next

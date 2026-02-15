@@ -1,5 +1,8 @@
-import { useContext, useEffect, useRef } from 'react';
-import { ChatContext } from '../state/ChatContext';
+import { useCallback, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { sendMessage, clearChat, selectChatMessages, selectIsTyping } from '../state/chatSlice';
+import { selectConfig } from '@/features/config-details/state/configDetailsSlice';
 import { ChatMessageComponent } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import styles from './ChatWindow.module.scss';
@@ -8,25 +11,34 @@ interface ChatWindowProps {
   onClose: () => void;
 }
 
-const SUGGESTION_CHIPS = [
-  'Clean up my address data',
-  'Format all phone numbers to international',
-  'Remove duplicate employee records',
-  'Mask sensitive personal information',
-  'Standardise country codes',
-  'What can you help me with?',
-];
+const SUGGESTION_KEYS = [
+  'chat.suggestions.cleanAddress',
+  'chat.suggestions.formatPhone',
+  'chat.suggestions.removeDuplicates',
+  'chat.suggestions.maskPii',
+  'chat.suggestions.standardiseCountry',
+  'chat.suggestions.whatCanYouDo',
+] as const;
 
 export function ChatWindow({ onClose }: ChatWindowProps) {
-  const ctx = useContext(ChatContext);
+  const { t } = useTranslation();
+  const dispatch = useAppDispatch();
+  const messages = useAppSelector(selectChatMessages);
+  const isTyping = useAppSelector(selectIsTyping);
+  const pipelineConfig = useAppSelector(selectConfig);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  if (!ctx) {
-    throw new Error('ChatWindow must be used within a ChatProvider');
-  }
+  const handleSend = useCallback(
+    (content: string) => {
+      if (!pipelineConfig) return;
+      dispatch(sendMessage({ content, pipelineConfig }));
+    },
+    [dispatch, pipelineConfig],
+  );
 
-  const { state, sendMessage, clearChat, pipelineConfig } = ctx;
-  const { messages, isTyping } = state;
+  const handleClear = useCallback(() => {
+    dispatch(clearChat());
+  }, [dispatch]);
 
   // Auto-scroll to bottom on new messages or typing state change
   useEffect(() => {
@@ -36,15 +48,15 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
   const hasMessages = messages.length > 0;
 
   return (
-    <div className={styles.chatWindow}>
+    <aside className={styles.chatWindow} aria-label={t('chat.title')}>
       {/* Header */}
       <div className={styles.chatHeader}>
         <div className={styles.chatHeaderLeft}>
           <span className={styles.chatHeaderIcon}>🤖</span>
           <div>
-            <h3 className={styles.chatTitle}>Onboarding Assistant</h3>
+            <h3 className={styles.chatTitle}>{t('chat.title')}</h3>
             <span className={styles.chatSubtitle}>
-              {pipelineConfig ? pipelineConfig.name : 'No system selected'}
+              {pipelineConfig ? pipelineConfig.name : t('chat.noSystemSelected')}
             </span>
           </div>
         </div>
@@ -53,9 +65,9 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
             <button
               type="button"
               className={styles.iconBtn}
-              onClick={clearChat}
-              aria-label="Clear chat"
-              title="Clear chat"
+              onClick={handleClear}
+              aria-label={t('chat.clearChat')}
+              title={t('chat.clearChat')}
             >
               🗑
             </button>
@@ -64,8 +76,8 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
             type="button"
             className={styles.iconBtn}
             onClick={onClose}
-            aria-label="Close chat"
-            title="Close chat"
+            aria-label={t('chat.closeChat')}
+            title={t('chat.closeChat')}
           >
             ✕
           </button>
@@ -73,24 +85,23 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
       </div>
 
       {/* Messages */}
-      <div className={styles.chatMessages}>
+      <div className={styles.chatMessages} role="log" aria-live="polite">
         {!hasMessages ? (
           <div className={styles.chatWelcome}>
             <span className={styles.welcomeIcon}>💬</span>
-            <h4 className={styles.welcomeTitle}>How can I help?</h4>
+            <h4 className={styles.welcomeTitle}>{t('chat.welcome.title')}</h4>
             <p className={styles.welcomeText}>
-              Tell me what you'd like to do with your data — I'll update the flow for you
-              automatically.
+              {t('chat.welcome.text')}
             </p>
-            <div className={styles.suggestions}>
-              {SUGGESTION_CHIPS.map((chip) => (
+            <div className={styles.suggestions} role="group" aria-label="Suggested prompts">
+              {SUGGESTION_KEYS.map((key) => (
                 <button
-                  key={chip}
+                  key={key}
                   type="button"
                   className={styles.suggestionChip}
-                  onClick={() => sendMessage(chip)}
+                  onClick={() => handleSend(t(key))}
                 >
-                  {chip}
+                  {t(key)}
                 </button>
               ))}
             </div>
@@ -117,7 +128,7 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
       </div>
 
       {/* Input */}
-      <ChatInput onSend={sendMessage} disabled={isTyping || !pipelineConfig} />
-    </div>
+      <ChatInput onSend={handleSend} disabled={isTyping || !pipelineConfig} />
+    </aside>
   );
 }

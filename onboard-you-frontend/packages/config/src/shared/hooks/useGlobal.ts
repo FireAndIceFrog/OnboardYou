@@ -1,4 +1,3 @@
-import { createContext, useContext, useMemo } from 'react';
 import { ApiClient } from '@/shared/services';
 import { API_BASE_URL, MOCK_MODE } from '@/shared/domain/constants';
 import type { User, Organization, NotificationType } from '@/shared/domain/types';
@@ -12,8 +11,6 @@ export interface GlobalContextValue {
   apiClient: ApiClient;
   showNotification: (message: string, type: NotificationType) => void;
 }
-
-export const ConfigGlobalContext = createContext<GlobalContextValue | null>(null);
 
 const MOCK_USER: User = {
   id: 'user-001',
@@ -29,27 +26,35 @@ const MOCK_ORG: Organization = {
   plan: 'enterprise',
 };
 
+/* ── Module-level singleton ──────────────────────────────── */
+
+let _injectedValue: GlobalContextValue | null = null;
+let _standaloneValue: GlobalContextValue | null = null;
+
+/**
+ * Call from the Module Federation host to inject platform globals
+ * before rendering any config routes.
+ */
+export function setGlobalValue(value: GlobalContextValue): void {
+  _injectedValue = value;
+}
+
 /**
  * Local bridge hook that config components consume.
  *
- * When loaded via Module Federation into the platform shell, the platform
- * injects its real GlobalContextValue through ConfigGlobalContext.Provider.
- * In standalone / mock-mode dev, this falls back to mock data.
+ * When loaded via Module Federation the host calls `setGlobalValue()`
+ * before rendering.  In standalone / mock-mode dev this falls back
+ * to mock data.
  */
 export function useGlobal(): GlobalContextValue {
-  const ctx = useContext(ConfigGlobalContext);
+  if (_injectedValue) return _injectedValue;
 
-  // If running inside platform via Module Federation, context will be provided
-  if (ctx) return ctx;
-
-  // Standalone fallback (dev mode)
   if (!MOCK_MODE) {
-    console.warn('[useGlobal] No context provided and not in mock mode');
+    console.warn('[useGlobal] No value injected and not in mock mode');
   }
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  return useMemo(
-    () => ({
+  if (!_standaloneValue) {
+    _standaloneValue = {
       user: MOCK_USER,
       isAuthenticated: true,
       token: 'mock-token',
@@ -59,7 +64,8 @@ export function useGlobal(): GlobalContextValue {
       showNotification: (message: string, type: NotificationType) => {
         console.log(`[Notification] ${type}: ${message}`);
       },
-    }),
-    [],
-  );
+    };
+  }
+
+  return _standaloneValue;
 }

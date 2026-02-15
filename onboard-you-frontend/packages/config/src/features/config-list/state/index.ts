@@ -1,4 +1,10 @@
-export { ConfigListContext, useConfigList } from './ConfigListContext';
-export { ConfigListProvider } from './ConfigListProvider';
-export { configListReducer, configListInitialState } from './configListReducer';
-export type { ConfigListAction } from './configListReducer';
+export {
+  fetchConfigs,
+  setSearchQuery,
+  selectConfigList,
+  selectFilteredConfigs,
+  selectIsLoading,
+  selectSearchQuery,
+  selectConfigListError,
+} from './configListSlice';
+export { default as configListReducer } from './configListSlice';

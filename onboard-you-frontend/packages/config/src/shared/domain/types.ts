@@ -128,14 +128,14 @@ export function deriveStatus(config: PipelineConfig): SystemStatus {
   return 'healthy';
 }
 
+import type { BadgeVariant } from '../ui/Badge';
+
 export const STATUS_DISPLAY: Record<SystemStatus, { label: string; variant: BadgeVariant }> = {
   healthy: { label: 'Healthy', variant: 'active' },
   syncing: { label: 'Syncing', variant: 'info' },
   paused: { label: 'Paused', variant: 'paused' },
   'needs-attention': { label: 'Needs Attention', variant: 'error' },
 };
-
-export type BadgeVariant = 'active' | 'draft' | 'paused' | 'error' | 'info';
 
 export interface ChatMessage {
   id: string;

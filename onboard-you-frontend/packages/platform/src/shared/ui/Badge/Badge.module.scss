@@ -11,27 +11,27 @@
   white-space: nowrap;
 
   &--active {
-    background-color: rgba($color-success, 0.1);
-    color: darken($color-success, 10%);
+    background-color: var(--color-success-bg);
+    color: var(--color-success-text);
   }
 
   &--draft {
-    background-color: $neutral-100;
-    color: $neutral-600;
+    background-color: var(--color-neutral-100);
+    color: var(--color-neutral-600);
   }
 
   &--paused {
-    background-color: rgba($color-warning, 0.1);
-    color: darken($color-warning, 15%);
+    background-color: var(--color-warning-bg);
+    color: var(--color-warning-text);
   }
 
   &--error {
-    background-color: rgba($color-error, 0.1);
-    color: darken($color-error, 5%);
+    background-color: var(--color-error-bg);
+    color: var(--color-error-text);
   }
 
   &--info {
-    background-color: rgba($color-info, 0.1);
-    color: darken($color-info, 10%);
+    background-color: var(--color-info-bg);
+    color: var(--color-info-text);
   }
 }

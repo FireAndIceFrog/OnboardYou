@@ -48,7 +48,7 @@ export function ConfigListItem({ config }: ConfigListItemProps) {
     <div
       className={styles.configItem}
       onClick={() => navigate(config.customerCompanyId)}
-      role="button"
+      role="link"
       tabIndex={0}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {

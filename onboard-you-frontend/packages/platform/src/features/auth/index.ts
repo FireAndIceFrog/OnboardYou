@@ -1,22 +1,43 @@
-import { useContext } from 'react';
-import { AuthContext } from './state/AuthContext';
-import type { AuthContextValue } from './state/AuthContext';
+import { useAppSelector, useAppDispatch } from '@/store';
+import {
+  selectAuth,
+  performLogin,
+  performLogout,
+  exchangeCode,
+} from './state/authSlice';
 
 /**
- * Convenience hook to consume the auth context.
+ * Convenience hook to consume auth state from Redux.
+ * Keeps the same external API shape as the old context hook.
  */
-export function useAuth(): AuthContextValue {
-  const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return ctx;
+export function useAuth() {
+  const dispatch = useAppDispatch();
+  const state = useAppSelector(selectAuth);
+
+  return {
+    state,
+    login: () => {
+      dispatch(performLogin());
+    },
+    logout: () => {
+      dispatch(performLogout());
+    },
+    getToken: () => state.token,
+    exchangeCode: (code: string) => dispatch(exchangeCode(code)).unwrap(),
+  };
 }
 
 // State
-export { AuthProvider } from './state';
-export { AuthContext } from './state';
-export type { AuthContextValue } from './state';
+export {
+  initAuth,
+  exchangeCode,
+  performLogin,
+  performLogout,
+  selectAuth,
+  selectUser,
+  selectIsAuthenticated,
+  selectIsLoading,
+} from './state/authSlice';
 
 // UI
 export { LoginPage, CallbackPage, ProtectedRoute } from './ui';

@@ -1,27 +1,20 @@
-import { useContext, useState, useRef, useEffect } from 'react';
-import { LayoutContext } from '@/features/layout/state/LayoutContext';
-import { AuthContext } from '@/features/auth/state/AuthContext';
-import { GlobalContext } from '@/shared/state/GlobalContext';
+import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useAppDispatch } from '@/store';
+import { toggleSidebar } from '@/features/layout/state/layoutSlice';
+import { useGlobal } from '@/shared/hooks/useGlobal';
 import { APP_NAME } from '@/shared/domain/constants';
 import styles from './Header.module.scss';
 
 export function Header() {
-  const layoutCtx = useContext(LayoutContext);
-  const authCtx = useContext(AuthContext);
-  const globalCtx = useContext(GlobalContext);
+  const { t } = useTranslation();
+  const dispatch = useAppDispatch();
+  const { user, theme, toggleTheme: onToggleTheme, logout } = useGlobal();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  if (!layoutCtx || !authCtx || !globalCtx) {
-    throw new Error('Header must be used within Layout, Auth, and Global providers');
-  }
-
-  const { dispatch: layoutDispatch } = layoutCtx;
-  const { state: authState, logout } = authCtx;
-  const { state: globalState, dispatch: globalDispatch } = globalCtx;
-
-  const initials = authState.user?.name
-    ? authState.user.name
+  const initials = user?.name
+    ? user.name
         .split(' ')
         .map((n) => n[0])
         .join('')
@@ -40,13 +33,21 @@ export function Header() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Focus first menu item when dropdown opens
+  useEffect(() => {
+    if (dropdownOpen) {
+      const firstItem = dropdownRef.current?.querySelector<HTMLElement>('[role="menuitem"]');
+      firstItem?.focus();
+    }
+  }, [dropdownOpen]);
+
   return (
     <header className={styles.header}>
       <div className={styles['header-left']}>
         <button
           className={styles['header-hamburger']}
-          onClick={() => layoutDispatch({ type: 'TOGGLE_SIDEBAR' })}
-          aria-label="Toggle navigation"
+          onClick={() => dispatch(toggleSidebar())}
+          aria-label={t('layout.header.toggleNavigation')}
         >
           ☰
         </button>
@@ -56,31 +57,42 @@ export function Header() {
       <div className={styles['header-actions']}>
         <button
           className={styles['theme-toggle']}
-          onClick={() => globalDispatch({ type: 'TOGGLE_THEME' })}
-          aria-label="Toggle theme"
-          title={`Switch to ${globalState.theme === 'light' ? 'dark' : 'light'} mode`}
+          onClick={onToggleTheme}
+          aria-label={t('layout.header.toggleTheme')}
+          title={t('layout.header.switchToMode', { mode: theme === 'light' ? t('common.dark') : t('common.light') })}
         >
-          {globalState.theme === 'light' ? '🌙' : '☀️'}
+          {theme === 'light' ? '🌙' : '☀️'}
         </button>
 
         <div className={styles['avatar-wrapper']} ref={dropdownRef}>
           <button
             className={styles.avatar}
             onClick={() => setDropdownOpen((prev) => !prev)}
-            aria-label="User menu"
+            aria-label={t('layout.header.userMenu')}
+            aria-expanded={dropdownOpen}
+            aria-haspopup="true"
           >
             {initials}
           </button>
 
           {dropdownOpen && (
-            <div className={styles.dropdown}>
+            <div
+              className={styles.dropdown}
+              role="menu"
+              aria-label={t('layout.header.userMenu')}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  setDropdownOpen(false);
+                }
+              }}
+            >
               <div className={styles['dropdown-header']}>
-                <span className={styles['dropdown-name']}>{authState.user?.name}</span>
-                <span className={styles['dropdown-email']}>{authState.user?.email}</span>
+                <span className={styles['dropdown-name']}>{user?.name}</span>
+                <span className={styles['dropdown-email']}>{user?.email}</span>
               </div>
               <hr className={styles['dropdown-divider']} />
-              <button className={styles['dropdown-item']} onClick={logout}>
-                Sign out
+              <button className={styles['dropdown-item']} onClick={logout} role="menuitem">
+                {t('layout.header.signOut')}
               </button>
             </div>
           )}

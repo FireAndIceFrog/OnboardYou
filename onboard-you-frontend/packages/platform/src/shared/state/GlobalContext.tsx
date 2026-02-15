@@ -1,9 +1,3 @@
-import { createContext } from 'react';
-import type { GlobalState, GlobalAction } from './globalReducer';
-
-export interface GlobalContextValue {
-  state: GlobalState;
-  dispatch: React.Dispatch<GlobalAction>;
-}
-
-export const GlobalContext = createContext<GlobalContextValue | null>(null);
+// Legacy file — global state is now managed by Redux (globalSlice).
+// Kept for backwards-compatible type exports only.
+export type { GlobalState } from './globalSlice';

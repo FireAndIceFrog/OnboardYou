@@ -1,3 +1,4 @@
+import i18n from '@/i18n';
 import type { PipelineConfig, ActionConfig } from '@/shared/domain/types';
 import { businessLabel } from '@/shared/domain/types';
 
@@ -96,10 +97,7 @@ export function generateResponse(config: PipelineConfig, userMessage: string): s
         JSON.stringify(a.config).toLowerCase().includes('social_security'),
     );
     if (!hasSsn) {
-      return (
-        `I couldn't find a "Social Security" column in your data. ` +
-        `Should I skip this step, or would you like to map a different column to it?`
-      );
+      return i18n.t('chat.responses.ssnNotFound');
     }
   }
 
@@ -107,60 +105,32 @@ export function generateResponse(config: PipelineConfig, userMessage: string): s
   const flowAction = deriveFlowAction(userMessage);
   if (flowAction) {
     const label = businessLabel(flowAction.actionType);
-    return (
-      `Done! I've added a new **"${label}"** step to your flow. ` +
-      `You should see it appear on the flowchart now.\n\n` +
-      `Would you like to adjust its settings, or add another step?`
-    );
+    return i18n.t('chat.responses.actionAdded', { label });
   }
 
   // ── Informational responses ────────────────────────────────
   if (lower.includes('explain') || lower.includes('what does') || lower.includes('describe')) {
-    return (
-      `Your connection **${config.name}** has **${actions.length}** step(s):\n\n` +
-      actions
-        .map((a, i) => `${i + 1}. **${(a.config.name as string) || businessLabel(a.actionType)}**`)
-        .join('\n') +
-      `\n\nWould you like me to explain any specific step in more detail?`
-    );
+    const steps = actions
+      .map((a, i) => `${i + 1}. **${(a.config.name as string) || businessLabel(a.actionType)}**`)
+      .join('\n');
+    return i18n.t('chat.responses.explain', { name: config.name, count: actions.length, steps });
   }
 
   if (lower.includes('schedule') || lower.includes('frequency') || lower.includes('cron')) {
-    return (
-      `**${config.name}** syncs on schedule: \`${config.cron}\`.\n\n` +
-      `Last edited: ${config.lastEdited || 'unknown'}. Would you like to change the sync frequency?`
-    );
+    return i18n.t('chat.responses.schedule', {
+      name: config.name,
+      cron: config.cron,
+      lastEdited: config.lastEdited || i18n.t('chat.responses.lastEditedUnknown'),
+    });
   }
 
   if (lower.includes('help') || lower.includes('what can you')) {
-    return (
-      `I can help you:\n\n` +
-      `- **Clean up data** — addresses, phone numbers, special characters\n` +
-      `- **Remove duplicates** from your employee records\n` +
-      `- **Mask sensitive data** like SSNs and emails\n` +
-      `- **Standardise fields** — country codes, column names\n` +
-      `- **Explain** each step in your flow\n\n` +
-      `Just tell me what you need in plain English!`
-    );
+    return i18n.t('chat.responses.help');
   }
 
   if (lower.includes('error') || lower.includes('fail') || lower.includes('wrong')) {
-    return (
-      `I noticed something might not be right. Let me check…\n\n` +
-      `Your flow currently has **${actions.length}** step(s). ` +
-      `Could you describe what went wrong? For example:\n` +
-      `- "I'm seeing the wrong column names"\n` +
-      `- "Some records are missing"\n\n` +
-      `I'll do my best to help!`
-    );
+    return i18n.t('chat.responses.error', { count: actions.length });
   }
 
-  return (
-    `I see your connection **${config.name}** has ${actions.length} step(s). ` +
-    `Tell me what you'd like to change — for example:\n\n` +
-    `• "Clean up my address data"\n` +
-    `• "Remove duplicate records"\n` +
-    `• "Format phone numbers to international"\n\n` +
-    `I'll update the flow for you automatically!`
-  );
+  return i18n.t('chat.responses.default', { name: config.name, count: actions.length });
 }

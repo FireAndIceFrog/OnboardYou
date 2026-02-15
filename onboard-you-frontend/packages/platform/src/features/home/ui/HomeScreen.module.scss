@@ -13,13 +13,13 @@
 .welcome-title {
   font-size: $text-2xl;
   font-weight: $font-bold;
-  color: $text-primary;
+  color: var(--color-text);
   margin-bottom: $spacing-1;
 }
 
 .welcome-subtitle {
   font-size: $text-sm;
-  color: $text-secondary;
+  color: var(--color-text-secondary);
 }
 
 .stats-grid {
@@ -57,28 +57,28 @@
 }
 
 .trend--up {
-  color: darken($color-success, 10%);
-  background-color: rgba($color-success, 0.1);
+  color: var(--color-success-text);
+  background-color: var(--color-success-bg);
 }
 
 .trend--down {
-  color: darken($color-error, 5%);
-  background-color: rgba($color-error, 0.1);
+  color: var(--color-error-text);
+  background-color: var(--color-error-bg);
 }
 
 .trend--neutral {
-  color: $neutral-500;
-  background-color: $neutral-100;
+  color: var(--color-neutral-500);
+  background-color: var(--color-neutral-100);
 }
 
 .stat-value {
   font-size: $text-3xl;
   font-weight: $font-bold;
-  color: $text-primary;
+  color: var(--color-text);
   margin-bottom: $spacing-1;
 }
 
 .stat-label {
   font-size: $text-sm;
-  color: $text-secondary;
+  color: var(--color-text-secondary);
 }

@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, type KeyboardEvent, type ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './ChatInput.module.scss';
 
 interface ChatInputProps {
@@ -7,6 +8,7 @@ interface ChatInputProps {
 }
 
 export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
+  const { t } = useTranslation();
   const [value, setValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -48,13 +50,15 @@ export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
 
   return (
     <div className={styles.chatInputArea}>
+      <label htmlFor="chat-message-input" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' as const }}>{t('chat.input.placeholder')}</label>
       <textarea
         ref={textareaRef}
+        id="chat-message-input"
         className={styles.chatTextarea}
         value={value}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
-        placeholder="Tell me what to do with your data..."
+        placeholder={t('chat.input.placeholder')}
         disabled={disabled}
         rows={1}
       />
@@ -63,7 +67,7 @@ export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
         className={styles.sendButton}
         onClick={handleSend}
         disabled={disabled || !value.trim()}
-        aria-label="Send message"
+        aria-label={t('chat.input.send')}
       >
         →
       </button>

@@ -1,0 +1,138 @@
+{
+  "chat": {
+    "title": "Onboarding Assistant",
+    "noSystemSelected": "No system selected",
+    "clearChat": "Clear chat",
+    "closeChat": "Close chat",
+    "welcome": {
+      "title": "How can I help?",
+      "text": "Tell me what you'd like to do with your data — I'll update the flow for you automatically."
+    },
+    "suggestions": {
+      "cleanAddress": "Clean up my address data",
+      "formatPhone": "Format all phone numbers to international",
+      "removeDuplicates": "Remove duplicate employee records",
+      "maskPii": "Mask sensitive personal information",
+      "standardiseCountry": "Standardise country codes",
+      "whatCanYouDo": "What can you help me with?"
+    },
+    "input": {
+      "placeholder": "Tell me what to do with your data...",
+      "send": "Send message"
+    },
+    "responses": {
+      "ssnNotFound": "I couldn't find a \"Social Security\" column in your data. Should I skip this step, or would you like to map a different column to it?",
+      "actionAdded": "Done! I've added a new **\"{{label}}\"** step to your flow. You should see it appear on the flowchart now.\n\nWould you like to adjust its settings, or add another step?",
+      "explain": "Your connection **{{name}}** has **{{count}}** step(s):\n\n{{steps}}\n\nWould you like me to explain any specific step in more detail?",
+      "schedule": "**{{name}}** syncs on schedule: `{{cron}}`.\n\nLast edited: {{lastEdited}}. Would you like to change the sync frequency?",
+      "help": "I can help you:\n\n- **Clean up data** — addresses, phone numbers, special characters\n- **Remove duplicates** from your employee records\n- **Mask sensitive data** like SSNs and emails\n- **Standardise fields** — country codes, column names\n- **Explain** each step in your flow\n\nJust tell me what you need in plain English!",
+      "error": "I noticed something might not be right. Let me check…\n\nYour flow currently has **{{count}}** step(s). Could you describe what went wrong? For example:\n- \"I'm seeing the wrong column names\"\n- \"Some records are missing\"\n\nI'll do my best to help!",
+      "default": "I see your connection **{{name}}** has {{count}} step(s). Tell me what you'd like to change — for example:\n\n• \"Clean up my address data\"\n• \"Remove duplicate records\"\n• \"Format phone numbers to international\"\n\nI'll update the flow for you automatically!",
+      "lastEditedUnknown": "unknown"
+    }
+  },
+  "configDetails": {
+    "steps": {
+      "connectionDetails": "Connection Details",
+      "flowCustomization": "Flow Customization"
+    },
+    "loading": "Loading configuration…",
+    "noConfigId": "No configuration ID provided.",
+    "backToConfigurations": "← Back to Configurations",
+    "back": "← Back",
+    "openChat": "Open Chat",
+    "closeChat": "Close Chat",
+    "save": "Save",
+    "form": {
+      "stepType": "Step Type",
+      "category": "Category",
+      "configuration": "Configuration",
+      "noConfigData": "No configuration data",
+      "close": "Close",
+      "nodeDetails": "Node Details",
+      "categoryLabels": {
+        "ingestion": "Data Source",
+        "logic": "Business Rule",
+        "egress": "Destination"
+      }
+    },
+    "connection": {
+      "title": "Connect Your HR System",
+      "subtitle": "Choose your HR platform and provide the connection details.",
+      "hrSystem": "HR System",
+      "displayName": "Display Name",
+      "displayNamePlaceholder": "e.g. Acme Corp — Workday Sync",
+      "displayNameHint": "A friendly name to identify this connection.",
+      "workday": {
+        "credentialsTitle": "WS-Security Credentials",
+        "tenantUrl": "Tenant URL",
+        "tenantUrlPlaceholder": "https://wd5-impl.workday.com/ccx/service/your_tenant",
+        "tenantUrlHint": "Your Workday SOAP endpoint including the tenant path.",
+        "tenantId": "Tenant ID",
+        "tenantIdPlaceholder": "your_tenant",
+        "username": "Username",
+        "usernamePlaceholder": "ISU_user@your_tenant",
+        "password": "Password",
+        "passwordPlaceholder": "••••••••",
+        "queryOptionsTitle": "Query Options",
+        "workerCountLimit": "Worker Count Limit",
+        "workerCountLimitHint": "Maximum workers per page (default 200).",
+        "responseGroups": "Response Groups",
+        "responseGroupsHint": "Select which data groups to pull from Workday."
+      },
+      "csv": {
+        "fileLocationTitle": "File Location",
+        "csvFilePath": "CSV File Path",
+        "csvFilePathPlaceholder": "/data/uploads/employees.csv",
+        "csvFilePathHint": "Path to the CSV file that will be ingested by the pipeline."
+      },
+      "backButton": "← Back",
+      "nextButton": "Next: Customize Flow →"
+    },
+    "nodes": {
+      "dataSource": "Data Source",
+      "businessRule": "Business Rule",
+      "destination": "Destination"
+    }
+  },
+  "configList": {
+    "tabs": {
+      "clientPortfolio": "Client Portfolio",
+      "mySystems": "My Systems"
+    },
+    "title": "Connected Systems",
+    "newConnection": "New Connection",
+    "search": {
+      "placeholder": "Search by name or company…"
+    },
+    "loading": "Loading connected systems…",
+    "empty": {
+      "title": "No connected systems found",
+      "noResults": "Try adjusting your search criteria.",
+      "noData": "Connect your first HR system to get started."
+    },
+    "systems": {
+      "title": "My Systems",
+      "description": "Manage your internal integration settings and API keys here."
+    },
+    "error": {}
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "message": "An unexpected error occurred. Please try again or contact support if the problem persists.",
+    "retry": "Try Again"
+  },
+  "validation": {
+    "required": "This field is required",
+    "invalidUrl": "Please enter a valid URL",
+    "minLength": "Must be at least {{min}} characters",
+    "selectSystem": "Please select an HR system",
+    "selectResponseGroup": "At least one response group must be selected"
+  },
+  "common": {
+    "chatIcon": "💬",
+    "back": "Back",
+    "save": "Save",
+    "close": "Close"
+  }
+}

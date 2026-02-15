@@ -1,18 +1,13 @@
-import { useContext } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
-import { AuthContext } from '@/features/auth/state/AuthContext';
+import { useAppSelector } from '@/store';
+import { selectIsAuthenticated, selectIsLoading } from '@/features/auth/state/authSlice';
 import { Spinner } from '@/shared/ui/Spinner';
 
 export function ProtectedRoute() {
-  const authCtx = useContext(AuthContext);
+  const isLoading = useAppSelector(selectIsLoading);
+  const isAuthenticated = useAppSelector(selectIsAuthenticated);
 
-  if (!authCtx) {
-    throw new Error('ProtectedRoute must be used within an AuthProvider');
-  }
-
-  const { state } = authCtx;
-
-  if (state.isLoading) {
+  if (isLoading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
         <Spinner size="lg" />
@@ -20,7 +15,7 @@ export function ProtectedRoute() {
     );
   }
 
-  if (!state.isAuthenticated) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 

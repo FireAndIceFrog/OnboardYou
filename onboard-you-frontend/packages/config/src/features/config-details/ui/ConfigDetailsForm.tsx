@@ -1,4 +1,6 @@
-import { useConfigDetails } from '../state/ConfigDetailsContext';
+import { useTranslation } from 'react-i18next';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { selectSelectedNode, deselectNode } from '../state/configDetailsSlice';
 import { businessLabel } from '@/shared/domain/types';
 import styles from './ConfigDetailsForm.module.scss';
 
@@ -8,15 +10,10 @@ const CATEGORY_ICONS: Record<string, string> = {
   egress: '📤',
 };
 
-const CATEGORY_LABELS: Record<string, string> = {
-  ingestion: 'Data Source',
-  logic: 'Business Rule',
-  egress: 'Destination',
-};
-
 export function ConfigDetailsForm() {
-  const { state, dispatch } = useConfigDetails();
-  const { selectedNode } = state;
+  const { t } = useTranslation();
+  const dispatch = useAppDispatch();
+  const selectedNode = useAppSelector(selectSelectedNode);
 
   if (!selectedNode) return null;
 
@@ -26,7 +23,7 @@ export function ConfigDetailsForm() {
   const config = nodeData.config as Record<string, unknown> | undefined;
 
   const handleClose = () => {
-    dispatch({ type: 'DESELECT_NODE' });
+    dispatch(deselectNode());
   };
 
   const configEntries = config ? Object.entries(config) : [];
@@ -37,43 +34,43 @@ export function ConfigDetailsForm() {
       <div className={styles.formHeader}>
         <div className={styles.formTitle}>
           <span>{CATEGORY_ICONS[category] ?? '🔧'}</span>
-          <span>{(nodeData.label as string) ?? CATEGORY_LABELS[category] ?? 'Node Details'}</span>
+          <span>{(nodeData.label as string) ?? t(`configDetails.form.categoryLabels.${category}`, t('configDetails.form.nodeDetails'))}</span>
         </div>
-        <button type="button" className={styles.closeBtn} onClick={handleClose} aria-label="Close">
+        <button type="button" className={styles.closeBtn} onClick={handleClose} aria-label={t('configDetails.form.close')}>
           ×
         </button>
       </div>
 
       {/* Body */}
-      <div className={styles.formBody}>
+      <dl className={styles.formBody}>
         {/* Action type field */}
         <div className={styles.configField}>
-          <div className={styles.configLabel}>Step Type</div>
-          <div className={styles.configValue}>{businessLabel(actionType)}</div>
+          <dt className={styles.configLabel}>{t('configDetails.form.stepType')}</dt>
+          <dd className={styles.configValue}>{businessLabel(actionType)}</dd>
         </div>
 
         {/* Category field */}
         <div className={styles.configField}>
-          <div className={styles.configLabel}>Category</div>
-          <div className={styles.configValue}>{CATEGORY_LABELS[category] ?? category}</div>
+          <dt className={styles.configLabel}>{t('configDetails.form.category')}</dt>
+          <dd className={styles.configValue}>{t(`configDetails.form.categoryLabels.${category}`, category)}</dd>
         </div>
 
         {/* Config key-value pairs */}
         {configEntries.length > 0 ? (
           configEntries.map(([key, value]) => (
             <div key={key} className={styles.configField}>
-              <div className={styles.configLabel}>{key}</div>
-              <div className={styles.configValue}>
+              <dt className={styles.configLabel}>{key}</dt>
+              <dd className={styles.configValue}>
                 {typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
                   ? String(value)
                   : JSON.stringify(value)}
-              </div>
+              </dd>
             </div>
           ))
         ) : (
           <div className={styles.configField}>
-            <div className={styles.configLabel}>Configuration</div>
-            <div className={styles.configValue}>No configuration data</div>
+            <dt className={styles.configLabel}>{t('configDetails.form.configuration')}</dt>
+            <dd className={styles.configValue}>{t('configDetails.form.noConfigData')}</dd>
           </div>
         )}
 
@@ -83,7 +80,7 @@ export function ConfigDetailsForm() {
             <pre>{JSON.stringify(config, null, 2)}</pre>
           </div>
         )}
-      </div>
+      </dl>
     </div>
   );
 }

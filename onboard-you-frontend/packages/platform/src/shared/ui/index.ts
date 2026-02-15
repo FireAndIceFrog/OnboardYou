@@ -9,3 +9,5 @@ export type { BadgeProps, BadgeVariant } from './Badge';
 
 export { Card } from './Card';
 export type { CardProps } from './Card';
+
+export { ErrorBoundary } from './ErrorBoundary';

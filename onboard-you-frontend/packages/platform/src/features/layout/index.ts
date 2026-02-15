@@ -1,6 +1,36 @@
+import { useAppSelector, useAppDispatch } from '@/store';
+import {
+  selectLayout,
+  toggleSidebar,
+  setSidebarOpen,
+  toggleSidebarCollapsed,
+} from './state/layoutSlice';
+
+/**
+ * Convenience hook to consume layout state from Redux.
+ */
+export function useLayout() {
+  const dispatch = useAppDispatch();
+  const state = useAppSelector(selectLayout);
+
+  return {
+    state,
+    toggleSidebar: () => dispatch(toggleSidebar()),
+    setSidebarOpen: (open: boolean) => dispatch(setSidebarOpen(open)),
+    toggleSidebarCollapsed: () => dispatch(toggleSidebarCollapsed()),
+  };
+}
+
 // State
-export { LayoutProvider, LayoutContext } from './state';
-export type { LayoutContextValue, LayoutAction } from './state';
+export {
+  toggleSidebar,
+  setSidebarOpen,
+  toggleSidebarCollapsed,
+  selectLayout,
+  selectSidebarOpen,
+  selectSidebarCollapsed,
+} from './state/layoutSlice';
+export type { LayoutAction } from './state';
 
 // UI
 export { AppLayout, Header, Sidebar } from './ui';

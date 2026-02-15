@@ -1,9 +1,14 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { federation } from '@module-federation/vite';
 import { resolve } from 'path';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  const configRemoteUrl =
+    env.VITE_CONFIG_REMOTE_URL || 'http://localhost:5174';
+
+  return {
   plugins: [
     react(),
     federation({
@@ -13,7 +18,7 @@ export default defineConfig({
         configApp: {
           type: 'module',
           name: 'configApp',
-          entry: 'http://localhost:5174/remoteEntry.js',
+          entry: `${configRemoteUrl}/remoteEntry.js`,
           entryGlobalName: 'configApp',
           shareScope: 'default',
         },
@@ -22,6 +27,10 @@ export default defineConfig({
         react: { singleton: true },
         'react-dom': { singleton: true },
         'react-router-dom': { singleton: true },
+        '@reduxjs/toolkit': { singleton: true },
+        'react-redux': { singleton: true },
+        'react-i18next': { singleton: true },
+        i18next: { singleton: true },
       },
     }),
   ],
@@ -49,4 +58,5 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
   },
+};
 });

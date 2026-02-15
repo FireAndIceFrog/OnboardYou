@@ -26,8 +26,8 @@ export function StatCard({ data }: StatCardProps) {
           </span>
         )}
       </div>
-      <div className={styles['stat-value']}>{data.value}</div>
-      <div className={styles['stat-label']}>{data.label}</div>
+      <dd className={styles['stat-value']}>{data.value}</dd>
+      <dt className={styles['stat-label']}>{data.label}</dt>
     </Card>
   );
 }

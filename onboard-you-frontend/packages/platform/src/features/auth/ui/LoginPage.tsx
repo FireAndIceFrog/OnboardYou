@@ -1,17 +1,17 @@
-import { useContext } from 'react';
-import { AuthContext } from '@/features/auth/state/AuthContext';
+import { useTranslation } from 'react-i18next';
+import { useAppDispatch } from '@/store';
+import { performLogin } from '@/features/auth/state/authSlice';
 import { Button } from '@/shared/ui/Button';
 import { MOCK_MODE, APP_NAME } from '@/shared/domain/constants';
 import styles from './LoginPage.module.scss';
 
 export function LoginPage() {
-  const authCtx = useContext(AuthContext);
+  const { t } = useTranslation();
+  const dispatch = useAppDispatch();
 
-  if (!authCtx) {
-    throw new Error('LoginPage must be used within an AuthProvider');
-  }
-
-  const { login } = authCtx;
+  const login = () => {
+    dispatch(performLogin());
+  };
 
   return (
     <div className={styles['login-page']}>
@@ -21,23 +21,23 @@ export function LoginPage() {
           <h1 className={styles['login-app-name']}>{APP_NAME}</h1>
         </div>
 
-        <h2 className={styles['login-title']}>Welcome back</h2>
-        <p className={styles['login-subtitle']}>Sign in to your workspace</p>
+        <h2 className={styles['login-title']}>{t('auth.login.title')}</h2>
+        <p className={styles['login-subtitle']}>{t('auth.login.subtitle')}</p>
 
         <div className={styles['login-actions']}>
           {MOCK_MODE ? (
             <Button variant="primary" size="lg" onClick={login} className={styles['login-btn']}>
-              🧪 Demo Mode — Continue as Demo User
+              {t('auth.login.demoButton')}
             </Button>
           ) : (
             <Button variant="primary" size="lg" onClick={login} className={styles['login-btn']}>
-              Sign in with SSO
+              {t('auth.login.ssoButton')}
             </Button>
           )}
         </div>
 
         <p className={styles['login-footer']}>
-          Secure authentication powered by AWS Cognito
+          {t('auth.login.footer')}
         </p>
       </div>
     </div>

@@ -1,26 +1,24 @@
-import { useContext, useMemo } from 'react';
-import { GlobalContext } from '@/shared/state/GlobalContext';
-import { AuthContext } from '@/features/auth/state/AuthContext';
+import { useMemo } from 'react';
+import { useAppSelector, useAppDispatch } from '@/store';
+import { selectAuth, performLogin, performLogout } from '@/features/auth/state/authSlice';
+import {
+  setOrganization,
+  toggleTheme,
+  showNotification,
+  dismissNotification,
+  selectGlobal,
+} from '@/shared/state/globalSlice';
 import { ApiClient } from '@/shared/services/apiClient';
 import type { Organization, NotificationType } from '@/shared/domain/types';
 
 export function useGlobal() {
-  const globalCtx = useContext(GlobalContext);
-  const authCtx = useContext(AuthContext);
-
-  if (!globalCtx) {
-    throw new Error('useGlobal must be used within a GlobalProvider');
-  }
-  if (!authCtx) {
-    throw new Error('useGlobal must be used within an AuthProvider');
-  }
-
-  const { state, dispatch } = globalCtx;
-  const { state: authState, login, logout, getToken } = authCtx;
+  const dispatch = useAppDispatch();
+  const authState = useAppSelector(selectAuth);
+  const globalState = useAppSelector(selectGlobal);
 
   const apiClient = useMemo(
-    () => new ApiClient(getToken),
-    [getToken],
+    () => new ApiClient(() => authState.token),
+    [authState.token],
   );
 
   return {
@@ -28,24 +26,22 @@ export function useGlobal() {
     user: authState.user,
     isAuthenticated: authState.isAuthenticated,
     token: authState.token,
-    login,
-    logout,
+    login: () => dispatch(performLogin()),
+    logout: () => dispatch(performLogout()),
 
     // Organization
-    organization: state.organization,
-    setOrganization: (org: Organization | null) =>
-      dispatch({ type: 'SET_ORGANIZATION', payload: org }),
+    organization: globalState.organization,
+    setOrganization: (org: Organization | null) => dispatch(setOrganization(org)),
 
     // Theme
-    theme: state.theme,
-    toggleTheme: () => dispatch({ type: 'TOGGLE_THEME' }),
+    theme: globalState.theme,
+    toggleTheme: () => dispatch(toggleTheme()),
 
     // Notifications
-    notifications: state.notifications,
+    notifications: globalState.notifications,
     showNotification: (message: string, type: NotificationType) =>
-      dispatch({ type: 'ADD_NOTIFICATION', payload: { message, type } }),
-    dismissNotification: (id: string) =>
-      dispatch({ type: 'DISMISS_NOTIFICATION', payload: id }),
+      dispatch(showNotification(message, type)),
+    dismissNotification: (id: string) => dispatch(dismissNotification(id)),
 
     // API
     apiClient,

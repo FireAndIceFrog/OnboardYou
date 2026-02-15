@@ -1,0 +1,51 @@
+.errorBoundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: 2rem;
+  text-align: center;
+  gap: 1rem;
+}
+
+.icon {
+  font-size: 2.5rem;
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text-primary, #1a1a2e);
+  margin: 0;
+}
+
+.message {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary, #6b7280);
+  margin: 0;
+  max-width: 420px;
+  line-height: 1.5;
+}
+
+.retryButton {
+  margin-top: 0.5rem;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #fff;
+  background-color: var(--color-primary, #6366f1);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: var(--color-primary-hover, #4f46e5);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary, #6366f1);
+    outline-offset: 2px;
+  }
+}

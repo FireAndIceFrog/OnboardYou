@@ -1,61 +1,79 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { useConfigList } from '../state';
-import { ConfigListProvider } from '../state';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { fetchConfigs, setSearchQuery, selectConfigList, selectFilteredConfigs } from '../state/configListSlice';
 import { ConfigListItem } from './ConfigListItem';
 import { Button } from '@/shared/ui/Button';
 import { Spinner } from '@/shared/ui/Spinner';
+import { useGlobal } from '@/shared/hooks';
 import styles from './ConfigListScreen.module.scss';
 
 type TabId = 'portfolio' | 'systems';
 
 function ConfigListScreenInner() {
-  const { state, filteredConfigs, setSearchQuery } = useConfigList();
+  const { t } = useTranslation();
+  const dispatch = useAppDispatch();
+  const state = useAppSelector(selectConfigList);
+  const filteredConfigs = useAppSelector(selectFilteredConfigs);
+  const { apiClient } = useGlobal();
   const [activeTab, setActiveTab] = useState<TabId>('portfolio');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    dispatch(fetchConfigs({ apiClient }));
+  }, [dispatch, apiClient]);
 
   return (
     <div className={styles.configListScreen}>
       {/* Dual-tab header */}
-      <div className={styles.tabBar}>
+      <div className={styles.tabBar} role="tablist" aria-label="Configuration views">
         <button
           className={`${styles.tab} ${activeTab === 'portfolio' ? styles.tabActive : ''}`}
           onClick={() => setActiveTab('portfolio')}
+          role="tab"
+          aria-selected={activeTab === 'portfolio'}
+          aria-controls="tabpanel-portfolio"
         >
-          🏢 Client Portfolio
+          🏢 {t('configList.tabs.clientPortfolio')}
         </button>
         <button
           className={`${styles.tab} ${activeTab === 'systems' ? styles.tabActive : ''}`}
           onClick={() => setActiveTab('systems')}
+          role="tab"
+          aria-selected={activeTab === 'systems'}
+          aria-controls="tabpanel-systems"
         >
-          ⚙️ My Systems
+          ⚙️ {t('configList.tabs.mySystems')}
         </button>
       </div>
 
       {activeTab === 'portfolio' && (
-        <>
+        <div role="tabpanel" id="tabpanel-portfolio">
           <div className={styles.listHeader}>
-            <h1 className={styles.title}>Connected Systems</h1>
+            <h1 className={styles.title}>{t('configList.title')}</h1>
             <Button variant="primary" size="md" leftIcon={<span>＋</span>} onClick={() => navigate('new')}>
-              New Connection
+              {t('configList.newConnection')}
             </Button>
           </div>
 
           <div className={styles.searchBar}>
-            <span className={styles.searchIcon}>🔍</span>
+            <label htmlFor="config-search" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' as const }}>{t('configList.search.placeholder')}</label>
+            <span className={styles.searchIcon} aria-hidden="true">🔍</span>
             <input
+              id="config-search"
               type="text"
               className={styles.searchInput}
-              placeholder="Search by name or company…"
+              placeholder={t('configList.search.placeholder')}
               value={state.searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => dispatch(setSearchQuery(e.target.value))}
             />
           </div>
 
           {state.isLoading && (
             <div className={styles.loadingState}>
               <Spinner size="lg" />
-              <p>Loading connected systems…</p>
+              <p>{t('configList.loading')}</p>
             </div>
           )}
 
@@ -69,11 +87,11 @@ function ConfigListScreenInner() {
           {!state.isLoading && !state.error && filteredConfigs.length === 0 && (
             <div className={styles.emptyState}>
               <span className={styles.emptyIcon}>🔗</span>
-              <h3 className={styles.emptyTitle}>No connected systems found</h3>
+              <h3 className={styles.emptyTitle}>{t('configList.empty.title')}</h3>
               <p className={styles.emptyDesc}>
                 {state.searchQuery
-                  ? 'Try adjusting your search criteria.'
-                  : 'Connect your first HR system to get started.'}
+                  ? t('configList.empty.noResults')
+                  : t('configList.empty.noData')}
               </p>
             </div>
           )}
@@ -85,15 +103,15 @@ function ConfigListScreenInner() {
               ))}
             </div>
           )}
-        </>
+        </div>
       )}
 
       {activeTab === 'systems' && (
-        <div className={styles.emptyState}>
+        <div role="tabpanel" id="tabpanel-systems" className={styles.emptyState}>
           <span className={styles.emptyIcon}>⚙️</span>
-          <h3 className={styles.emptyTitle}>My Systems</h3>
+          <h3 className={styles.emptyTitle}>{t('configList.systems.title')}</h3>
           <p className={styles.emptyDesc}>
-            Manage your internal integration settings and API keys here.
+            {t('configList.systems.description')}
           </p>
         </div>
       )}
@@ -102,9 +120,5 @@ function ConfigListScreenInner() {
 }
 
 export function ConfigListScreen() {
-  return (
-    <ConfigListProvider>
-      <ConfigListScreenInner />
-    </ConfigListProvider>
-  );
+  return <ConfigListScreenInner />;
 }

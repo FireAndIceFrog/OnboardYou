@@ -1,5 +1,17 @@
-export { AuthContext } from './AuthContext';
-export type { AuthContextValue } from './AuthContext';
-export { AuthProvider } from './AuthProvider';
-export { authReducer, initialAuthState } from './authReducer';
+export { default as authReducer } from './authSlice';
+export {
+  setLoading,
+  setUser,
+  setError,
+  logout,
+  initAuth,
+  exchangeCode,
+  performLogin,
+  performLogout,
+  selectAuth,
+  selectUser,
+  selectIsAuthenticated,
+  selectIsLoading,
+} from './authSlice';
+export { initialAuthState } from './authReducer';
 export type { AuthAction } from './authReducer';

@@ -1,34 +1,72 @@
-import { useContext } from 'react';
-import { AuthContext } from '@/features/auth/state/AuthContext';
+import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useGlobal } from '@/shared/hooks/useGlobal';
+import { Spinner } from '@/shared/ui/Spinner';
+import { MOCK_MODE } from '@/shared/domain/constants';
+import { fetchDashboardStats, MOCK_STATS } from '@/features/home/services/homeService';
 import { StatCard } from './StatCard';
 import type { StatCardData } from '@/features/home/domain/types';
 import styles from './HomeScreen.module.scss';
 
-const STATS: StatCardData[] = [
-  { label: 'Connected Systems', value: 3, change: '+1 this week', trend: 'up', icon: '🔗' },
-  { label: 'Pending Reviews', value: 7, change: '+3 today', trend: 'up', icon: '📋' },
-  { label: 'Team Members', value: 12, change: 'No change', trend: 'neutral', icon: '👥' },
-  { label: 'Activity Today', value: 156, change: '+12%', trend: 'up', icon: '📊' },
-];
-
 export function HomeScreen() {
-  const authCtx = useContext(AuthContext);
-  const userName = authCtx?.state.user?.name ?? 'there';
+  const { t } = useTranslation();
+  const { user, apiClient } = useGlobal();
+  const userName = user?.name ?? 'there';
+
+  const [stats, setStats] = useState<StatCardData[] | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadStats() {
+      if (MOCK_MODE) {
+        setStats(MOCK_STATS(t));
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const data = await fetchDashboardStats(apiClient);
+        if (!cancelled) setStats(data);
+      } catch {
+        if (!cancelled) setStats(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    loadStats();
+    return () => { cancelled = true; };
+  }, [apiClient, t]);
+
+  const placeholderStats: StatCardData[] = [
+    { label: t('home.stats.connectedSystems'), value: '—', icon: '🔗' },
+    { label: t('home.stats.pendingReviews'), value: '—', icon: '📋' },
+    { label: t('home.stats.teamMembers'), value: '—', icon: '👥' },
+    { label: t('home.stats.activityToday'), value: '—', icon: '📊' },
+  ];
 
   return (
-    <div className={styles['home-screen']}>
+    <section className={styles['home-screen']} aria-label="Dashboard overview">
       <section className={styles['welcome-section']}>
-        <h1 className={styles['welcome-title']}>Welcome back, {userName}</h1>
+        <h1 className={styles['welcome-title']}>{t('home.welcome', { name: userName })}</h1>
         <p className={styles['welcome-subtitle']}>
-          Here&apos;s an overview of your client portfolio and connected systems.
+          {t('home.subtitle')}
         </p>
       </section>
 
-      <section className={styles['stats-grid']}>
-        {STATS.map((stat) => (
-          <StatCard key={stat.label} data={stat} />
-        ))}
-      </section>
-    </div>
+      <dl className={styles['stats-grid']}>
+        {loading ? (
+          <div className={styles['stats-loading']}>
+            <Spinner size="md" />
+          </div>
+        ) : (
+          (stats ?? placeholderStats).map((stat) => (
+            <StatCard key={stat.label} data={stat} />
+          ))
+        )}
+      </dl>
+    </section>
   );
 }

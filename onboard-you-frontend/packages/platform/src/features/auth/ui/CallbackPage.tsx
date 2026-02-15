@@ -1,24 +1,22 @@
-import { useContext, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { AuthContext } from '@/features/auth/state/AuthContext';
+import { useTranslation } from 'react-i18next';
+import { useAppSelector, useAppDispatch } from '@/store';
+import { exchangeCode, selectAuth } from '@/features/auth/state/authSlice';
 import { Spinner } from '@/shared/ui/Spinner';
 import styles from './LoginPage.module.scss';
 
 export function CallbackPage() {
-  const authCtx = useContext(AuthContext);
+  const { t } = useTranslation();
+  const dispatch = useAppDispatch();
+  const state = useAppSelector(selectAuth);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-
-  if (!authCtx) {
-    throw new Error('CallbackPage must be used within an AuthProvider');
-  }
-
-  const { state, exchangeCode } = authCtx;
 
   useEffect(() => {
     const code = searchParams.get('code');
     if (code) {
-      exchangeCode(code).then(() => {
+      dispatch(exchangeCode(code)).then(() => {
         navigate('/', { replace: true });
       });
     } else {
@@ -31,9 +29,9 @@ export function CallbackPage() {
     return (
       <div className={styles['login-page']}>
         <div className={styles['login-card']}>
-          <h2 className={styles['login-title']}>Authentication Error</h2>
+          <h2 className={styles['login-title']}>{t('auth.callback.errorTitle')}</h2>
           <p className={styles['login-subtitle']}>{state.error}</p>
-          <a href="/login">Return to login</a>
+          <a href="/login">{t('auth.callback.returnToLogin')}</a>
         </div>
       </div>
     );
@@ -44,7 +42,7 @@ export function CallbackPage() {
       <div className={styles['login-card']}>
         <Spinner size="lg" />
         <p className={styles['login-subtitle']} style={{ marginTop: '1rem' }}>
-          Completing sign in…
+          {t('auth.callback.completingSignIn')}
         </p>
       </div>
     </div>
