@@ -2,3 +2,6 @@ This is a memory bank so you understand the coding paradigms required. Always fo
 
 # Frontend related tasks
 ./frontend/index.md
+
+# Backend
+./backend/standards.md 
