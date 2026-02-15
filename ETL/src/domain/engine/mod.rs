@@ -9,5 +9,5 @@ pub mod manifest;
 pub mod roster;
 
 pub use errors::{Error, Result};
-pub use manifest::{ActionConfig, Manifest};
+pub use manifest::{ActionConfig, ActionType, Manifest};
 pub use roster::{FieldMetadata, RosterContext};

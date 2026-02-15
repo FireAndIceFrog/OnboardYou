@@ -1,7 +1,10 @@
-//! The Resolver: Maps manifest string IDs to Capability instances
+//! The Resolver: Maps manifest ActionType variants to Capability instances
 //!
 //! Uses the `ActionConfig` from the manifest to instantiate the correct
 //! `OnboardingAction` implementation, forwarding action-specific JSON config.
+//!
+//! The match is **exhaustive** — adding a new `ActionType` variant forces
+//! a compiler error here until you wire it up.
 
 use crate::capabilities::egress::api_dispatcher::ApiDispatcher;
 use crate::capabilities::ingestion::engine::{CsvHrisConnector, WorkdayHrisConnector};
@@ -10,7 +13,7 @@ use crate::capabilities::logic::engine::{
     IdentityDeduplicator, IsoCountrySanitizer, PIIMasking, RegexReplace,
     RenameColumn, SCDType2,
 };
-use crate::domain::{Error, OnboardingAction, Result};
+use crate::domain::{ActionType, OnboardingAction, Result};
 use crate::domain::engine::manifest::ActionConfig;
 use std::sync::Arc;
 
@@ -20,93 +23,76 @@ pub struct ActionFactory;
 impl ActionFactory {
     /// Create an action instance from a full `ActionConfig`.
     ///
-    /// The `action_type` field selects the concrete implementation, while
+    /// The `action_type` enum selects the concrete implementation, while
     /// `config` is forwarded as-is to the implementation's constructor.
     pub fn create(action_config: &ActionConfig) -> Result<Arc<dyn OnboardingAction>> {
-        match action_config.action_type.as_str() {
-            "csv_hris_connector" => {
+        match action_config.action_type {
+            ActionType::CsvHrisConnector => {
                 let connector = CsvHrisConnector::from_action_config(&action_config.config)?;
                 Ok(Arc::new(connector))
             }
-            "workday_hris_connector" => {
+            ActionType::WorkdayHrisConnector => {
                 let connector = WorkdayHrisConnector::from_action_config(&action_config.config)?;
                 Ok(Arc::new(connector))
             }
-            "scd_type_2" => {
+            ActionType::ScdType2 => {
                 let scd = SCDType2::from_action_config(&action_config.config)?;
                 Ok(Arc::new(scd))
             }
-            "pii_masking" => {
+            ActionType::PiiMasking => {
                 let masking = PIIMasking::from_action_config(&action_config.config)?;
                 Ok(Arc::new(masking))
             }
-            "identity_deduplicator" => {
+            ActionType::IdentityDeduplicator => {
                 let dedup = IdentityDeduplicator::from_action_config(&action_config.config)?;
                 Ok(Arc::new(dedup))
             }
-            "regex_replace" => {
+            ActionType::RegexReplace => {
                 let action = RegexReplace::from_action_config(&action_config.config)?;
                 Ok(Arc::new(action))
             }
-            "iso_country_sanitizer" => {
+            ActionType::IsoCountrySanitizer => {
                 let action = IsoCountrySanitizer::from_action_config(&action_config.config)?;
                 Ok(Arc::new(action))
             }
-            "cellphone_sanitizer" => {
+            ActionType::CellphoneSanitizer => {
                 let action = CellphoneSanitizer::from_action_config(&action_config.config)?;
                 Ok(Arc::new(action))
             }
-            "handle_diacritics" => {
+            ActionType::HandleDiacritics => {
                 let action = HandleDiacritics::from_action_config(&action_config.config)?;
                 Ok(Arc::new(action))
             }
-            "rename_column" => {
+            ActionType::RenameColumn => {
                 let action = RenameColumn::from_action_config(&action_config.config)?;
                 Ok(Arc::new(action))
             }
-            "drop_column" => {
+            ActionType::DropColumn => {
                 let action = DropColumn::from_action_config(&action_config.config)?;
                 Ok(Arc::new(action))
             }
-            "filter_by_value" => {
+            ActionType::FilterByValue => {
                 let action = FilterByValue::from_action_config(&action_config.config)?;
                 Ok(Arc::new(action))
             }
-            "api_dispatcher" => {
+            ActionType::ApiDispatcher => {
                 let action = ApiDispatcher::from_action_config(&action_config.config)?;
                 Ok(Arc::new(action))
             }
-            other => Err(Error::ConfigurationError(format!(
-                "Unknown action type: '{}'",
-                other
-            ))),
         }
-    }
-
-    /// Legacy helper — resolve by bare id (no config). Kept for backward compat.
-    pub fn create_action(action_id: &str) -> Result<Arc<dyn OnboardingAction>> {
-        Err(Error::ConfigurationError(format!(
-            "Unknown action type: '{}'. Use ActionFactory::create(config) instead.",
-            action_id
-        )))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_factory_unknown_action() {
-        let result = ActionFactory::create_action("unknown_action");
-        assert!(result.is_err());
-    }
+    use crate::domain::ActionType;
 
     #[test]
     fn test_factory_creates_csv_connector() {
         let config = ActionConfig {
             id: "ingest".into(),
-            action_type: "csv_hris_connector".into(),
+            action_type: ActionType::CsvHrisConnector,
             config: serde_json::json!({ "csv_path": "/tmp/test.csv" }),
         };
         let action = ActionFactory::create(&config).expect("should create csv connector");
@@ -117,7 +103,7 @@ mod tests {
     fn test_factory_creates_scd_type_2() {
         let config = ActionConfig {
             id: "scd".into(),
-            action_type: "scd_type_2".into(),
+            action_type: ActionType::ScdType2,
             config: serde_json::json!({
                 "entity_column": "employee_id",
                 "date_column": "start_date"
@@ -131,7 +117,7 @@ mod tests {
     fn test_factory_creates_pii_masking() {
         let config = ActionConfig {
             id: "mask".into(),
-            action_type: "pii_masking".into(),
+            action_type: ActionType::PiiMasking,
             config: serde_json::json!({ "mask_ssn": true, "mask_salary": false }),
         };
         let action = ActionFactory::create(&config).expect("should create pii_masking");
@@ -142,7 +128,7 @@ mod tests {
     fn test_factory_creates_identity_deduplicator() {
         let config = ActionConfig {
             id: "dedup".into(),
-            action_type: "identity_deduplicator".into(),
+            action_type: ActionType::IdentityDeduplicator,
             config: serde_json::json!({ "columns": ["email"] }),
         };
         let action = ActionFactory::create(&config).expect("should create identity_deduplicator");
@@ -150,20 +136,10 @@ mod tests {
     }
 
     #[test]
-    fn test_factory_rejects_unknown_type() {
-        let config = ActionConfig {
-            id: "bad".into(),
-            action_type: "nope".into(),
-            config: serde_json::json!({}),
-        };
-        assert!(ActionFactory::create(&config).is_err());
-    }
-
-    #[test]
     fn test_factory_creates_regex_replace() {
         let config = ActionConfig {
             id: "clean_phone".into(),
-            action_type: "regex_replace".into(),
+            action_type: ActionType::RegexReplace,
             config: serde_json::json!({
                 "column": "phone",
                 "pattern": "\\+44\\s?",
@@ -178,7 +154,7 @@ mod tests {
     fn test_factory_creates_cellphone_sanitizer() {
         let config = ActionConfig {
             id: "phone_intl".into(),
-            action_type: "cellphone_sanitizer".into(),
+            action_type: ActionType::CellphoneSanitizer,
             config: serde_json::json!({
                 "phone_column": "mobile_phone",
                 "country_columns": ["work_country", "home_country"],
@@ -187,5 +163,26 @@ mod tests {
         };
         let action = ActionFactory::create(&config).expect("should create cellphone_sanitizer");
         assert_eq!(action.id(), "cellphone_sanitizer");
+    }
+
+    #[test]
+    fn test_unknown_action_type_rejected_at_deserialization() {
+        // Unknown action types are now caught by serde, not the factory
+        let json = r#"{"id":"bad","action_type":"nope","config":{}}"#;
+        let result: std::result::Result<ActionConfig, _> = serde_json::from_str(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_action_type_round_trip_serde() {
+        let config = ActionConfig {
+            id: "test".into(),
+            action_type: ActionType::ApiDispatcher,
+            config: serde_json::json!({}),
+        };
+        let json = serde_json::to_string(&config).unwrap();
+        assert!(json.contains("\"api_dispatcher\""));
+        let back: ActionConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.action_type, ActionType::ApiDispatcher);
     }
 }

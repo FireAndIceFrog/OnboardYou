@@ -80,7 +80,7 @@ pub fn validate_pipeline(pipeline_json: &Manifest) -> Result<ValidationResult, A
 
         steps.push(StepValidation {
             action_id: ac.id.clone(),
-            action_type: ac.action_type.clone(),
+            action_type: ac.action_type.to_string(),
             columns_after,
         });
     }

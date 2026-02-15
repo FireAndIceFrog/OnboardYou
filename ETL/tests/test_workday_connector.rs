@@ -5,7 +5,7 @@
 
 mod common;
 
-use onboard_you::{ActionConfig, ActionFactory, RosterContext};
+use onboard_you::{ActionConfig, ActionFactory, ActionType, RosterContext};
 use onboard_you::capabilities::ingestion::engine::{
     WorkdayConfig, WorkdayResponseGroup,
     build_get_workers_envelope, parse_get_workers_response,
@@ -77,7 +77,7 @@ const WORKDAY_RESPONSE_XML: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 fn test_factory_creates_workday_connector() {
     let config = ActionConfig {
         id: "ingest_workday".into(),
-        action_type: "workday_hris_connector".into(),
+        action_type: ActionType::WorkdayHrisConnector,
         config: serde_json::json!({
             "tenant_url": "https://wd3-impl-services1.workday.com",
             "tenant_id": "integration_test_tenant",
@@ -93,7 +93,7 @@ fn test_factory_creates_workday_connector() {
 fn test_factory_workday_with_full_config() {
     let config = ActionConfig {
         id: "ingest_workday_full".into(),
-        action_type: "workday_hris_connector".into(),
+        action_type: ActionType::WorkdayHrisConnector,
         config: serde_json::json!({
             "tenant_url": "https://wd5-impl-services1.workday.com",
             "tenant_id": "checkout_corp",
@@ -117,7 +117,7 @@ fn test_factory_workday_with_full_config() {
 fn test_factory_workday_missing_config() {
     let config = ActionConfig {
         id: "bad_workday".into(),
-        action_type: "workday_hris_connector".into(),
+        action_type: ActionType::WorkdayHrisConnector,
         config: serde_json::json!({}),
     };
     let result = ActionFactory::create(&config);
@@ -208,7 +208,7 @@ fn test_e2e_workday_pipeline_with_scd_type_2() {
     // Verify we can then pass this through the SCD Type 2 action
     let scd_config = ActionConfig {
         id: "scd".into(),
-        action_type: "scd_type_2".into(),
+        action_type: ActionType::ScdType2,
         config: serde_json::json!({
             "entity_column": "employee_id",
             "date_column": "hire_date"
@@ -233,7 +233,7 @@ fn test_e2e_workday_pipeline_with_deduplication() {
 
     let dedup_config = ActionConfig {
         id: "dedup".into(),
-        action_type: "identity_deduplicator".into(),
+        action_type: ActionType::IdentityDeduplicator,
         config: serde_json::json!({ "columns": ["email"] }),
     };
     let dedup_action = ActionFactory::create(&dedup_config).expect("create dedup");

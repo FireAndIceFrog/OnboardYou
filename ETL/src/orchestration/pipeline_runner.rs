@@ -32,6 +32,7 @@ mod tests {
     use super::*;
     use crate::capabilities::logic::traits::ColumnCalculator;
     use crate::domain::engine::manifest::ActionConfig;
+    use crate::domain::ActionType;
     use polars::prelude::*;
 
     /// A trivial pass-through action for testing the runner.
@@ -67,7 +68,7 @@ mod tests {
             version: "1.0".into(),
             actions: vec![ActionConfig {
                 id: "noop".into(),
-                action_type: "noop".into(),
+                action_type: ActionType::CsvHrisConnector, // type doesn't matter, action is pre-built
                 config: serde_json::json!({}),
             }],
         };

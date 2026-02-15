@@ -276,11 +276,6 @@ pub const SAMPLE_MANIFEST_JSON: &str = r#"{
       "id": "hris_connector",
       "action_type": "csv_hris_connector",
       "config": {}
-    },
-    {
-      "id": "validator",
-      "action_type": "validation",
-      "config": {}
     }
   ]
 }"#;

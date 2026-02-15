@@ -2,7 +2,7 @@
 
 mod common;
 
-use onboard_you::{ActionFactory, ActionConfig, RosterContext};
+use onboard_you::{ActionFactory, ActionConfig, ActionType, RosterContext};
 use polars::prelude::*;
 
 #[test]
@@ -20,7 +20,7 @@ fn test_identity_resolution_basic() {
     // Resolve the deduplicator through the factory (integration!)
     let config = ActionConfig {
         id: "dedup".into(),
-        action_type: "identity_deduplicator".into(),
+        action_type: ActionType::IdentityDeduplicator,
         config: serde_json::json!({ "columns": ["email"] }),
     };
     let action = ActionFactory::create(&config).expect("create deduplicator");
