@@ -3,6 +3,8 @@ declare module 'configApp/App' {
   const App: ComponentType;
   export default App;
   export const ConfigRoutes: ComponentType;
+  /** Standardized export name — all remotes expose Routes */
+  export const Routes: ComponentType;
   export function setGlobalValue(value: {
     apiClient: import('@/shared/services/apiClient').ApiClient;
     showNotification: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
