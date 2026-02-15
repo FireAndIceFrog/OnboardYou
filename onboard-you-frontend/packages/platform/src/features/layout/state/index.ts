@@ -7,5 +7,3 @@ export {
   selectSidebarOpen,
   selectSidebarCollapsed,
 } from './layoutSlice';
-export { initialLayoutState } from './layoutReducer';
-export type { LayoutAction } from './layoutReducer';

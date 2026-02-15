@@ -30,7 +30,6 @@ export {
   selectSidebarOpen,
   selectSidebarCollapsed,
 } from './state/layoutSlice';
-export type { LayoutAction } from './state';
 
 // UI
 export { AppLayout, Header, Sidebar } from './ui';

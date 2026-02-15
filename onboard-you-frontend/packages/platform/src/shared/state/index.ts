@@ -12,5 +12,3 @@ export {
   selectNotifications,
 } from './globalSlice';
 export type { GlobalState } from './globalSlice';
-export { initialGlobalState } from './globalReducer';
-export type { GlobalAction } from './globalReducer';
