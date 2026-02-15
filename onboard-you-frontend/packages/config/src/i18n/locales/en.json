@@ -96,10 +96,6 @@
     }
   },
   "configList": {
-    "tabs": {
-      "clientPortfolio": "Client Portfolio",
-      "mySystems": "My Systems"
-    },
     "title": "Connected Systems",
     "newConnection": "New Connection",
     "search": {
@@ -110,10 +106,6 @@
       "title": "No connected systems found",
       "noResults": "Try adjusting your search criteria.",
       "noData": "Connect your first HR system to get started."
-    },
-    "systems": {
-      "title": "My Systems",
-      "description": "Manage your internal integration settings and API keys here."
     },
     "error": {}
   },

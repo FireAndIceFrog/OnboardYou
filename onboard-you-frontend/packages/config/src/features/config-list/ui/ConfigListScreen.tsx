@@ -8,14 +8,11 @@ import { Button } from '@/shared/ui/Button';
 import { Spinner } from '@/shared/ui/Spinner';
 import styles from './ConfigListScreen.module.scss';
 
-type TabId = 'portfolio' | 'systems';
-
 function ConfigListScreenInner() {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const state = useAppSelector(selectConfigList);
   const filteredConfigs = useAppSelector(selectFilteredConfigs);
-  const [activeTab, setActiveTab] = useState<TabId>('portfolio');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,29 +21,6 @@ function ConfigListScreenInner() {
 
   return (
     <div className={styles.configListScreen}>
-      {/* Dual-tab header */}
-      <div className={styles.tabBar} role="tablist" aria-label="Configuration views">
-        <button
-          className={`${styles.tab} ${activeTab === 'portfolio' ? styles.tabActive : ''}`}
-          onClick={() => setActiveTab('portfolio')}
-          role="tab"
-          aria-selected={activeTab === 'portfolio'}
-          aria-controls="tabpanel-portfolio"
-        >
-          🏢 {t('configList.tabs.clientPortfolio')}
-        </button>
-        <button
-          className={`${styles.tab} ${activeTab === 'systems' ? styles.tabActive : ''}`}
-          onClick={() => setActiveTab('systems')}
-          role="tab"
-          aria-selected={activeTab === 'systems'}
-          aria-controls="tabpanel-systems"
-        >
-          ⚙️ {t('configList.tabs.mySystems')}
-        </button>
-      </div>
-
-      {activeTab === 'portfolio' && (
         <div role="tabpanel" id="tabpanel-portfolio">
           <div className={styles.listHeader}>
             <h1 className={styles.title}>{t('configList.title')}</h1>
@@ -102,17 +76,6 @@ function ConfigListScreenInner() {
             </div>
           )}
         </div>
-      )}
-
-      {activeTab === 'systems' && (
-        <div role="tabpanel" id="tabpanel-systems" className={styles.emptyState}>
-          <span className={styles.emptyIcon}>⚙️</span>
-          <h3 className={styles.emptyTitle}>{t('configList.systems.title')}</h3>
-          <p className={styles.emptyDesc}>
-            {t('configList.systems.description')}
-          </p>
-        </div>
-      )}
     </div>
   );
 }
