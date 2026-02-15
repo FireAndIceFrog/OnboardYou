@@ -23,3 +23,4 @@ pub mod orchestration;
 
 pub use domain::{ActionConfig, ColumnCalculator, Error, Manifest, OnboardingAction, Result, RosterContext};
 pub use orchestration::{ActionFactory, PipelineRunner};
+pub use capabilities::egress::models::AuthType;

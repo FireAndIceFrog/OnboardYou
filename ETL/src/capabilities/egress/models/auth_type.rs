@@ -1,6 +1,7 @@
 //! Authentication type discriminator (serde-powered)
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// The authentication type configured for this egress destination.
 ///
@@ -15,7 +16,7 @@ use serde::Deserialize;
 /// | `"bearer"`, `"api_key"`, `"none"`       | `AuthType::Bearer`  |
 /// | `"oauth"`, `"oauth1"`                   | `AuthType::OAuth`   |
 /// | `"oauth2"`, `"oidc"`, `"openid"`        | `AuthType::OAuth2`  |
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AuthType {
     /// No auth / static bearer token / custom API key.

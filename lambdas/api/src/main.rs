@@ -13,7 +13,8 @@ use axum::{
     Router,
 };
 use controllers::{create_config, get_config, list_configs, update_config, validate_config};
-use models::{AppState, ErrorResponse, PipelineConfig};
+use controllers::{get_settings, upsert_settings};
+use models::{AppState, ErrorResponse, OrgSettings, PipelineConfig};
 use tracing_subscriber::{fmt, EnvFilter};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -36,6 +37,8 @@ use onboard_you::{ActionConfig, Manifest};
         controllers::config_controller::create_config,
         controllers::config_controller::update_config,
         controllers::config_controller::validate_config,
+        controllers::settings_controller::get_settings,
+        controllers::settings_controller::upsert_settings,
     ),
     components(schemas(
         PipelineConfig,
@@ -44,10 +47,12 @@ use onboard_you::{ActionConfig, Manifest};
         ValidationResult,
         StepValidation,
         ErrorResponse,
+        OrgSettings,
     )),
     tags(
         (name = "Configuration", description = "Pipeline configuration CRUD operations"),
         (name = "Validation", description = "Dry-run pipeline validation"),
+        (name = "Settings", description = "Organization settings management"),
     ),
     security(
         ("bearer" = []),
@@ -104,6 +109,7 @@ fn router(state: AppState) -> Router {
             "/config/{customer_company_id}/validate",
             post(validate_config),
         )
+        .route("/settings", get(get_settings).put(upsert_settings))
         .with_state(state)
         .merge(
             SwaggerUi::new("/swagger-ui")
