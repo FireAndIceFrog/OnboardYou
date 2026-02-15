@@ -39,13 +39,14 @@ export function convertToFlow(manifest: Manifest): { nodes: Node[]; edges: Edge[
     // Connect sequentially to the previous node
     if (idx > 0) {
       const prev = manifest.actions[idx - 1];
-      const style = CATEGORY_STYLES[category] ?? CATEGORY_STYLES.logic;
+      const edgeColor = CATEGORY_STYLES[category] ?? CATEGORY_STYLES.logic;
       edges.push({
         id: `edge-${prev.id}-${action.id}`,
         source: prev.id,
         target: action.id,
+        type: 'default',
         animated: true,
-        style: { ...style, strokeWidth: 2 },
+        style: { stroke: edgeColor.stroke, strokeWidth: 2 },
       });
     }
   });

@@ -73,7 +73,7 @@ describe('convertToFlow', () => {
       actions: [
         { id: 'ing', actionType: 'csv_hris_connector', config: {} },
         { id: 'logic', actionType: 'pii_masking', config: {} },
-        { id: 'eg', actionType: 'api_dispatch', config: {} },
+        { id: 'eg', actionType: 'api_dispatcher', config: {} },
       ],
     };
     const { nodes } = convertToFlow(manifest);

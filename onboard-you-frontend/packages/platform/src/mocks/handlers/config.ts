@@ -54,11 +54,19 @@ const MOCK_CONFIGS = [
             renames: { Worker_ID: 'employeeId', Personal_Name: 'legalName' },
           },
         },
+        {
+          id: 'dispatch',
+          actionType: 'api_dispatcher',
+          config: {
+            name: 'Push to Client HRIS',
+            auth_type: 'default',
+          },
+        },
       ],
     },
   },
   {
-    name: 'BambooHR Onboarding Import',
+    name: 'CSV Onboarding Import',
     image: undefined,
     cron: 'rate(4 hours)',
     organizationId: 'org-001',
@@ -71,8 +79,8 @@ const MOCK_CONFIGS = [
           id: 'ingest',
           actionType: 'csv_hris_connector',
           config: {
-            name: 'BambooHR CSV Fetch',
-            csv_path: 's3://onboardyou-landing/bamboohr/latest.csv',
+            name: 'CSV Upload Fetch',
+            csv_path: 's3://onboardyou-landing/globex/latest.csv',
           },
         },
         {
@@ -93,11 +101,22 @@ const MOCK_CONFIGS = [
             columns: ['internalNote', 'legacyId'],
           },
         },
+        {
+          id: 'dispatch',
+          actionType: 'api_dispatcher',
+          config: {
+            name: 'Push to Globex API',
+            auth_type: 'bearer',
+            destination_url: 'https://api.globex.com/v1/employees',
+            token: 'sk-globex-custom-token',
+            placement: 'authorization_header',
+          },
+        },
       ],
     },
   },
   {
-    name: 'SAP SuccessFactors Benefits Sync',
+    name: 'Workday Benefits Weekly Sync',
     image: undefined,
     cron: 'cron(0 6 ? * MON *)',
     organizationId: 'org-001',
@@ -108,10 +127,12 @@ const MOCK_CONFIGS = [
       actions: [
         {
           id: 'ingest',
-          actionType: 'csv_hris_connector',
+          actionType: 'workday_hris_connector',
           config: {
-            name: 'SAP SFTP Fetch',
-            csv_path: 's3://onboardyou-landing/sap/benefits.csv',
+            name: 'Workday Benefits Fetch',
+            endpoint: 'https://wd5-impl.workday.com/ccx/service/initech/Benefits/v40.1',
+            auth: 'oauth2_client_credentials',
+            pageSize: 100,
           },
         },
         {
@@ -146,6 +167,20 @@ const MOCK_CONFIGS = [
             name: 'SCD Type 2 History',
             entity_column: 'employeeId',
             date_column: 'effectiveDate',
+          },
+        },
+        {
+          id: 'dispatch',
+          actionType: 'api_dispatcher',
+          config: {
+            name: 'Push to Initech Benefits API',
+            auth_type: 'oauth2',
+            destination_url: 'https://api.initech.com/v2/benefits',
+            client_id: 'initech-app-001',
+            client_secret: 'initech-secret',
+            token_url: 'https://auth.initech.com/oauth/token',
+            scopes: ['benefits.write'],
+            grant_type: 'client_credentials',
           },
         },
       ],

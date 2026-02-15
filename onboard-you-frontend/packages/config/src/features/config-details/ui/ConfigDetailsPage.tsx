@@ -116,6 +116,14 @@ function ConfigDetailsContent({ customerCompanyId }: { customerCompanyId: string
 
   const memoizedNodeTypes = useMemo(() => nodeTypes, []);
 
+  const defaultEdgeOptions = useMemo(
+    () => ({
+      animated: true,
+      style: { strokeWidth: 2 },
+    }),
+    [],
+  );
+
   if (isLoading) {
     return (
       <div className={styles.loadingState}>
@@ -181,6 +189,7 @@ function ConfigDetailsContent({ customerCompanyId }: { customerCompanyId: string
             nodes={nodes}
             edges={edges}
             nodeTypes={memoizedNodeTypes}
+            defaultEdgeOptions={defaultEdgeOptions}
             onNodesChange={handleNodesChange}
             onEdgesChange={handleEdgesChange}
             onNodeClick={handleNodeClick}

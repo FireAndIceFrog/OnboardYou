@@ -149,13 +149,14 @@ const configDetailsSlice = createSlice({
 
       if (state.nodes.length > 0) {
         const prevNode = state.nodes[state.nodes.length - 1];
-        const style = CATEGORY_STYLES[category] ?? CATEGORY_STYLES.logic;
+        const edgeColor = CATEGORY_STYLES[category] ?? CATEGORY_STYLES.logic;
         state.edges.push({
           id: `edge-${prevNode.id}-${actionCfg.id}`,
           source: prevNode.id,
           target: actionCfg.id,
+          type: 'default',
           animated: true,
-          style: { ...style, strokeWidth: 2 },
+          style: { stroke: edgeColor.stroke, strokeWidth: 2 },
         } as typeof state.edges[number]);
       }
 

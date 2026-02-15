@@ -65,6 +65,13 @@ svg {
   max-width: 100%;
 }
 
+// React Flow needs unconstrained SVGs for edge / connection-line rendering
+.react-flow svg,
+.react-flow__edges svg {
+  display: initial;
+  max-width: initial;
+}
+
 // Inherit fonts for inputs and buttons
 input,
 button,

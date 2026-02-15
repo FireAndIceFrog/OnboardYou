@@ -15,6 +15,7 @@ export function IngestionNode({ data }: NodeProps) {
       </div>
       <div className={styles.nodeBody}>{data.label as string}</div>
       <span className={styles.nodeBadge}>{friendly}</span>
+      <Handle type="target" position={Position.Left} />
       <Handle type="source" position={Position.Right} />
     </div>
   );

@@ -51,8 +51,8 @@ export const ACTION_CATEGORIES: Record<string, 'ingestion' | 'logic' | 'egress'>
   rename_column: 'logic',
   drop_column: 'logic',
   filter_by_value: 'logic',
-  // egress steps (dispatched externally today, but may appear in manifests)
-  api_dispatch: 'egress',
+  // egress steps
+  api_dispatcher: 'egress',
   dynamodb_writer: 'egress',
   s3_writer: 'egress',
 };
@@ -81,7 +81,7 @@ export const ACTION_BUSINESS_LABELS: Record<string, string> = {
   drop_column: 'Remove Unused Fields',
   filter_by_value: 'Filter Records',
   // Egress
-  api_dispatch: 'Send to API',
+  api_dispatcher: 'Send to API',
   dynamodb_writer: 'Save to Database',
   s3_writer: 'Export to Storage',
 };
