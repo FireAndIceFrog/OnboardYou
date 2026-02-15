@@ -181,3 +181,31 @@
   padding-top: $spacing-5;
   border-top: 1px solid var(--color-border);
 }
+
+/* ── Error banner ───────────────────────────── */
+.errorBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-3;
+  color: $color-error;
+
+  p {
+    margin: 0;
+    font-size: $text-sm;
+  }
+
+  button {
+    background: none;
+    border: none;
+    color: $color-error;
+    cursor: pointer;
+    font-size: $text-lg;
+    line-height: 1;
+    padding: $spacing-1;
+
+    &:hover {
+      opacity: 0.7;
+    }
+  }
+}

@@ -4,6 +4,11 @@ export {
   updateBearerField,
   updateOAuth2Field,
   updateRetryField,
-  save as saveSettings,
+  clearSettingsError,
+  fetchSettingsThunk,
+  saveSettingsThunk,
   selectSettings,
+  selectSettingsLoading,
+  selectSettingsSaving,
+  selectSettingsError,
 } from './settingsSlice';

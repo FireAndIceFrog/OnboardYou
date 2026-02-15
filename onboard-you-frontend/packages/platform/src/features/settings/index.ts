@@ -6,6 +6,11 @@ export {
   updateBearerField,
   updateOAuth2Field,
   updateRetryField,
-  saveSettings,
+  clearSettingsError,
+  fetchSettingsThunk,
+  saveSettingsThunk,
   selectSettings,
+  selectSettingsLoading,
+  selectSettingsSaving,
+  selectSettingsError,
 } from './state';

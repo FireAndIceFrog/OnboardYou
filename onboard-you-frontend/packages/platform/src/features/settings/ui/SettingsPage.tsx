@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
 import { Card } from '@/shared/ui/Card';
+import { Spinner } from '@/shared/ui/Spinner';
 import { PLACEMENT_OPTIONS, GRANT_TYPE_OPTIONS } from '../domain/types';
 import { useSettingsState } from '../state/useSettingsState';
 import { useSettingsValidation } from '../state/useSettingsValidation';
@@ -21,12 +22,16 @@ export function SettingsPage() {
     settings,
     saved,
     dirty,
+    isLoading,
+    isSaving,
+    error,
     updateBearer,
     updateOAuth2,
     updateRetry,
     handleAuthTypeChange,
     handleSave,
     handleTestConnection,
+    handleClearError,
   } = useSettingsState();
 
   const { errors, isValid, validateAll } = useSettingsValidation(settings);
@@ -35,6 +40,14 @@ export function SettingsPage() {
     if (!validateAll()) return;
     handleSave();
   };
+
+  if (isLoading) {
+    return (
+      <div className={styles.page} role="status" aria-label={t('settings.loading')}>
+        <Spinner />
+      </div>
+    );
+  }
 
   return (
     <form className={styles.page} onSubmit={(e) => e.preventDefault()}>
@@ -49,8 +62,21 @@ export function SettingsPage() {
         <div className={styles.headerActions}>
           {saved && <Badge variant="active">{t('settings.saved')}</Badge>}
           {dirty && <Badge variant="draft">{t('settings.unsaved')}</Badge>}
+          {isSaving && <Badge variant="draft">{t('settings.saving')}</Badge>}
         </div>
       </div>
+
+      {/* ── Error banner ─────────────────────────────────── */}
+      {error && (
+        <Card className={styles.section} role="alert">
+          <div className={styles.errorBanner}>
+            <p>{error}</p>
+            <button type="button" onClick={handleClearError} aria-label={t('settings.dismissError')}>
+              ✕
+            </button>
+          </div>
+        </Card>
+      )}
 
       {/* ── Auth type selector ───────────────────────────── */}
       <Card className={styles.section}>
@@ -326,8 +352,8 @@ export function SettingsPage() {
         <Button variant="secondary" size="md" onClick={handleTestConnection}>
           {t('settings.testConnection')}
         </Button>
-        <Button variant="primary" size="md" onClick={onSave} disabled={!dirty || !isValid}>
-          {t('settings.saveSettings')}
+        <Button variant="primary" size="md" onClick={onSave} disabled={(!dirty && !isSaving) || !isValid || isSaving}>
+          {isSaving ? t('settings.saving') : t('settings.saveSettings')}
         </Button>
       </div>
     </form>

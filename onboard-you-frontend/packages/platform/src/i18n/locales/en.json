@@ -50,6 +50,9 @@
     "subtitle": "Configure where processed employee data is dispatched after each pipeline run.",
     "saved": "Saved ✓",
     "unsaved": "Unsaved",
+    "saving": "Saving…",
+    "loading": "Loading settings…",
+    "dismissError": "Dismiss error",
     "authType": {
       "title": "Authentication Type",
       "description": "Select how the dispatcher authenticates with your destination API.",

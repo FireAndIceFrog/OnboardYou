@@ -4,7 +4,9 @@ import reducer, {
   updateBearerField,
   updateOAuth2Field,
   updateRetryField,
-  save,
+  clearSettingsError,
+  fetchSettingsThunk,
+  saveSettingsThunk,
 } from './settingsSlice';
 import { DEFAULT_EGRESS_SETTINGS } from '../domain/types';
 
@@ -12,6 +14,9 @@ const initialState = {
   settings: DEFAULT_EGRESS_SETTINGS,
   saved: false,
   dirty: false,
+  isLoading: false,
+  isSaving: false,
+  error: null,
 };
 
 describe('settingsSlice', () => {
@@ -21,6 +26,9 @@ describe('settingsSlice', () => {
     expect(state.settings.retryPolicy.maxAttempts).toBe(3);
     expect(state.saved).toBe(false);
     expect(state.dirty).toBe(false);
+    expect(state.isLoading).toBe(false);
+    expect(state.isSaving).toBe(false);
+    expect(state.error).toBeNull();
   });
 
   it('setAuthType changes auth type and marks dirty', () => {
@@ -57,10 +65,78 @@ describe('settingsSlice', () => {
     expect(state.dirty).toBe(true);
   });
 
-  it('save marks as saved and clears dirty', () => {
-    const dirtyState = { ...initialState, dirty: true };
-    const state = reducer(dirtyState, save());
+  it('clearSettingsError clears the error', () => {
+    const errorState = { ...initialState, error: 'Something failed' };
+    const state = reducer(errorState, clearSettingsError());
+    expect(state.error).toBeNull();
+  });
+
+  /* ── Fetch thunk reducers ──────────────────────────────── */
+
+  it('fetchSettingsThunk.pending sets loading', () => {
+    const state = reducer(initialState, fetchSettingsThunk.pending('', {} as never));
+    expect(state.isLoading).toBe(true);
+    expect(state.error).toBeNull();
+  });
+
+  it('fetchSettingsThunk.fulfilled updates settings', () => {
+    const loaded = { ...DEFAULT_EGRESS_SETTINGS, authType: 'oauth2' as const };
+    const state = reducer(
+      { ...initialState, isLoading: true },
+      fetchSettingsThunk.fulfilled(loaded, '', {} as never),
+    );
+    expect(state.isLoading).toBe(false);
+    expect(state.settings.authType).toBe('oauth2');
+    expect(state.dirty).toBe(false);
+  });
+
+  it('fetchSettingsThunk.fulfilled with null keeps defaults', () => {
+    const state = reducer(
+      { ...initialState, isLoading: true },
+      fetchSettingsThunk.fulfilled(null, '', {} as never),
+    );
+    expect(state.isLoading).toBe(false);
+    expect(state.settings).toEqual(DEFAULT_EGRESS_SETTINGS);
+  });
+
+  it('fetchSettingsThunk.rejected sets error', () => {
+    const state = reducer(
+      { ...initialState, isLoading: true },
+      fetchSettingsThunk.rejected(null, '', {} as never, 'Network error'),
+    );
+    expect(state.isLoading).toBe(false);
+    expect(state.error).toBe('Network error');
+  });
+
+  /* ── Save thunk reducers ───────────────────────────────── */
+
+  it('saveSettingsThunk.pending sets saving', () => {
+    const state = reducer(
+      initialState,
+      saveSettingsThunk.pending('', {} as never),
+    );
+    expect(state.isSaving).toBe(true);
+    expect(state.error).toBeNull();
+  });
+
+  it('saveSettingsThunk.fulfilled marks saved', () => {
+    const saved = { ...DEFAULT_EGRESS_SETTINGS, authType: 'oauth2' as const };
+    const state = reducer(
+      { ...initialState, dirty: true, isSaving: true },
+      saveSettingsThunk.fulfilled(saved, '', {} as never),
+    );
+    expect(state.isSaving).toBe(false);
     expect(state.saved).toBe(true);
     expect(state.dirty).toBe(false);
+    expect(state.settings.authType).toBe('oauth2');
+  });
+
+  it('saveSettingsThunk.rejected sets error', () => {
+    const state = reducer(
+      { ...initialState, isSaving: true },
+      saveSettingsThunk.rejected(null, '', {} as never, 'Validation error'),
+    );
+    expect(state.isSaving).toBe(false);
+    expect(state.error).toBe('Validation error');
   });
 });
