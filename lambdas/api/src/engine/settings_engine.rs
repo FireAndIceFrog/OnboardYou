@@ -44,7 +44,26 @@ pub async fn upsert(
 
 /// Validate that `default_auth` contains a well-formed auth config
 /// by running it through the same factory the pipeline uses.
+///
+/// Also rejects `auth_type: "default"` — the org's own settings must
+/// use a concrete auth type (bearer, oauth, oauth2).
 fn validate(settings: &OrgSettings) -> Result<(), ApiError> {
+    // Reject self-referential "default"
+    let is_default = settings
+        .default_auth
+        .get("auth_type")
+        .and_then(|v| v.as_str())
+        .map(|s| s == "default")
+        .unwrap_or(false);
+
+    if is_default {
+        return Err(ApiError::Validation(
+            "default_auth cannot use auth_type 'default' — must be a concrete type \
+             (bearer, oauth, oauth2)"
+                .into(),
+        ));
+    }
+
     ApiEngine::from_action_config(&settings.default_auth).map_err(|e| {
         ApiError::Validation(format!("Invalid default_auth config: {e}"))
     })?;

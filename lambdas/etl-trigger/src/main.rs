@@ -21,14 +21,18 @@ async fn main() -> Result<(), Error> {
     let dynamo = aws_sdk_dynamodb::Client::new(&aws_config);
     let table_name =
         std::env::var("CONFIG_TABLE_NAME").unwrap_or_else(|_| "PipelineConfigs".to_string());
+    let settings_table_name =
+        std::env::var("SETTINGS_TABLE_NAME").unwrap_or_else(|_| "OrgSettings".to_string());
 
     lambda_runtime::run(service_fn(|event: LambdaEvent<ScheduleEvent>| {
         let dynamo = dynamo.clone();
         let table_name = table_name.clone();
+        let settings_table_name = settings_table_name.clone();
         async move {
             engine::pipeline_engine::run(
                 &dynamo,
                 &table_name,
+                &settings_table_name,
                 &event.payload.organization_id,
                 &event.payload.customer_company_id,
             )

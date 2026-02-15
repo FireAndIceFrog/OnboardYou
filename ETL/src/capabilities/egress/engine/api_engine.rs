@@ -63,6 +63,14 @@ impl ApiEngine {
             AuthType::Bearer => Box::new(BearerRepo::from_action_config(value)?),
             AuthType::OAuth => Box::new(OAuthRepo::from_action_config(value)?),
             AuthType::OAuth2 => Box::new(OAuth2Repo::from_action_config(value)?),
+            AuthType::Default => {
+                return Err(Error::ConfigurationError(
+                    "auth_type 'default' must be resolved to a concrete auth config \
+                     before ApiEngine construction. The ETL trigger should replace \
+                     'default' with the organisation's stored settings."
+                        .into(),
+                ));
+            }
         };
 
         Ok(Self {
@@ -168,6 +176,7 @@ mod tests {
         assert_eq!(de("oauth2"), AuthType::OAuth2);
         assert_eq!(de("oidc"), AuthType::OAuth2);
         assert_eq!(de("openid"), AuthType::OAuth2);
+        assert_eq!(de("default"), AuthType::Default);
 
         let bad: std::result::Result<AuthType, _> =
             serde_json::from_value(serde_json::Value::String("unknown".into()));
@@ -208,5 +217,18 @@ mod tests {
         assert_eq!(policy.max_attempts, 3);
         assert!(policy.retryable_status_codes.contains(&429));
         assert!(policy.retryable_status_codes.contains(&503));
+    }
+
+    #[test]
+    fn test_engine_rejects_unresolved_default_auth() {
+        let json = serde_json::json!({
+            "auth_type": "default",
+            "destination_url": "https://api.example.com/employees"
+        });
+
+        let result = ApiEngine::from_action_config(&json);
+        assert!(result.is_err());
+        let err_msg = format!("{}", result.err().unwrap());
+        assert!(err_msg.contains("default"));
     }
 }

@@ -1,16 +1,21 @@
 //! Pipeline engine — loads config, builds actions, runs the ETL pipeline.
+//!
+//! When a manifest action specifies `auth_type: "default"`, the engine
+//! fetches the organisation's stored auth settings from the settings table
+//! and injects them into the action config before factory construction.
 
 use lambda_runtime::Error;
 use onboard_you::{ActionFactory, Manifest, PipelineRunner, RosterContext};
 use polars::prelude::LazyFrame;
 
 use crate::models::PipelineResult;
-use crate::repositories::config_repository;
+use crate::repositories::{config_repository, settings_repository};
 
 /// Load config from DynamoDB, build the pipeline, and execute it.
 pub async fn run(
     dynamo: &aws_sdk_dynamodb::Client,
     table_name: &str,
+    settings_table_name: &str,
     organization_id: &str,
     customer_company_id: &str,
 ) -> Result<PipelineResult, Error> {
@@ -20,10 +25,13 @@ pub async fn run(
     let config = config_repository::get(dynamo, table_name, organization_id, customer_company_id).await?;
 
     // 2. Deserialize the Manifest
-    let manifest: Manifest = serde_json::from_value(config.pipeline)
+    let mut manifest: Manifest = serde_json::from_value(config.pipeline)
         .map_err(|e| Error::from(format!("Failed to parse manifest: {e}")))?;
 
-    // 3. Build actions from manifest via Factory
+    // 3. Resolve any "default" auth types from the settings table
+    resolve_default_auth(dynamo, settings_table_name, organization_id, &mut manifest).await?;
+
+    // 4. Build actions from manifest via Factory
     let actions: Vec<_> = manifest
         .actions
         .iter()
@@ -31,7 +39,7 @@ pub async fn run(
         .collect::<onboard_you::Result<_>>()
         .map_err(|e| Error::from(format!("Failed to build actions: {e}")))?;
 
-    // 4. Execute the pipeline
+    // 5. Execute the pipeline
     let context = RosterContext::new(LazyFrame::default());
 
     match PipelineRunner::run(&manifest, actions, context) {
@@ -45,4 +53,61 @@ pub async fn run(
             Ok(PipelineResult::failure(organization_id, customer_company_id, e))
         }
     }
+}
+
+/// Scan the manifest for actions with `auth_type: "default"` and replace
+/// their config with the organisation's stored default auth settings.
+///
+/// The settings lookup is lazy — only performed if at least one action
+/// actually uses `"default"`.
+async fn resolve_default_auth(
+    dynamo: &aws_sdk_dynamodb::Client,
+    settings_table_name: &str,
+    organization_id: &str,
+    manifest: &mut Manifest,
+) -> Result<(), Error> {
+    // Quick scan: does any action use "default"?
+    let needs_resolution = manifest.actions.iter().any(|ac| {
+        ac.config
+            .get("auth_type")
+            .and_then(|v| v.as_str())
+            .map(|s| s == "default")
+            .unwrap_or(false)
+    });
+
+    if !needs_resolution {
+        return Ok(());
+    }
+
+    // Fetch org settings
+    let settings = settings_repository::get(dynamo, settings_table_name, organization_id)
+        .await?
+        .ok_or_else(|| {
+            Error::from(format!(
+                "auth_type 'default' used but no settings found for org: {organization_id}"
+            ))
+        })?;
+
+    tracing::info!(%organization_id, "Resolved default auth from settings table");
+
+    // Replace config for every action that uses "default"
+    for action in &mut manifest.actions {
+        let is_default = action
+            .config
+            .get("auth_type")
+            .and_then(|v| v.as_str())
+            .map(|s| s == "default")
+            .unwrap_or(false);
+
+        if is_default {
+            tracing::info!(
+                action_id = %action.id,
+                action_type = %action.action_type,
+                "Replacing auth_type 'default' with org settings"
+            );
+            action.config = settings.default_auth.clone();
+        }
+    }
+
+    Ok(())
 }

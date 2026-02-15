@@ -3,6 +3,7 @@
 //! Uses the `ActionConfig` from the manifest to instantiate the correct
 //! `OnboardingAction` implementation, forwarding action-specific JSON config.
 
+use crate::capabilities::egress::api_dispatcher::ApiDispatcher;
 use crate::capabilities::ingestion::engine::{CsvHrisConnector, WorkdayHrisConnector};
 use crate::capabilities::logic::engine::{
     CellphoneSanitizer, DropColumn, FilterByValue, HandleDiacritics,
@@ -69,6 +70,10 @@ impl ActionFactory {
             }
             "filter_by_value" => {
                 let action = FilterByValue::from_action_config(&action_config.config)?;
+                Ok(Arc::new(action))
+            }
+            "api_dispatcher" => {
+                let action = ApiDispatcher::from_action_config(&action_config.config)?;
                 Ok(Arc::new(action))
             }
             other => Err(Error::ConfigurationError(format!(

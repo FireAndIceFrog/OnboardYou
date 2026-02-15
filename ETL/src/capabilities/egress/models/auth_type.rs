@@ -11,11 +11,17 @@ use utoipa::ToSchema;
 /// case-insensitively and with underscores, plus `#[serde(alias)]` to accept
 /// common synonyms:
 ///
-/// | JSON value                              | Resolves to         |
-/// |-----------------------------------------|---------------------|
-/// | `"bearer"`, `"api_key"`, `"none"`       | `AuthType::Bearer`  |
-/// | `"oauth"`, `"oauth1"`                   | `AuthType::OAuth`   |
-/// | `"oauth2"`, `"oidc"`, `"openid"`        | `AuthType::OAuth2`  |
+/// | JSON value                              | Resolves to          |
+/// |-----------------------------------------|----------------------|
+/// | `"bearer"`, `"api_key"`, `"none"`       | `AuthType::Bearer`   |
+/// | `"oauth"`, `"oauth1"`                   | `AuthType::OAuth`    |
+/// | `"oauth2"`, `"oidc"`, `"openid"`        | `AuthType::OAuth2`   |
+/// | `"default"`                             | `AuthType::Default`  |
+///
+/// `Default` is a meta-type: at pipeline execution time the ETL trigger
+/// resolves it to the organisation's stored settings from DynamoDB
+/// **before** the `ApiEngine` is constructed. If `Default` reaches the
+/// engine unresolved, construction fails with a clear error.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AuthType {
@@ -28,4 +34,7 @@ pub enum AuthType {
     /// OAuth2 client credentials or authorization code flow.
     #[serde(rename = "oauth2", alias = "oidc", alias = "openid")]
     OAuth2,
+    /// Use the organisation's default auth settings from DynamoDB.
+    /// Must be resolved to a concrete type before engine construction.
+    Default,
 }
