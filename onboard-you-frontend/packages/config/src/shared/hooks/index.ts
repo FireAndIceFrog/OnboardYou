@@ -1,2 +1,2 @@
-export { useGlobal, setGlobalValue } from './useGlobal';
+export { useGlobal, setGlobalValue, getGlobalValue } from './useGlobal';
 export type { GlobalContextValue } from './useGlobal';

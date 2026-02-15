@@ -46,7 +46,7 @@ describe('configListSlice', () => {
   it('fetchConfigs.pending sets loading true and clears error', () => {
     const state = reducer(
       { ...initialState, error: 'old error' },
-      fetchConfigs.pending('req-id', { apiClient: {} as never }),
+      fetchConfigs.pending('req-id', undefined),
     );
     expect(state.isLoading).toBe(true);
     expect(state.error).toBeNull();
@@ -55,7 +55,7 @@ describe('configListSlice', () => {
   it('fetchConfigs.fulfilled sets configs and clears loading', () => {
     const state = reducer(
       { ...initialState, isLoading: true },
-      fetchConfigs.fulfilled(mockConfigs, 'req-id', { apiClient: {} as never }),
+      fetchConfigs.fulfilled(mockConfigs, 'req-id', undefined),
     );
     expect(state.isLoading).toBe(false);
     expect(state.configs).toEqual(mockConfigs);
@@ -65,7 +65,7 @@ describe('configListSlice', () => {
   it('fetchConfigs.rejected sets error and clears loading', () => {
     const state = reducer(
       { ...initialState, isLoading: true },
-      fetchConfigs.rejected(null, 'req-id', { apiClient: {} as never }, 'Network error'),
+      fetchConfigs.rejected(null, 'req-id', undefined, 'Network error'),
     );
     expect(state.isLoading).toBe(false);
     expect(state.error).toBe('Network error');

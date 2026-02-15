@@ -49,7 +49,7 @@ const nodeTypes = {
 function ConfigDetailsContent({ customerCompanyId }: { customerCompanyId: string }) {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
-  const { apiClient, showNotification } = useGlobal();
+  const { showNotification } = useGlobal();
   const navigate = useNavigate();
 
   const config = useAppSelector(selectConfig);
@@ -63,8 +63,8 @@ function ConfigDetailsContent({ customerCompanyId }: { customerCompanyId: string
 
   // ── Fetch config on mount ─────────────────────────────────
   useEffect(() => {
-    dispatch(fetchConfigDetails({ apiClient, customerCompanyId }));
-  }, [dispatch, apiClient, customerCompanyId]);
+    dispatch(fetchConfigDetails({ customerCompanyId }));
+  }, [dispatch, customerCompanyId]);
 
   // ── Show error notifications ──────────────────────────────
   useEffect(() => {

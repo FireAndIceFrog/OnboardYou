@@ -19,3 +19,4 @@ export default function App() {
 
 // Export for Module Federation — renders inside host's router context
 export { ConfigRoutes } from './ConfigRoutes';
+export { setGlobalValue } from '@/shared/hooks';

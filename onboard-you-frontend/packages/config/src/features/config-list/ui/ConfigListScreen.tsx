@@ -6,7 +6,6 @@ import { fetchConfigs, setSearchQuery, selectConfigList, selectFilteredConfigs }
 import { ConfigListItem } from './ConfigListItem';
 import { Button } from '@/shared/ui/Button';
 import { Spinner } from '@/shared/ui/Spinner';
-import { useGlobal } from '@/shared/hooks';
 import styles from './ConfigListScreen.module.scss';
 
 type TabId = 'portfolio' | 'systems';
@@ -16,13 +15,12 @@ function ConfigListScreenInner() {
   const dispatch = useAppDispatch();
   const state = useAppSelector(selectConfigList);
   const filteredConfigs = useAppSelector(selectFilteredConfigs);
-  const { apiClient } = useGlobal();
   const [activeTab, setActiveTab] = useState<TabId>('portfolio');
   const navigate = useNavigate();
 
   useEffect(() => {
-    dispatch(fetchConfigs({ apiClient }));
-  }, [dispatch, apiClient]);
+    dispatch(fetchConfigs());
+  }, [dispatch]);
 
   return (
     <div className={styles.configListScreen}>

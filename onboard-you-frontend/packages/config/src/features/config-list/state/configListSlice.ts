@@ -4,9 +4,8 @@ import {
   createSelector,
   type PayloadAction,
 } from '@reduxjs/toolkit';
-import type { RootState } from '@/store';
+import type { RootState, ThunkExtra } from '@/store';
 import type { PipelineConfig } from '@/shared/domain/types';
-import type { ApiClient } from '@/shared/services';
 import type { ConfigListState } from '../domain/types';
 import { fetchConfigs as fetchConfigsService } from '../services';
 
@@ -23,12 +22,13 @@ const initialState: ConfigListState = {
 
 export const fetchConfigs = createAsyncThunk<
   PipelineConfig[],
-  { apiClient: ApiClient }
+  void,
+  { extra: ThunkExtra }
 >(
   'configList/fetchConfigs',
-  async ({ apiClient }, { rejectWithValue }) => {
+  async (_arg, { rejectWithValue, extra }) => {
     try {
-      return await fetchConfigsService(apiClient);
+      return await fetchConfigsService(extra.apiClient);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to fetch configurations';

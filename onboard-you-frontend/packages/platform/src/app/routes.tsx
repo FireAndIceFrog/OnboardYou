@@ -6,9 +6,19 @@ import { HomeScreen } from '@/features/home';
 import { SettingsPage } from '@/features/settings';
 import { Spinner } from '@/shared/ui/Spinner';
 import { ErrorBoundary } from '@/shared/ui/ErrorBoundary';
+import { useGlobal } from '@/shared/hooks/useGlobal';
+
+type SetGlobalValueFn = (value: {
+  apiClient: import('@/shared/services/apiClient').ApiClient;
+  showNotification: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
+  theme: 'light' | 'dark';
+}) => void;
+
+let _setGlobalValue: SetGlobalValueFn | null = null;
 
 const ConfigApp = lazy(async () => {
   const m = await import('configApp/App');
+  _setGlobalValue = m.setGlobalValue;
   return { default: m.ConfigRoutes };
 });
 
@@ -62,10 +72,25 @@ function ConfigRemote() {
           </div>
         }
       >
-        <ConfigApp />
+        <ConfigInjector />
       </Suspense>
     </ErrorBoundary>
   );
+}
+
+/**
+ * Lives INSIDE the Suspense boundary so it re-renders when the
+ * lazy module resolves. Injects platform globals synchronously
+ * during render, before ConfigApp mounts and dispatches thunks.
+ */
+function ConfigInjector() {
+  const { apiClient, showNotification, theme } = useGlobal();
+
+  if (_setGlobalValue) {
+    _setGlobalValue({ apiClient, showNotification, theme });
+  }
+
+  return <ConfigApp />;
 }
 
 export const router = createBrowserRouter([

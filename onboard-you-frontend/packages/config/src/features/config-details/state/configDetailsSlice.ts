@@ -12,10 +12,9 @@ import {
   type NodeChange,
   type EdgeChange,
 } from '@xyflow/react';
-import type { RootState } from '@/store';
+import type { RootState, ThunkExtra } from '@/store';
 import type { PipelineConfig, ActionConfig, ValidationResult } from '@/shared/domain/types';
 import { actionCategory } from '@/shared/domain/types';
-import type { ApiClient } from '@/shared/services';
 import type { ConfigDetailsState } from '../domain/types';
 import { fetchConfig, saveConfig as saveConfigService, validateConfig as validateConfigService } from '../services/configDetailsService';
 import { convertToFlow } from '../services/pipelineLayoutService';
@@ -48,12 +47,13 @@ const initialState: ConfigDetailsState = {
 
 export const fetchConfigDetails = createAsyncThunk<
   { config: PipelineConfig; nodes: Node[]; edges: Edge[] },
-  { apiClient: ApiClient; customerCompanyId: string }
+  { customerCompanyId: string },
+  { extra: ThunkExtra }
 >(
   'configDetails/fetchConfigDetails',
-  async ({ apiClient, customerCompanyId }, { rejectWithValue }) => {
+  async ({ customerCompanyId }, { rejectWithValue, extra }) => {
     try {
-      const config = await fetchConfig(apiClient, customerCompanyId);
+      const config = await fetchConfig(extra.apiClient, customerCompanyId);
       const { nodes, edges } = convertToFlow(config.pipeline);
       return { config, nodes, edges };
     } catch (err) {
@@ -66,12 +66,13 @@ export const fetchConfigDetails = createAsyncThunk<
 
 export const saveConfigThunk = createAsyncThunk<
   PipelineConfig,
-  { apiClient: ApiClient; customerCompanyId: string; data: PipelineConfig }
+  { customerCompanyId: string; data: PipelineConfig },
+  { extra: ThunkExtra }
 >(
   'configDetails/saveConfig',
-  async ({ apiClient, customerCompanyId, data }, { rejectWithValue }) => {
+  async ({ customerCompanyId, data }, { rejectWithValue, extra }) => {
     try {
-      return await saveConfigService(apiClient, customerCompanyId, data);
+      return await saveConfigService(extra.apiClient, customerCompanyId, data);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to save configuration';
@@ -82,12 +83,13 @@ export const saveConfigThunk = createAsyncThunk<
 
 export const validateConfigThunk = createAsyncThunk<
   ValidationResult,
-  { apiClient: ApiClient; customerCompanyId: string; data: PipelineConfig }
+  { customerCompanyId: string; data: PipelineConfig },
+  { extra: ThunkExtra }
 >(
   'configDetails/validateConfig',
-  async ({ apiClient, customerCompanyId, data }, { rejectWithValue }) => {
+  async ({ customerCompanyId, data }, { rejectWithValue, extra }) => {
     try {
-      return await validateConfigService(apiClient, customerCompanyId, data);
+      return await validateConfigService(extra.apiClient, customerCompanyId, data);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to validate configuration';

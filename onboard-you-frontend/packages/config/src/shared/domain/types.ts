@@ -144,20 +144,6 @@ export interface ChatMessage {
   timestamp: string;
 }
 
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  organizationId: string;
-  role: string;
-}
-
-export interface Organization {
-  id: string;
-  name: string;
-  plan: string;
-}
-
 export type NotificationType = 'success' | 'error' | 'warning' | 'info';
 
 export interface ApiErrorResponse {
