@@ -46,10 +46,17 @@ data "aws_caller_identity" "current" {}
 
 module "pipeline_configs_table" {
   source      = "./modules/dynamodb"
-  table_name  = var.config_table_name
+  table_name  = "PipelineConfigs"
   hash_key    = "organizationId"
   range_key   = "customerCompanyId"
-  enable_pitr = false 
+  enable_pitr = false
+}
+
+module "org_settings_table" {
+  source      = "./modules/dynamodb"
+  table_name  = "OrgSettings"
+  hash_key    = "organizationId"
+  enable_pitr = false
 }
 
 # ══════════════════════════════════════════════════════════════
@@ -78,14 +85,15 @@ module "etl_trigger" {
   log_retention_days = var.log_retention_days
 
   environment_variables = {
-    CONFIG_TABLE_NAME = module.pipeline_configs_table.name
-    RUST_LOG          = "info"
+    CONFIG_TABLE_NAME    = module.pipeline_configs_table.name
+    SETTINGS_TABLE_NAME  = module.org_settings_table.name
+    RUST_LOG             = "info"
   }
 
   iam_policy_statements = [
     {
       actions   = ["dynamodb:GetItem", "dynamodb:Query"]
-      resources = [module.pipeline_configs_table.arn]
+      resources = [module.pipeline_configs_table.arn, module.org_settings_table.arn]
     },
   ]
 }
@@ -123,16 +131,17 @@ module "config_api" {
   log_retention_days = var.log_retention_days
 
   environment_variables = {
-    CONFIG_TABLE_NAME  = module.pipeline_configs_table.name
-    ETL_LAMBDA_ARN     = module.etl_trigger.arn
-    SCHEDULER_ROLE_ARN = aws_iam_role.scheduler_execution.arn
-    RUST_LOG           = "info"
+    CONFIG_TABLE_NAME    = module.pipeline_configs_table.name
+    SETTINGS_TABLE_NAME  = module.org_settings_table.name
+    ETL_LAMBDA_ARN       = module.etl_trigger.arn
+    SCHEDULER_ROLE_ARN   = aws_iam_role.scheduler_execution.arn
+    RUST_LOG             = "info"
   }
 
   iam_policy_statements = [
     {
       actions   = ["dynamodb:PutItem", "dynamodb:GetItem", "dynamodb:UpdateItem", "dynamodb:DeleteItem", "dynamodb:Query"]
-      resources = [module.pipeline_configs_table.arn]
+      resources = [module.pipeline_configs_table.arn, module.org_settings_table.arn]
     },
     {
       actions   = ["scheduler:CreateSchedule", "scheduler:UpdateSchedule", "scheduler:DeleteSchedule", "scheduler:GetSchedule"]

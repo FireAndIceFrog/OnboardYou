@@ -22,6 +22,16 @@ output "config_table_arn" {
   value       = module.pipeline_configs_table.arn
 }
 
+output "settings_table_name" {
+  description = "DynamoDB table for organization settings"
+  value       = module.org_settings_table.name
+}
+
+output "settings_table_arn" {
+  description = "DynamoDB OrgSettings table ARN"
+  value       = module.org_settings_table.arn
+}
+
 output "config_api_lambda_arn" {
   description = "Config API Lambda ARN"
   value       = module.config_api.arn

@@ -14,12 +14,6 @@ variable "environment" {
   default     = "dev"
 }
 
-variable "config_table_name" {
-  description = "DynamoDB table name for pipeline configs"
-  type        = string
-  default     = "PipelineConfigs"
-}
-
 variable "log_retention_days" {
   description = "CloudWatch log retention in days"
   type        = number
