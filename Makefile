@@ -1,4 +1,18 @@
-.PHONY: build-lambdas build-config-api build-etl-trigger build-authorizer tf-init tf-plan tf-apply deploy clean
+VENV := .venv/bin/activate
+
+.PHONY: setup build-lambdas build-config-api build-etl-trigger build-authorizer \
+        plan apply deploy clean
+
+##──────────────────────────────────────────────────────────────
+## Setup — create venv and install cargo-lambda
+##──────────────────────────────────────────────────────────────
+
+setup:
+	@echo "▸ Creating Python venv..."
+	python3 -m venv .venv
+	@echo "▸ Installing cargo-lambda..."
+	. $(VENV) && pip install cargo-lambda
+	@echo "✓ Setup complete — cargo-lambda installed in .venv"
 
 ##──────────────────────────────────────────────────────────────
 ## Build — cross-compile Rust Lambdas with cargo-lambda
@@ -8,35 +22,38 @@ build-lambdas: build-config-api build-etl-trigger build-authorizer
 
 build-config-api:
 	@echo "▸ Building config-api Lambda..."
-	cargo lambda build --release -p api --output-format zip
+	. $(VENV) && cargo lambda build --release -p api
 
 build-etl-trigger:
 	@echo "▸ Building etl-trigger Lambda..."
-	cargo lambda build --release -p etl-trigger --output-format zip
+	. $(VENV) && cargo lambda build --release -p etl-trigger
 
 build-authorizer:
 	@echo "▸ Building authorizer Lambda..."
-	cargo lambda build --release -p authorizer --output-format zip
+	. $(VENV) && cargo lambda build --release -p authorizer
 
 ##──────────────────────────────────────────────────────────────
-## OpenTofu — infra provisioning
+## Infrastructure — OpenTofu
 ##──────────────────────────────────────────────────────────────
 
-tf-init:
-	cd infra && tofu init
-
-tf-plan: build-lambdas
+plan: build-lambdas
+	@echo "▸ Initialising OpenTofu..."
+	cd infra && tofu init -input=false
+	@echo "▸ Planning..."
 	cd infra && tofu plan -out=plan.out
+	@echo "✓ Plan saved to infra/plan.out — run 'make apply' to deploy"
 
-tf-apply:
+apply:
+	@test -f infra/plan.out || (echo "✗ No plan found. Run 'make plan' first." && exit 1)
+	@echo "▸ Applying plan..."
 	cd infra && tofu apply plan.out
+	@echo "✓ Deployed!"
 
 ##──────────────────────────────────────────────────────────────
 ## All-in-one
 ##──────────────────────────────────────────────────────────────
 
-deploy: build-lambdas tf-plan tf-apply
-	@echo "✓ Deployed!"
+deploy: plan apply
 
 clean:
 	cargo clean
