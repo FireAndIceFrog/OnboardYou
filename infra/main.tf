@@ -135,6 +135,7 @@ module "config_api" {
     SETTINGS_TABLE_NAME  = module.org_settings_table.name
     ETL_LAMBDA_ARN       = module.etl_trigger.arn
     SCHEDULER_ROLE_ARN   = aws_iam_role.scheduler_execution.arn
+    COGNITO_CLIENT_ID    = module.cognito.client_id
     RUST_LOG             = "info"
   }
 
@@ -150,6 +151,10 @@ module "config_api" {
     {
       actions   = ["iam:PassRole"]
       resources = [aws_iam_role.scheduler_execution.arn]
+    },
+    {
+      actions   = ["cognito-idp:InitiateAuth"]
+      resources = ["*"]
     },
   ]
 }
@@ -195,4 +200,7 @@ module "api" {
   authorization            = "CUSTOM"
   authorizer_uri           = module.authorizer.invoke_arn
   authorizer_function_name = module.authorizer.function_name
+
+  # ── Unauthenticated /auth path (login) ──────────────────────
+  auth_path_enabled = true
 }

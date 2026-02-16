@@ -89,3 +89,17 @@ variable "cors_allowed_origin" {
   type        = string
   default     = "*"
 }
+
+# ── Public auth path (login, no authorizer) ──────────────────
+
+variable "auth_path_enabled" {
+  description = "Create an /auth/{proxy+} resource with NONE authorization (for login)"
+  type        = bool
+  default     = false
+}
+
+variable "auth_path_part" {
+  description = "Path segment for the unauthenticated auth route"
+  type        = string
+  default     = "auth"
+}

@@ -226,6 +226,102 @@ resource "aws_lambda_permission" "apigw" {
 }
 
 # ══════════════════════════════════════════════════════════════
+# Public /auth path  (login — no authorizer)
+# ══════════════════════════════════════════════════════════════
+
+resource "aws_api_gateway_resource" "auth" {
+  count       = var.auth_path_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  parent_id   = aws_api_gateway_rest_api.this.root_resource_id
+  path_part   = var.auth_path_part
+}
+
+resource "aws_api_gateway_resource" "auth_proxy" {
+  count       = var.auth_path_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  parent_id   = aws_api_gateway_resource.auth[0].id
+  path_part   = "{proxy+}"
+}
+
+# ── POST /auth/{proxy+} → Lambda (NONE auth) ────────────────
+
+resource "aws_api_gateway_method" "auth_proxy" {
+  count         = var.auth_path_enabled ? 1 : 0
+  rest_api_id   = aws_api_gateway_rest_api.this.id
+  resource_id   = aws_api_gateway_resource.auth_proxy[0].id
+  http_method   = "ANY"
+  authorization = "NONE"
+
+  request_parameters = {
+    "method.request.path.proxy" = true
+  }
+}
+
+resource "aws_api_gateway_integration" "auth_proxy" {
+  count                   = var.auth_path_enabled ? 1 : 0
+  rest_api_id             = aws_api_gateway_rest_api.this.id
+  resource_id             = aws_api_gateway_resource.auth_proxy[0].id
+  http_method             = aws_api_gateway_method.auth_proxy[0].http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = var.lambda_invoke_arn
+
+  request_parameters = {
+    "integration.request.path.proxy" = "method.request.path.proxy"
+  }
+}
+
+# ── CORS OPTIONS — /auth/{proxy+} ───────────────────────────
+
+resource "aws_api_gateway_method" "cors_auth_proxy" {
+  count         = var.auth_path_enabled ? 1 : 0
+  rest_api_id   = aws_api_gateway_rest_api.this.id
+  resource_id   = aws_api_gateway_resource.auth_proxy[0].id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "cors_auth_proxy" {
+  count       = var.auth_path_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  resource_id = aws_api_gateway_resource.auth_proxy[0].id
+  http_method = aws_api_gateway_method.cors_auth_proxy[0].http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+}
+
+resource "aws_api_gateway_method_response" "cors_auth_proxy_200" {
+  count       = var.auth_path_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  resource_id = aws_api_gateway_resource.auth_proxy[0].id
+  http_method = aws_api_gateway_method.cors_auth_proxy[0].http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+}
+
+resource "aws_api_gateway_integration_response" "cors_auth_proxy_200" {
+  count       = var.auth_path_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  resource_id = aws_api_gateway_resource.auth_proxy[0].id
+  http_method = aws_api_gateway_method.cors_auth_proxy[0].http_method
+  status_code = aws_api_gateway_method_response.cors_auth_proxy_200[0].status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'${var.cors_allowed_headers}'"
+    "method.response.header.Access-Control-Allow-Methods" = "'POST,OPTIONS'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'${var.cors_allowed_origin}'"
+  }
+}
+
+# ══════════════════════════════════════════════════════════════
 # Deployment + Stage
 # ══════════════════════════════════════════════════════════════
 
@@ -237,6 +333,8 @@ resource "aws_api_gateway_deployment" "this" {
     aws_api_gateway_integration.proxy,
     aws_api_gateway_integration.cors_base,
     aws_api_gateway_integration.cors_proxy,
+    aws_api_gateway_integration.auth_proxy,
+    aws_api_gateway_integration.cors_auth_proxy,
   ]
 
   triggers = {
@@ -247,6 +345,8 @@ resource "aws_api_gateway_deployment" "this" {
       { for k, v in aws_api_gateway_method.base : k => v.id },
       { for k, v in aws_api_gateway_integration.base : k => v.id },
       aws_api_gateway_integration.proxy.id,
+      var.auth_path_enabled ? aws_api_gateway_resource.auth_proxy[0].id : null,
+      var.auth_path_enabled ? aws_api_gateway_integration.auth_proxy[0].id : null,
     ]))
   }
 

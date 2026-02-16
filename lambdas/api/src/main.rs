@@ -14,7 +14,8 @@ use axum::{
 };
 use controllers::{create_config, get_config, list_configs, update_config, validate_config};
 use controllers::{get_settings, upsert_settings};
-use models::{AppState, ErrorResponse, OrgSettings, PipelineConfig};
+use controllers::login;
+use models::{AppState, ErrorResponse, LoginRequest, LoginResponse, OrgSettings, PipelineConfig};
 use tracing_subscriber::{fmt, EnvFilter};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -32,6 +33,7 @@ use onboard_you::{ActionConfig, ActionType, Manifest};
         license(name = "Proprietary"),
     ),
     paths(
+        controllers::auth_controller::login,
         controllers::config_controller::list_configs,
         controllers::config_controller::get_config,
         controllers::config_controller::create_config,
@@ -41,6 +43,8 @@ use onboard_you::{ActionConfig, ActionType, Manifest};
         controllers::settings_controller::upsert_settings,
     ),
     components(schemas(
+        LoginRequest,
+        LoginResponse,
         PipelineConfig,
         Manifest,
         ActionConfig,
@@ -51,6 +55,7 @@ use onboard_you::{ActionConfig, ActionType, Manifest};
         OrgSettings,
     )),
     tags(
+        (name = "Authentication", description = "Login and token management"),
         (name = "Configuration", description = "Pipeline configuration CRUD operations"),
         (name = "Validation", description = "Dry-run pipeline validation"),
         (name = "Settings", description = "Organization settings management"),
@@ -101,6 +106,7 @@ async fn main() -> Result<(), lambda_http::Error> {
 
 fn router(state: AppState) -> Router {
     Router::new()
+        .route("/auth/login", post(login))
         .route("/config", get(list_configs))
         .route(
             "/config/{customer_company_id}",

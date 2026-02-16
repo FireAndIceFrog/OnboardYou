@@ -16,8 +16,9 @@ This is a **Cargo workspace** with three crates:
 | Crate | Path | Role |
 |---|---|---|
 | `onboard_you` | `ETL/` | Core ETL library — domain types, capabilities (ingestion/logic/egress), orchestration |
-| `config-api` | `lambdas/api/` | AWS Lambda — Axum-based REST API for CRUD on pipeline configs |
+| `config-api` | `lambdas/api/` | AWS Lambda — Axum-based REST API for CRUD on pipeline configs + auth login |
 | `etl-trigger` | `lambdas/etl-trigger/` | AWS Lambda — EventBridge-triggered pipeline executor |
+| `authorizer` | `lambdas/authorizer/` | AWS Lambda — TOKEN authorizer, validates Cognito JWTs, injects organizationId |
 
 Infrastructure lives in `infra/` (OpenTofu/Terraform).
 
@@ -58,9 +59,19 @@ OnboardYou/
 │   ├── api/                 # Config API Lambda
 │   │   └── src/
 │   │       ├── main.rs      # Axum router + lambda_http adapter
-│   │       ├── engine/      # Business logic (ConfigEngine)
-│   │       ├── models/      # PipelineConfig, ApiError, AppState
-│   │       └── repositories/ # DynamoDB + EventBridge Scheduler
+│   │       ├── controllers/
+│   │       │   ├── auth_controller.rs      # POST /auth/login (no JWT required)
+│   │       │   ├── config_controller.rs    # CRUD /config
+│   │       │   └── settings_controller.rs  # GET/PUT /settings
+│   │       ├── engine/      # Business logic (ConfigEngine, AuthEngine, SettingsEngine)
+│   │       ├── models/      # PipelineConfig, ApiError, AppState, LoginRequest/Response
+│   │       └── repositories/ # DynamoDB, EventBridge Scheduler, Cognito
+│   ├── authorizer/          # Lambda Authorizer
+│   │   └── src/
+│   │       ├── main.rs      # lambda_runtime handler
+│   │       ├── engine/      # AuthEngine — JWT validation or dev-mode bypass
+│   │       ├── models/      # AuthEvent, AuthResponse, AuthError
+│   │       └── repositories/ # JWKS fetcher
 │   └── etl-trigger/         # ETL Trigger Lambda
 │       └── src/
 │           ├── main.rs      # lambda_runtime handler

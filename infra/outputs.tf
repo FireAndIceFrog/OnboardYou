@@ -12,6 +12,11 @@ output "api_endpoint_example" {
   value       = "curl -H 'Authorization: Bearer <jwt>' ${module.api.invoke_url}/config"
 }
 
+output "login_endpoint_example" {
+  description = "Example: authenticate with email + password"
+  value       = "curl -X POST ${module.api.invoke_url}/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"user@example.com\",\"password\":\"…\"}'"
+}
+
 output "config_table_name" {
   description = "DynamoDB table for pipeline configs"
   value       = module.pipeline_configs_table.name
