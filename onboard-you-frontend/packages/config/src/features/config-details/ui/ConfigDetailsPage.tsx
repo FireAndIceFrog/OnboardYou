@@ -1,6 +1,6 @@
 import { useMemo, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   ReactFlow,
   MiniMap,
@@ -18,8 +18,12 @@ import { useAppDispatch, useAppSelector } from '@/store';
 import { useGlobal } from '@/shared/hooks';
 import { Button, Spinner, Badge } from '@/shared/ui';
 import { humanFrequency } from '@/shared/domain/types';
+import type { ConnectionForm } from '../domain/types';
 import {
   fetchConfigDetails,
+  initNewConfig,
+  saveConfigThunk,
+  createConfigThunk,
   onNodesChange as onNodesChangeAction,
   onEdgesChange as onEdgesChangeAction,
   selectNode as selectNodeAction,
@@ -32,6 +36,7 @@ import {
   selectSelectedNode,
   selectIsChatOpen,
   selectConfigDetailsLoading,
+  selectConfigDetailsSaving,
   selectConfigDetailsError,
 } from '../state/configDetailsSlice';
 import { selectLastFlowAction } from '@/features/chat/state/chatSlice';
@@ -46,7 +51,15 @@ const nodeTypes = {
   egress: EgressNode,
 };
 
-function ConfigDetailsContent({ customerCompanyId }: { customerCompanyId: string }) {
+function ConfigDetailsContent({
+  customerCompanyId,
+  isNewConfig,
+  connectionForm,
+}: {
+  customerCompanyId: string;
+  isNewConfig: boolean;
+  connectionForm?: ConnectionForm;
+}) {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
   const { showNotification } = useGlobal();
@@ -57,14 +70,19 @@ function ConfigDetailsContent({ customerCompanyId }: { customerCompanyId: string
   const edges = useAppSelector(selectEdges);
   const selectedNode = useAppSelector(selectSelectedNode);
   const isLoading = useAppSelector(selectConfigDetailsLoading);
+  const isSaving = useAppSelector(selectConfigDetailsSaving);
   const error = useAppSelector(selectConfigDetailsError);
   const chatOpen = useAppSelector(selectIsChatOpen);
   const lastFlowAction = useAppSelector(selectLastFlowAction);
 
-  // ── Fetch config on mount ─────────────────────────────────
+  // ── Fetch existing config or initialise a blank one ───────
   useEffect(() => {
-    dispatch(fetchConfigDetails({ customerCompanyId }));
-  }, [dispatch, customerCompanyId]);
+    if (isNewConfig && connectionForm) {
+      dispatch(initNewConfig(connectionForm));
+    } else {
+      dispatch(fetchConfigDetails({ customerCompanyId }));
+    }
+  }, [dispatch, customerCompanyId, isNewConfig, connectionForm]);
 
   // ── Show error notifications ──────────────────────────────
   useEffect(() => {
@@ -113,6 +131,37 @@ function ConfigDetailsContent({ customerCompanyId }: { customerCompanyId: string
   const handleBack = useCallback(() => {
     navigate(-1);
   }, [navigate]);
+
+  const handleSave = useCallback(async () => {
+    if (!config) return;
+
+    try {
+      if (isNewConfig) {
+        // Derive a customerCompanyId from the display name
+        const newId = config.name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '')
+          || 'new-config';
+
+        const result = await dispatch(
+          createConfigThunk({ customerCompanyId: newId, data: config }),
+        ).unwrap();
+
+        showNotification(t('configDetails.createSuccess'), 'success');
+        // Navigate to the real config URL so subsequent saves use PUT
+        navigate(`/config/${result.customerCompanyId}`, { replace: true });
+      } else {
+        await dispatch(
+          saveConfigThunk({ customerCompanyId, data: config }),
+        ).unwrap();
+
+        showNotification(t('configDetails.saveSuccess'), 'success');
+      }
+    } catch {
+      // Error is already set in Redux state by the rejected thunk
+    }
+  }, [config, isNewConfig, customerCompanyId, dispatch, navigate, showNotification, t]);
 
   const memoizedNodeTypes = useMemo(() => nodeTypes, []);
 
@@ -175,8 +224,8 @@ function ConfigDetailsContent({ customerCompanyId }: { customerCompanyId: string
           <button type="button" className={styles.chatToggle} onClick={handleToggleChat}>
             💬 {chatOpen ? t('configDetails.closeChat') : t('configDetails.openChat')}
           </button>
-          <Button variant="primary" size="sm">
-            {t('configDetails.save')}
+          <Button variant="primary" size="sm" onClick={handleSave} disabled={isSaving}>
+            {isSaving ? t('configDetails.saving') : t('configDetails.save')}
           </Button>
         </div>
       </header>
@@ -226,6 +275,21 @@ function ConfigDetailsContent({ customerCompanyId }: { customerCompanyId: string
 export function ConfigDetailsPage() {
   const { t } = useTranslation();
   const { customerCompanyId } = useParams<{ customerCompanyId: string }>();
+  const location = useLocation();
+
+  const isNewConfig = customerCompanyId === 'new';
+  const connectionForm = (location.state as { connection?: ConnectionForm } | null)
+    ?.connection;
+
+  // If navigating to /new without connection form data, redirect back
+  if (isNewConfig && !connectionForm) {
+    return (
+      <div className={styles.errorState}>
+        <span className={styles.errorIcon}>⚠️</span>
+        <p>{t('configDetails.noConnectionData')}</p>
+      </div>
+    );
+  }
 
   if (!customerCompanyId) {
     return (
@@ -237,6 +301,10 @@ export function ConfigDetailsPage() {
   }
 
   return (
-    <ConfigDetailsContent customerCompanyId={customerCompanyId} />
+    <ConfigDetailsContent
+      customerCompanyId={customerCompanyId}
+      isNewConfig={isNewConfig}
+      connectionForm={connectionForm}
+    />
   );
 }

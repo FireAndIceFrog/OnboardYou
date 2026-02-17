@@ -13,10 +13,10 @@ import {
   type EdgeChange,
 } from '@xyflow/react';
 import type { RootState, ThunkExtra } from '@/store';
-import type { PipelineConfig, ActionConfig, ValidationResult } from '@/generated/api';
+import type { PipelineConfig, ActionConfig, ValidationResult, ActionType } from '@/generated/api';
 import { actionCategory } from '@/shared/domain/types';
-import type { ConfigDetailsState } from '../domain/types';
-import { fetchConfig, saveConfig as saveConfigService, validateConfig as validateConfigService } from '../services/configDetailsService';
+import type { ConfigDetailsState, ConnectionForm } from '../domain/types';
+import { fetchConfig, createConfig as createConfigService, saveConfig as saveConfigService, validateConfig as validateConfigService } from '../services/configDetailsService';
 import { convertToFlow } from '../services/pipelineLayoutService';
 
 /* ── Layout constants ──────────────────────────────────────── */
@@ -39,6 +39,7 @@ const initialState: ConfigDetailsState = {
   edges: [],
   selectedNode: null,
   isLoading: false,
+  isSaving: false,
   error: null,
   chatOpen: false,
 };
@@ -81,6 +82,28 @@ export const saveConfigThunk = createAsyncThunk<
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to save configuration';
+      return rejectWithValue(message);
+    }
+  },
+);
+
+export const createConfigThunk = createAsyncThunk<
+  PipelineConfig,
+  { customerCompanyId: string; data: PipelineConfig },
+  { extra: ThunkExtra }
+>(
+  'configDetails/createConfig',
+  async ({ customerCompanyId, data }, { rejectWithValue }) => {
+    try {
+      return await createConfigService(customerCompanyId, {
+        name: data.name,
+        cron: data.cron,
+        pipeline: data.pipeline,
+        image: data.image,
+      });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to create configuration';
       return rejectWithValue(message);
     }
   },
@@ -175,6 +198,60 @@ const configDetailsSlice = createSlice({
     resetConfigDetails() {
       return initialState;
     },
+    /**
+     * Initialise the slice for a brand-new config created via the
+     * connection wizard.  Builds a PipelineConfig with a single
+     * ingestion action derived from the ConnectionForm.
+     */
+    initNewConfig(state, action: PayloadAction<ConnectionForm>) {
+      const form = action.payload;
+
+      // Map the wizard system id to the generated ActionType
+      const actionType: ActionType =
+        form.system === 'workday' ? 'workday_hris_connector' : 'csv_hris_connector';
+
+      // Build connector-specific config payload
+      const connectorConfig: Record<string, unknown> =
+        form.system === 'workday'
+          ? {
+              name: form.displayName || 'Workday HCM Fetch',
+              endpoint: form.workday.tenantUrl,
+              tenant_id: form.workday.tenantId,
+              auth: 'ws_security',
+              username: form.workday.username,
+              response_group: form.workday.responseGroup,
+              pageSize: Number(form.workday.workerCountLimit) || 200,
+            }
+          : {
+              name: form.displayName || 'CSV Upload Fetch',
+              csv_path: form.csv.csvPath,
+            };
+
+      const ingestionAction: ActionConfig = {
+        id: 'ingest',
+        action_type: actionType,
+        config: connectorConfig,
+      };
+
+      const newConfig: PipelineConfig = {
+        name: form.displayName || 'New Configuration',
+        cron: 'rate(1 day)',
+        organizationId: '',
+        customerCompanyId: '',
+        pipeline: {
+          version: '1.0',
+          actions: [ingestionAction],
+        },
+      };
+
+      const { nodes, edges } = convertToFlow(newConfig.pipeline);
+
+      state.config = newConfig;
+      state.nodes = nodes as typeof state.nodes;
+      state.edges = edges as typeof state.edges;
+      state.isLoading = false;
+      state.error = null;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -193,8 +270,29 @@ const configDetailsSlice = createSlice({
         state.isLoading = false;
         state.error = (action.payload as string) ?? 'Failed to load configuration';
       })
+      .addCase(saveConfigThunk.pending, (state) => {
+        state.isSaving = true;
+        state.error = null;
+      })
       .addCase(saveConfigThunk.fulfilled, (state, action) => {
+        state.isSaving = false;
         state.config = action.payload;
+      })
+      .addCase(saveConfigThunk.rejected, (state, action) => {
+        state.isSaving = false;
+        state.error = (action.payload as string) ?? 'Failed to save configuration';
+      })
+      .addCase(createConfigThunk.pending, (state) => {
+        state.isSaving = true;
+        state.error = null;
+      })
+      .addCase(createConfigThunk.fulfilled, (state, action) => {
+        state.isSaving = false;
+        state.config = action.payload;
+      })
+      .addCase(createConfigThunk.rejected, (state, action) => {
+        state.isSaving = false;
+        state.error = (action.payload as string) ?? 'Failed to create configuration';
       })
       .addCase(validateConfigThunk.rejected, (state, action) => {
         state.error = (action.payload as string) ?? 'Validation failed';
@@ -213,6 +311,7 @@ export const {
   setChatOpen,
   addFlowAction,
   resetConfigDetails,
+  initNewConfig,
 } = configDetailsSlice.actions;
 
 /* ── Selectors ─────────────────────────────────────────────── */
@@ -224,6 +323,7 @@ export const selectEdges = (state: RootState) => state.configDetails.edges;
 export const selectSelectedNode = (state: RootState) => state.configDetails.selectedNode;
 export const selectIsChatOpen = (state: RootState) => state.configDetails.chatOpen;
 export const selectConfigDetailsLoading = (state: RootState) => state.configDetails.isLoading;
+export const selectConfigDetailsSaving = (state: RootState) => state.configDetails.isSaving;
 export const selectConfigDetailsError = (state: RootState) => state.configDetails.error;
 
 export default configDetailsSlice.reducer;

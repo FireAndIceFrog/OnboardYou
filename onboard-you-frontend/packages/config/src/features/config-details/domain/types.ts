@@ -7,6 +7,7 @@ export interface ConfigDetailsState {
   edges: Edge[];
   selectedNode: Node | null;
   isLoading: boolean;
+  isSaving: boolean;
   error: string | null;
   chatOpen: boolean;
 }
