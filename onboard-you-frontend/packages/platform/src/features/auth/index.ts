@@ -3,7 +3,6 @@ import {
   selectAuth,
   performLogin,
   performLogout,
-  exchangeCode,
 } from './state/authSlice';
 
 /**
@@ -16,21 +15,19 @@ export function useAuth() {
 
   return {
     state,
-    login: () => {
-      dispatch(performLogin());
+    login: (email: string, password: string) => {
+      dispatch(performLogin({ email, password }));
     },
     logout: () => {
       dispatch(performLogout());
     },
     getToken: () => state.token,
-    exchangeCode: (code: string) => dispatch(exchangeCode(code)).unwrap(),
   };
 }
 
 // State
 export {
   initAuth,
-  exchangeCode,
   performLogin,
   performLogout,
   selectAuth,
@@ -40,7 +37,7 @@ export {
 } from './state/authSlice';
 
 // UI
-export { LoginPage, CallbackPage, ProtectedRoute } from './ui';
+export { LoginPage, ProtectedRoute } from './ui';
 
 // Services
 export * from './services';

@@ -1,18 +1,8 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import type { AuthState } from '@/features/auth/domain/types';
 import type { User } from '@/shared/domain/types';
-import {
-  buildLoginUrl,
-  buildLogoutUrl,
-  exchangeCodeForTokens,
-  userFromIdToken,
-} from '@/features/auth/services/authService';
-import {
-  COGNITO_DOMAIN,
-  COGNITO_CLIENT_ID,
-  REDIRECT_URI,
-} from '@/features/auth/domain/constants';
-import { MOCK_MODE } from '@/shared/domain/constants';
+import { login as loginService, userFromIdToken } from '@/features/auth/services/authService';
+import { MOCK_MODE, API_BASE_URL } from '@/shared/domain/constants';
 import type { RootState } from '@/store';
 
 /* ── Mock data (development only) ─────────────────────────── */
@@ -40,7 +30,7 @@ const initialState: AuthState = {
 
 /* ── Async thunks ─────────────────────────────────────────── */
 
-/** Auto-login in mock mode, otherwise check for a stored session. */
+/** Check for an existing session on mount. Auto-login in mock mode. */
 export const initAuth = createAsyncThunk(
   'auth/initAuth',
   async (_, { dispatch }) => {
@@ -49,34 +39,42 @@ export const initAuth = createAsyncThunk(
       return;
     }
 
-    // In production, check for stored refresh token
-    const storedRefreshToken = sessionStorage.getItem('oy_refresh_token');
-    if (!storedRefreshToken) {
-      dispatch(logout());
-      return;
+    // Check for a stored token from a previous login.
+    const storedToken = sessionStorage.getItem('oy_access_token');
+    const storedIdToken = sessionStorage.getItem('oy_id_token');
+    if (storedToken && storedIdToken) {
+      try {
+        const user = userFromIdToken(storedIdToken);
+        const refreshToken = sessionStorage.getItem('oy_refresh_token');
+        dispatch(setUser({ user, token: storedToken, refreshToken }));
+        return;
+      } catch {
+        // Token is corrupt — fall through to logout.
+      }
     }
 
-    // We don't do silent refresh on mount for simplicity — the callback flow
-    // handles the initial auth, and the token is held in state.
     dispatch(logout());
   },
 );
 
-/** Exchange an authorization code for tokens (Cognito callback). */
-export const exchangeCode = createAsyncThunk(
-  'auth/exchangeCode',
-  async (code: string, { dispatch }) => {
+/** Authenticate with email + password via the backend /auth/login route. */
+export const performLogin = createAsyncThunk(
+  'auth/performLogin',
+  async ({ email, password }: { email: string; password: string }, { dispatch }) => {
+    if (MOCK_MODE) {
+      dispatch(setUser({ user: MOCK_USER, token: MOCK_TOKEN, refreshToken: null }));
+      return;
+    }
+
     dispatch(setLoading());
 
     try {
-      const tokens = await exchangeCodeForTokens(
-        code,
-        COGNITO_DOMAIN,
-        COGNITO_CLIENT_ID,
-        REDIRECT_URI,
-      );
-
+      const tokens = await loginService(API_BASE_URL, email, password);
       const user = userFromIdToken(tokens.id_token);
+
+      // Persist tokens so we can restore the session on refresh.
+      sessionStorage.setItem('oy_access_token', tokens.access_token);
+      sessionStorage.setItem('oy_id_token', tokens.id_token);
       if (tokens.refresh_token) {
         sessionStorage.setItem('oy_refresh_token', tokens.refresh_token);
       }
@@ -95,31 +93,14 @@ export const exchangeCode = createAsyncThunk(
   },
 );
 
-/** Redirect to Cognito hosted UI (or auto-login in mock mode). */
-export const performLogin = createAsyncThunk(
-  'auth/performLogin',
-  async (_, { dispatch }) => {
-    if (MOCK_MODE) {
-      dispatch(setUser({ user: MOCK_USER, token: MOCK_TOKEN, refreshToken: null }));
-      return;
-    }
-
-    const url = buildLoginUrl(COGNITO_DOMAIN, COGNITO_CLIENT_ID, REDIRECT_URI);
-    window.location.href = url;
-  },
-);
-
-/** Clear session and redirect to Cognito logout URL. */
+/** Clear the session. */
 export const performLogout = createAsyncThunk(
   'auth/performLogout',
   async (_, { dispatch }) => {
+    sessionStorage.removeItem('oy_access_token');
+    sessionStorage.removeItem('oy_id_token');
     sessionStorage.removeItem('oy_refresh_token');
     dispatch(logout());
-
-    if (!MOCK_MODE && COGNITO_DOMAIN) {
-      const url = buildLogoutUrl(COGNITO_DOMAIN, COGNITO_CLIENT_ID, REDIRECT_URI);
-      window.location.href = url;
-    }
   },
 );
 

@@ -1,16 +1,23 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useAppDispatch } from '@/store';
-import { performLogin } from '@/features/auth/state/authSlice';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { performLogin, selectAuth } from '@/features/auth/state/authSlice';
+import { DEMO_EMAIL, DEMO_PASSWORD } from '@/features/auth/domain/constants';
 import { Button } from '@/shared/ui/Button';
-import { MOCK_MODE, APP_NAME } from '@/shared/domain/constants';
+import { APP_NAME } from '@/shared/domain/constants';
 import styles from './LoginPage.module.scss';
 
 export function LoginPage() {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
+  const { isLoading, error } = useAppSelector(selectAuth);
 
-  const login = () => {
-    dispatch(performLogin());
+  const [email, setEmail] = useState(DEMO_EMAIL);
+  const [password, setPassword] = useState(DEMO_PASSWORD);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    dispatch(performLogin({ email, password }));
   };
 
   return (
@@ -24,17 +31,53 @@ export function LoginPage() {
         <h2 className={styles['login-title']}>{t('auth.login.title')}</h2>
         <p className={styles['login-subtitle']}>{t('auth.login.subtitle')}</p>
 
-        <div className={styles['login-actions']}>
-          {MOCK_MODE ? (
-            <Button variant="primary" size="lg" onClick={login} className={styles['login-btn']}>
-              {t('auth.login.demoButton')}
+        <form className={styles['login-form']} onSubmit={handleSubmit}>
+          <div className={styles['login-field']}>
+            <label htmlFor="login-email" className={styles['login-label']}>
+              {t('auth.login.emailLabel')}
+            </label>
+            <input
+              id="login-email"
+              className={styles['login-input']}
+              type="email"
+              autoComplete="email"
+              required
+              placeholder={t('auth.login.emailPlaceholder')}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+
+          <div className={styles['login-field']}>
+            <label htmlFor="login-password" className={styles['login-label']}>
+              {t('auth.login.passwordLabel')}
+            </label>
+            <input
+              id="login-password"
+              className={styles['login-input']}
+              type="password"
+              autoComplete="current-password"
+              required
+              placeholder={t('auth.login.passwordPlaceholder')}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+
+          {error && <p className={styles['login-error']}>{error}</p>}
+
+          <div className={styles['login-actions']}>
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              disabled={isLoading}
+              className={styles['login-btn']}
+            >
+              {isLoading ? t('auth.login.signingIn') : t('auth.login.submitButton')}
             </Button>
-          ) : (
-            <Button variant="primary" size="lg" onClick={login} className={styles['login-btn']}>
-              {t('auth.login.ssoButton')}
-            </Button>
-          )}
-        </div>
+          </div>
+        </form>
 
         <p className={styles['login-footer']}>
           {t('auth.login.footer')}

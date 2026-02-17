@@ -1,44 +1,61 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
-  buildLoginUrl,
-  buildLogoutUrl,
+  login,
   decodeJwtPayload,
   userFromIdToken,
 } from './authService';
 
 describe('authService', () => {
-  describe('buildLoginUrl', () => {
-    it('builds correct Cognito authorize URL with all params', () => {
-      const url = buildLoginUrl(
-        'https://auth.example.com',
-        'my-client-id',
-        'https://app.example.com/callback',
-      );
-      expect(url).toContain('https://auth.example.com/oauth2/authorize?');
-      expect(url).toContain('response_type=code');
-      expect(url).toContain('client_id=my-client-id');
-      expect(url).toContain(encodeURIComponent('https://app.example.com/callback'));
-      expect(url).toContain('scope=openid+profile+email');
-    });
+  beforeEach(() => {
+    vi.restoreAllMocks();
   });
 
-  describe('buildLogoutUrl', () => {
-    it('builds correct Cognito logout URL', () => {
-      const url = buildLogoutUrl(
-        'https://auth.example.com',
-        'my-client-id',
-        'https://app.example.com',
+  describe('login', () => {
+    it('POSTs email + password and returns tokens on success', async () => {
+      const mockTokens = {
+        id_token: 'mock-id',
+        access_token: 'mock-access',
+        refresh_token: 'mock-refresh',
+        token_type: 'Bearer',
+        expires_in: 3600,
+      };
+
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        new Response(JSON.stringify(mockTokens), { status: 200 }),
       );
-      expect(url).toContain('https://auth.example.com/logout?');
-      expect(url).toContain('client_id=my-client-id');
-      expect(url).toContain('logout_uri=');
-      expect(url).toContain(encodeURIComponent('https://app.example.com'));
+
+      const result = await login('https://api.example.com', 'a@b.com', 'pass');
+      expect(result).toEqual(mockTokens);
+
+      const [url, init] = vi.mocked(fetch).mock.calls[0];
+      expect(url).toBe('https://api.example.com/auth/login');
+      expect(init?.method).toBe('POST');
+      expect(JSON.parse(init?.body as string)).toEqual({ email: 'a@b.com', password: 'pass' });
+    });
+
+    it('throws with error message from backend on failure', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: 'Invalid credentials' }), { status: 401 }),
+      );
+
+      await expect(login('https://api.example.com', 'a@b.com', 'wrong')).rejects.toThrow(
+        'Invalid credentials',
+      );
+    });
+
+    it('throws generic message when backend returns non-JSON error', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        new Response('Internal Server Error', { status: 500 }),
+      );
+
+      await expect(login('https://api.example.com', 'a@b.com', 'pass')).rejects.toThrow(
+        'Login failed (500)',
+      );
     });
   });
 
   describe('decodeJwtPayload', () => {
     it('decodes a JWT payload', () => {
-      // Build a fake JWT: header.payload.signature
       const payload = { sub: 'user-123', email: 'test@example.com' };
       const encoded = btoa(JSON.stringify(payload));
       const fakeJwt = `header.${encoded}.signature`;

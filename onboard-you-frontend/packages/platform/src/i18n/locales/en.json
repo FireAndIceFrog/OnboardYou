@@ -3,14 +3,13 @@
     "login": {
       "title": "Welcome back",
       "subtitle": "Sign in to your workspace",
-      "demoButton": "🧪 Demo Mode — Continue as Demo User",
-      "ssoButton": "Sign in with SSO",
-      "footer": "Secure authentication powered by AWS Cognito"
-    },
-    "callback": {
-      "errorTitle": "Authentication Error",
-      "returnToLogin": "Return to login",
-      "completingSignIn": "Completing sign in…"
+      "emailLabel": "Email",
+      "emailPlaceholder": "you@company.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "••••••••",
+      "submitButton": "Sign in",
+      "signingIn": "Signing in…",
+      "footer": "Secure authentication powered by OnboardYou"
     }
   },
   "home": {

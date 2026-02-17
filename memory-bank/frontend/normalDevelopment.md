@@ -6,6 +6,11 @@ We are using a federated module format. The platform project handles the overarc
 
 We should try to keep the software configuration-based as much as possible for the platoform so that future developers only need to adjust the json and not the core application. 
 
+## Authentication flow
+The frontend does NOT talk to Cognito directly. Instead it POSTs `{ email, password }` to the backend `POST /auth/login` route, which proxies through to Cognito and returns `{ id_token, access_token, refresh_token?, token_type, expires_in }`. The frontend stores tokens in `sessionStorage` and decodes the `id_token` to extract the User.
+
+In mock mode (`VITE_MOCK_MODE=true`) the MSW handler intercepts the same `/auth/login` POST and returns fake tokens. Demo credentials can be pre-filled on the login form via `VITE_DEMO_EMAIL` and `VITE_DEMO_PASSWORD` env vars (written by `sync-env.sh` from the tofu state). 
+
 ## Use Global hook
 We expose a hook called useGlobal. the details of this hook should also be exposed via the store extras - everything in this store is what you need to make api calls including authorization and authentication checks. 
 

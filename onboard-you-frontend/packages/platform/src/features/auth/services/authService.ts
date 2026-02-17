@@ -1,98 +1,35 @@
 import type { User } from '@/shared/domain/types';
 
-interface TokenResponse {
-  access_token: string;
+export interface LoginTokens {
   id_token: string;
+  access_token: string;
   refresh_token?: string;
   token_type: string;
   expires_in: number;
 }
 
 /**
- * Build the Cognito hosted UI login URL.
+ * Authenticate with the backend `/auth/login` endpoint.
+ *
+ * The backend proxies credentials through to Cognito and returns
+ * a token set — the frontend never talks to Cognito directly.
  */
-export function buildLoginUrl(
-  cognitoDomain: string,
-  clientId: string,
-  redirectUri: string,
-): string {
-  const params = new URLSearchParams({
-    response_type: 'code',
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    scope: 'openid profile email',
-  });
-  return `${cognitoDomain}/oauth2/authorize?${params.toString()}`;
-}
-
-/**
- * Build the Cognito hosted UI logout URL.
- */
-export function buildLogoutUrl(
-  cognitoDomain: string,
-  clientId: string,
-  redirectUri: string,
-): string {
-  const params = new URLSearchParams({
-    client_id: clientId,
-    logout_uri: redirectUri,
-  });
-  return `${cognitoDomain}/logout?${params.toString()}`;
-}
-
-/**
- * Exchange an authorization code for tokens via the Cognito token endpoint.
- */
-export async function exchangeCodeForTokens(
-  code: string,
-  cognitoDomain: string,
-  clientId: string,
-  redirectUri: string,
-): Promise<TokenResponse> {
-  const body = new URLSearchParams({
-    grant_type: 'authorization_code',
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    code,
-  });
-
-  const res = await fetch(`${cognitoDomain}/oauth2/token`, {
+export async function login(
+  apiBaseUrl: string,
+  email: string,
+  password: string,
+): Promise<LoginTokens> {
+  const res = await fetch(`${apiBaseUrl}/auth/login`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
   });
 
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Token exchange failed: ${text}`);
-  }
-
-  return res.json();
-}
-
-/**
- * Refresh tokens using a refresh token.
- */
-export async function refreshTokens(
-  refreshToken: string,
-  cognitoDomain: string,
-  clientId: string,
-): Promise<TokenResponse> {
-  const body = new URLSearchParams({
-    grant_type: 'refresh_token',
-    client_id: clientId,
-    refresh_token: refreshToken,
-  });
-
-  const res = await fetch(`${cognitoDomain}/oauth2/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Token refresh failed: ${text}`);
+    const body = await res.json().catch(() => null);
+    const message =
+      (body as { error?: string } | null)?.error ?? `Login failed (${res.status})`;
+    throw new Error(message);
   }
 
   return res.json();
