@@ -51,11 +51,6 @@ pub struct RegexReplace {
 }
 
 impl RegexReplace {
-    /// Construct from a pre-validated config and its compiled regex.
-    fn new(config: RegexReplaceConfig, regex: SafeRegex) -> Self {
-        Self { config, regex }
-    }
-
     /// Deserialise and construct from manifest JSON.
     pub fn from_action_config(config: &RegexReplaceConfig) -> Result<Self> {
         let regex = config.validate()?;
