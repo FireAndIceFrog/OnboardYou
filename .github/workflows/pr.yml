@@ -1,0 +1,69 @@
+name: PR — Build & Test
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: pr-${{ github.head_ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ════════════════════════════════════════════════════════════
+  # Backend — build & unit test
+  # ════════════════════════════════════════════════════════════
+  backend:
+    name: Backend — Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: backend
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build workspace
+        run: cargo build --release --workspace
+
+      - name: Run unit tests
+        run: cargo test --release --workspace --lib
+
+  # ════════════════════════════════════════════════════════════
+  # Frontend — build & unit test
+  # ════════════════════════════════════════════════════════════
+  frontend:
+    name: Frontend — Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: onboard-you-frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: onboard-you-frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
