@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { performLogin, selectAuth } from '@/features/auth/state/authSlice';
@@ -10,10 +11,14 @@ import styles from './LoginPage.module.scss';
 export function LoginPage() {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
-  const { isLoading, error } = useAppSelector(selectAuth);
+  const { isAuthenticated, isLoading, error } = useAppSelector(selectAuth);
 
   const [email, setEmail] = useState(DEMO_EMAIL);
   const [password, setPassword] = useState(DEMO_PASSWORD);
+
+  if (isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

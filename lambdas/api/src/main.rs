@@ -12,6 +12,7 @@ use axum::{
     routing::{get, post},
     Router,
 };
+use tower_http::cors::{Any, CorsLayer};
 use controllers::{create_config, get_config, list_configs, update_config, validate_config};
 use controllers::{get_settings, upsert_settings};
 use controllers::login;
@@ -93,6 +94,12 @@ impl utoipa::Modify for SecurityAddon {
 
 #[tokio::main]
 async fn main() -> Result<(), lambda_http::Error> {
+    // Quick escape hatch: `config-api --openapi` dumps the spec to stdout.
+    if std::env::args().any(|a| a == "--openapi") {
+        println!("{}", ApiDoc::openapi().to_pretty_json().unwrap());
+        return Ok(());
+    }
+
     fmt()
         .with_env_filter(EnvFilter::from_default_env())
         .json()
@@ -107,6 +114,11 @@ async fn main() -> Result<(), lambda_http::Error> {
 // ── Routes ──────────────────────────────────────────────────
 
 fn router(state: AppState) -> Router {
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
     Router::new()
         .route("/auth/login", post(login))
         .route("/config", get(list_configs))
@@ -120,6 +132,7 @@ fn router(state: AppState) -> Router {
         )
         .route("/settings", get(get_settings).put(upsert_settings))
         .with_state(state)
+        .layer(cors)
         .merge(
             SwaggerUi::new("/swagger-ui")
                 .url("/api-docs/openapi.json", ApiDoc::openapi()),

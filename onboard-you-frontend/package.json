@@ -2,6 +2,7 @@
   "name": "onboard-you-frontend",
   "private": true,
   "scripts": {
+    "sync-env": "pnpm --filter @onboard-you/platform sync-env",
     "dev:platform": "pnpm --filter @onboard-you/platform dev",
     "dev:config": "pnpm --filter @onboard-you/config dev",
     "dev:mock": "pnpm --filter @onboard-you/config run dev:mock:build && pnpm -r --parallel dev:mock",
@@ -10,6 +11,7 @@
     "dev": "pnpm -r --parallel dev",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "openapi-ts": "pnpm -r openapi-ts"
   }
 }

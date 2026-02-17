@@ -25,5 +25,6 @@ chrono = "0.4"
 thiserror = "1.0"
 uuid = { version = "1", features = ["v4"] }
 axum = "0.8"
+tower-http = { version = "0.6", features = ["cors"] }
 utoipa = { version = "5", features = ["axum_extras"] }
 utoipa-swagger-ui = { version = "9", features = ["axum"] }

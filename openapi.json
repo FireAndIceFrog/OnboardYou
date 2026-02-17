@@ -1,0 +1,822 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "OnboardYou Config API",
+    "description": "REST API for managing OnboardYou ETL pipeline configurations.\n\nSupports CRUD operations on pipeline configs stored in DynamoDB and \ndry-run validation of pipeline manifests via column propagation.",
+    "license": {
+      "name": "Proprietary"
+    },
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "POST /auth/login",
+        "description": "Authenticate with email + password and receive Cognito tokens.\nThis endpoint does **not** require a JWT — it is the entry point\nfor obtaining one.",
+        "operationId": "login",
+        "requestBody": {
+          "description": "User credentials",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Authentication successful — token set returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error (missing email or password)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/config": {
+      "get": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "GET /config",
+        "description": "List all pipeline configurations owned by the caller's organization.\nThe organization is resolved from the caller's JWT claims.",
+        "operationId": "list_configs",
+        "responses": {
+          "200": {
+            "description": "List of pipeline configurations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PipelineConfig"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/config/{customer_company_id}": {
+      "get": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "GET /config/{customerCompanyId}",
+        "description": "Retrieve the pipeline configuration for a given customer company.\nThe organization is resolved from the caller's JWT claims.",
+        "operationId": "get_config",
+        "parameters": [
+          {
+            "name": "customer_company_id",
+            "in": "path",
+            "description": "Unique identifier for the customer company",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pipeline configuration found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineConfig"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Configuration not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "PUT /config/{customerCompanyId}",
+        "description": "Update an existing pipeline configuration. Validates the pipeline manifest,\npersists to DynamoDB, and updates the EventBridge schedule.\nThe organization is resolved from the caller's JWT claims.",
+        "operationId": "update_config",
+        "parameters": [
+          {
+            "name": "customer_company_id",
+            "in": "path",
+            "description": "Unique identifier for the customer company",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Pipeline configuration to update",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Configuration updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineConfig"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "POST /config/{customerCompanyId}",
+        "description": "Create a new pipeline configuration. Validates the pipeline manifest,\npersists to DynamoDB, and creates an EventBridge schedule.\nThe organization is resolved from the caller's JWT claims.",
+        "operationId": "create_config",
+        "parameters": [
+          {
+            "name": "customer_company_id",
+            "in": "path",
+            "description": "Unique identifier for the customer company",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Pipeline configuration to create",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Configuration created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineConfig"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/config/{customer_company_id}/validate": {
+      "post": {
+        "tags": [
+          "Validation"
+        ],
+        "summary": "POST /config/{customerCompanyId}/validate",
+        "description": "Dry-run column propagation: parses the pipeline manifest, builds every\naction, and folds `calculate_columns` through the chain. Returns the\ncolumn set after each step without executing any real transformations.",
+        "operationId": "validate_config",
+        "parameters": [
+          {
+            "name": "customer_company_id",
+            "in": "path",
+            "description": "Unique identifier for the customer company",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Pipeline configuration to validate (only the pipeline field is used)",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Validation result with per-step column snapshots",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error — misconfigured action or schema conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/settings": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "GET /settings",
+        "description": "Retrieve the settings for the caller's organization.\nThe organization is resolved from the caller's JWT claims.",
+        "operationId": "get_settings",
+        "responses": {
+          "200": {
+            "description": "Organization settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Settings not found for organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "PUT /settings",
+        "description": "Create or update the settings for the caller's organization.\nThe organization is resolved from the caller's JWT claims.",
+        "operationId": "upsert_settings",
+        "requestBody": {
+          "description": "Organization settings to save",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Settings saved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgSettings"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ActionConfig": {
+        "type": "object",
+        "description": "Configuration for a single action in the pipeline",
+        "required": [
+          "id",
+          "action_type",
+          "config"
+        ],
+        "properties": {
+          "action_type": {
+            "$ref": "#/components/schemas/ActionType",
+            "description": "Factory key — selects the Rust implementation (e.g. `ActionType::CsvHrisConnector`)"
+          },
+          "config": {
+            "description": "Action-specific configuration (shape depends on action_type)"
+          },
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for this pipeline step"
+          }
+        }
+      },
+      "ActionType": {
+        "type": "string",
+        "description": "All known action types in the pipeline.\n\nThis is the **single source of truth** — adding a new capability requires\nadding a variant here, which then forces the factory to handle it\n(exhaustive match). Serde maps these to/from `snake_case` JSON strings.\n\n| JSON value                | Variant                |\n|---------------------------|------------------------|\n| `\"csv_hris_connector\"`    | `CsvHrisConnector`     |\n| `\"workday_hris_connector\"`| `WorkdayHrisConnector` |\n| `\"scd_type_2\"`            | `ScdType2`             |\n| `\"pii_masking\"`           | `PiiMasking`           |\n| `\"identity_deduplicator\"` | `IdentityDeduplicator` |\n| `\"regex_replace\"`         | `RegexReplace`         |\n| `\"iso_country_sanitizer\"` | `IsoCountrySanitizer`  |\n| `\"cellphone_sanitizer\"`   | `CellphoneSanitizer`   |\n| `\"handle_diacritics\"`     | `HandleDiacritics`     |\n| `\"rename_column\"`         | `RenameColumn`         |\n| `\"drop_column\"`           | `DropColumn`           |\n| `\"filter_by_value\"`       | `FilterByValue`        |\n| `\"api_dispatcher\"`        | `ApiDispatcher`        |",
+        "enum": [
+          "csv_hris_connector",
+          "workday_hris_connector",
+          "scd_type_2",
+          "pii_masking",
+          "identity_deduplicator",
+          "regex_replace",
+          "iso_country_sanitizer",
+          "cellphone_sanitizer",
+          "handle_diacritics",
+          "rename_column",
+          "drop_column",
+          "filter_by_value",
+          "api_dispatcher"
+        ]
+      },
+      "ConfigRequest": {
+        "type": "object",
+        "description": "Request body for `POST /config/{id}` and `PUT /config/{id}`.\n\nClients send only the fields they own; the server stamps identity\nand timestamps before persisting.",
+        "required": [
+          "name",
+          "cron",
+          "pipeline"
+        ],
+        "properties": {
+          "cron": {
+            "type": "string",
+            "description": "EventBridge-compatible schedule expression (cron or rate)"
+          },
+          "image": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional image/icon for the pipeline"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the pipeline"
+          },
+          "pipeline": {
+            "$ref": "#/components/schemas/Manifest",
+            "description": "The full ETL pipeline manifest"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "JSON error envelope returned to clients.",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable error description"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "description": "Login request — email + password (plain credentials).",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "User email address (Cognito username)."
+          },
+          "password": {
+            "type": "string",
+            "description": "User password."
+          }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "description": "Successful login response — Cognito token set.",
+        "required": [
+          "id_token",
+          "access_token",
+          "token_type",
+          "expires_in"
+        ],
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "description": "JWT access token."
+          },
+          "expires_in": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Token lifetime in seconds."
+          },
+          "id_token": {
+            "type": "string",
+            "description": "JWT ID token (contains custom claims such as `organizationId`)."
+          },
+          "refresh_token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Refresh token (can be exchanged for new tokens)."
+          },
+          "token_type": {
+            "type": "string",
+            "description": "Token type — always `\"Bearer\"`."
+          }
+        }
+      },
+      "Manifest": {
+        "type": "object",
+        "description": "Version of the manifest schema",
+        "required": [
+          "version",
+          "actions"
+        ],
+        "properties": {
+          "actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActionConfig"
+            },
+            "description": "Ordered list of pipeline actions"
+          },
+          "version": {
+            "type": "string",
+            "description": "Schema version (e.g. \"1.0\")"
+          }
+        }
+      },
+      "OrgSettings": {
+        "type": "object",
+        "description": "Per-organization settings stored in DynamoDB.\n\n`default_auth` holds the full auth configuration blob that can be\npassed directly to `ApiEngine::from_action_config()`. It contains\n`auth_type` plus all strategy-specific fields:\n\n**Bearer example:**\n```json\n{\n  \"organizationId\": \"acme-corp\",\n  \"defaultAuth\": {\n    \"auth_type\": \"bearer\",\n    \"destination_url\": \"https://api.example.com/employees\",\n    \"token\": \"sk-live-abc123\"\n  }\n}\n```\n\n**OAuth2 example:**\n```json\n{\n  \"organizationId\": \"acme-corp\",\n  \"defaultAuth\": {\n    \"auth_type\": \"oauth2\",\n    \"destination_url\": \"https://api.example.com/v2/employees\",\n    \"client_id\": \"app-12345\",\n    \"client_secret\": \"secret-value\",\n    \"token_url\": \"https://auth.example.com/oauth/token\",\n    \"scopes\": [\"employees.write\"],\n    \"grant_type\": \"client_credentials\"\n  }\n}\n```",
+        "required": [
+          "organizationId",
+          "defaultAuth"
+        ],
+        "properties": {
+          "defaultAuth": {
+            "description": "Full auth configuration — passed directly to\n`ApiEngine::from_action_config()`.\n\nMust contain `\"auth_type\"` plus all fields required by the\nchosen strategy (bearer, oauth, oauth2)."
+          },
+          "organizationId": {
+            "type": "string",
+            "description": "Unique identifier for the organization (partition key)"
+          }
+        }
+      },
+      "PipelineConfig": {
+        "type": "object",
+        "description": "The pipeline config as stored in DynamoDB and exchanged via the API.\n\n```json\n{\n  \"name\": \"Acme Onboarding Pipeline\",\n  \"cron\": \"rate(1 hour)\",\n  \"organizationId\": \"acme-corp\",\n  \"customerCompanyId\": \"customer-123\",\n  \"lastEdited\": \"2026-02-09T12:00:00Z\",\n  \"pipeline\": { \"version\": \"1.0\", \"actions\": [...] }\n}\n```",
+        "required": [
+          "name",
+          "cron",
+          "organizationId",
+          "customerCompanyId",
+          "pipeline"
+        ],
+        "properties": {
+          "cron": {
+            "type": "string",
+            "description": "EventBridge-compatible schedule expression (cron or rate)"
+          },
+          "customerCompanyId": {
+            "type": "string",
+            "description": "Unique identifier for the customer company (sort key)"
+          },
+          "image": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional image/icon for the pipeline"
+          },
+          "lastEdited": {
+            "type": "string",
+            "description": "ISO 8601 timestamp of last edit — set by the server"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the pipeline"
+          },
+          "organizationId": {
+            "type": "string",
+            "description": "Unique identifier for the organization (partition key)"
+          },
+          "pipeline": {
+            "$ref": "#/components/schemas/Manifest",
+            "description": "The full ETL pipeline manifest (passed through to the ETL Lambda)"
+          }
+        }
+      },
+      "SettingsRequest": {
+        "type": "object",
+        "description": "Request body for `PUT /settings`.",
+        "required": [
+          "defaultAuth"
+        ],
+        "properties": {
+          "defaultAuth": {
+            "description": "Full auth configuration blob."
+          }
+        }
+      },
+      "StepValidation": {
+        "type": "object",
+        "description": "Result of validating a single step in the pipeline.",
+        "required": [
+          "action_id",
+          "action_type",
+          "columns_after"
+        ],
+        "properties": {
+          "action_id": {
+            "type": "string",
+            "description": "Action id from the manifest."
+          },
+          "action_type": {
+            "type": "string",
+            "description": "Action type (e.g. `csv_hris_connector`, `drop_column`)."
+          },
+          "columns_after": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Columns present *after* this step completes."
+          }
+        }
+      },
+      "ValidationResult": {
+        "type": "object",
+        "description": "Overall validation result for the entire pipeline.",
+        "required": [
+          "steps",
+          "final_columns"
+        ],
+        "properties": {
+          "final_columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Final column set after the last step."
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StepValidation"
+            },
+            "description": "Per-step column snapshots (in execution order)."
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Cognito JWT — the `custom:organizationId` claim is extracted by the Lambda authorizer and injected into the request context."
+      }
+    }
+  },
+  "security": [
+    {
+      "bearer": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "Login and token management"
+    },
+    {
+      "name": "Configuration",
+      "description": "Pipeline configuration CRUD operations"
+    },
+    {
+      "name": "Validation",
+      "description": "Dry-run pipeline validation"
+    },
+    {
+      "name": "Settings",
+      "description": "Organization settings management"
+    }
+  ]
+}

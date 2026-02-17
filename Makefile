@@ -56,6 +56,21 @@ apply:
 deploy: plan apply
 
 ##──────────────────────────────────────────────────────────────
+## OpenAPI spec — build the API binary and dump the spec to JSON
+##──────────────────────────────────────────────────────────────
+
+openapi:
+	@echo "▸ Building config-api…"
+	cargo build -p api
+	@echo "▸ Generating OpenAPI spec…"
+	./target/debug/config-api --openapi > openapi.json
+	@echo "✓ Wrote openapi.json"
+	@echo "▸ Generating TypeScript clients…"
+	cd onboard-you-frontend && pnpm openapi-ts
+	cd test/smoke-test && npx openapi-ts
+	@echo "✓ TypeScript clients generated"
+
+##──────────────────────────────────────────────────────────────
 ## Smoke tests — sync credentials from tofu output, then run
 ##──────────────────────────────────────────────────────────────
 
