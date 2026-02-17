@@ -65,9 +65,8 @@ impl OAuth2Repo {
         }
     }
 
-    pub fn from_action_config(value: &serde_json::Value) -> Result<Self> {
-        let config = OAuth2RepoConfig::from_json(value)?;
-        Ok(Self::new(config))
+    pub fn from_action_config(config: &OAuth2RepoConfig) -> Result<Self> {
+        Ok(Self::new(config.clone()))
     }
 
     /// Perform the token exchange with the authorization server.

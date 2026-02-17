@@ -5,7 +5,7 @@
 
 mod common;
 
-use onboard_you::{ActionConfig, ActionFactory, ActionType, RosterContext};
+use onboard_you::{ActionConfig, ActionConfigPayload, ActionFactory, ActionType, RosterContext};
 use onboard_you::capabilities::ingestion::engine::{
     WorkdayConfig, WorkdayResponseGroup,
     build_get_workers_envelope, parse_get_workers_response,
@@ -78,12 +78,12 @@ fn test_factory_creates_workday_connector() {
     let config = ActionConfig {
         id: "ingest_workday".into(),
         action_type: ActionType::WorkdayHrisConnector,
-        config: serde_json::json!({
+        config: ActionConfigPayload::WorkdayHrisConnector(serde_json::from_value(serde_json::json!({
             "tenant_url": "https://wd3-impl-services1.workday.com",
             "tenant_id": "integration_test_tenant",
             "username": "ISU_Integration",
             "password": "test_password"
-        }),
+        })).unwrap()),
     };
     let action = ActionFactory::create(&config).expect("factory should create workday connector");
     assert_eq!(action.id(), "workday_hris_connector");
@@ -94,7 +94,7 @@ fn test_factory_workday_with_full_config() {
     let config = ActionConfig {
         id: "ingest_workday_full".into(),
         action_type: ActionType::WorkdayHrisConnector,
-        config: serde_json::json!({
+        config: ActionConfigPayload::WorkdayHrisConnector(serde_json::from_value(serde_json::json!({
             "tenant_url": "https://wd5-impl-services1.workday.com",
             "tenant_id": "checkout_corp",
             "username": "ISU_Onboard",
@@ -107,7 +107,7 @@ fn test_factory_workday_with_full_config() {
                 "include_organizations": true,
                 "include_roles": true
             }
-        }),
+        })).unwrap()),
     };
     let action = ActionFactory::create(&config).expect("factory should create workday connector");
     assert_eq!(action.id(), "workday_hris_connector");
@@ -115,12 +115,10 @@ fn test_factory_workday_with_full_config() {
 
 #[test]
 fn test_factory_workday_missing_config() {
-    let config = ActionConfig {
-        id: "bad_workday".into(),
-        action_type: ActionType::WorkdayHrisConnector,
-        config: serde_json::json!({}),
-    };
-    let result = ActionFactory::create(&config);
+    // With typed configs, missing required fields are caught at deserialization
+    let result: std::result::Result<ActionConfig, _> = serde_json::from_str(
+        r#"{"id":"bad_workday","action_type":"workday_hris_connector","config":{}}"#,
+    );
     assert!(result.is_err(), "should fail with missing required fields");
 }
 
@@ -209,10 +207,10 @@ fn test_e2e_workday_pipeline_with_scd_type_2() {
     let scd_config = ActionConfig {
         id: "scd".into(),
         action_type: ActionType::ScdType2,
-        config: serde_json::json!({
+        config: ActionConfigPayload::ScdType2(serde_json::from_value(serde_json::json!({
             "entity_column": "employee_id",
             "date_column": "hire_date"
-        }),
+        })).unwrap()),
     };
     let scd_action = ActionFactory::create(&scd_config).expect("create scd_type_2");
     let result = scd_action.execute(ctx).expect("scd should execute on Workday data");
@@ -234,7 +232,7 @@ fn test_e2e_workday_pipeline_with_deduplication() {
     let dedup_config = ActionConfig {
         id: "dedup".into(),
         action_type: ActionType::IdentityDeduplicator,
-        config: serde_json::json!({ "columns": ["email"] }),
+        config: ActionConfigPayload::IdentityDeduplicator(serde_json::from_value(serde_json::json!({ "columns": ["email"] })).unwrap()),
     };
     let dedup_action = ActionFactory::create(&dedup_config).expect("create dedup");
     let result = dedup_action.execute(ctx).expect("dedup should succeed on Workday data");

@@ -29,9 +29,8 @@ impl OAuthRepo {
         Self { config }
     }
 
-    pub fn from_action_config(value: &serde_json::Value) -> Result<Self> {
-        let config = OAuthRepoConfig::from_json(value)?;
-        Ok(Self::new(config))
+    pub fn from_action_config(config: &OAuthRepoConfig) -> Result<Self> {
+        Ok(Self::new(config.clone()))
     }
 
     /// Build the OAuth 1.0a `Authorization` header value.

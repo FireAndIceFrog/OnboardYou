@@ -203,11 +203,26 @@ Every new capability action **must** follow this exact pattern:
 //! Brief description of what this action does
 
 use crate::domain::{OnboardingAction, RosterContext, Result};
+use serde::{Deserialize, Serialize};
 
 /// Config parsed from the manifest's `config` JSON object.
-#[derive(Debug, Clone)]
+/// Must derive both Serialize and Deserialize so it can be used as
+/// an `ActionConfigPayload` variant.
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MyActionConfig {
-    // fields with sensible defaults
+    // All required fields — serde handles structural validation
+    pub some_field: String,
+}
+
+impl MyActionConfig {
+    /// Validate semantic invariants (empty strings, value ranges, etc.).
+    /// Called by `from_action_config` at construction time.
+    pub fn validate(&self) -> Result<()> {
+        if self.some_field.is_empty() {
+            return Err(Error::ConfigurationError("some_field must not be empty".into()));
+        }
+        Ok(())
+    }
 }
 
 /// The action implementation.
@@ -217,10 +232,12 @@ pub struct MyAction {
 }
 
 impl MyAction {
-    /// Construct from the manifest's raw JSON config.
-    pub fn from_action_config(config: &serde_json::Value) -> Self {
-        // Parse config with defaults via serde or manual extraction
-        Self { config: MyActionConfig { /* ... */ } }
+    /// Construct from a typed config reference.
+    /// The config is already deserialized by the `ActionConfig` custom
+    /// `Deserialize` impl — this method only does semantic validation.
+    pub fn from_action_config(config: &MyActionConfig) -> Result<Self> {
+        config.validate()?;
+        Ok(Self { config: config.clone() })
     }
 }
 
@@ -243,7 +260,11 @@ mod tests {
 
     #[test]
     fn test_my_action_basic() {
-        // Use df![] macro for inline test DataFrames
+        // Deserialize config from JSON, then construct action
+        let cfg: MyActionConfig = serde_json::from_value(serde_json::json!({
+            "some_field": "value"
+        })).unwrap();
+        let action = MyAction::from_action_config(&cfg).unwrap();
         // Verify row count, column existence, specific values
         // Verify field_metadata provenance
     }
@@ -251,13 +272,15 @@ mod tests {
 ```
 
 **Checklist for adding a new action:**
-1. Create the implementation file in the appropriate `capabilities/{ingestion|logic|egress}/engine/` directory
-2. Add `pub mod my_action;` to the engine's `mod.rs`
-3. Add `pub use engine::MyAction;` to the capability's `mod.rs`
-4. Register the action in `orchestration/factory.rs` with a match arm
-5. Write unit tests in the same file (`#[cfg(test)]`)
-6. Write an integration test in `tests/` if the action interacts with external systems
-7. Update this standards document if the action introduces new patterns
+1. Create the config model in the appropriate `capabilities/{layer}/models/` directory with `Serialize + Deserialize`
+2. Create the implementation file in `capabilities/{layer}/engine/`
+3. Add `pub mod my_action;` to the engine's `mod.rs` and re-export through `mod.rs` chain
+4. Add a variant to `ActionConfigPayload` in `domain/engine/manifest.rs`
+5. Add the deserialization arm in `ActionConfig`'s custom `Deserialize` impl (same file)
+6. Register the action in `orchestration/factory.rs` with a match arm on `(ActionType, ActionConfigPayload)`
+7. Write unit tests in the same file (`#[cfg(test)]`)
+8. Write an integration test in `tests/` if the action interacts with external systems
+9. Update this standards document if the action introduces new patterns
 
 ### 3.5 Error Handling
 
@@ -301,10 +324,13 @@ let df = df! {
 
 ### 3.7 Serde Conventions
 
-- **Config structs** derive `Deserialize` (and `Serialize` if they need to be written back).
+- **Config structs** derive both `Serialize` and `Deserialize` so they can be used as `ActionConfigPayload` variants.
+- **`ActionConfig`** uses a custom `Deserialize` impl that reads `action_type` first, then deserializes the `config` JSON blob into the matching `ActionConfigPayload` variant. This is the single dispatch point for typed config deserialization.
+- **`ActionConfigPayload`** is a `#[serde(untagged)]` enum with `Serialize` only — deserialization is handled by the parent `ActionConfig`'s custom impl.
+- **`ApiDispatcherConfig`** has custom `Serialize`/`Deserialize` impls that flatten inner config fields + inject/read `auth_type` as a discriminator.
 - **Lambda API models** use `#[serde(rename_all = "camelCase")]` for JSON APIs.
 - **Internal manifest types** use `snake_case` (Rust default serde mapping).
-- Parsing from raw `serde_json::Value` is acceptable for action configs when you need custom defaults that `#[serde(default)]` doesn't easily express.
+- **Validation split:** Structural validation (required fields, types) is handled by serde's `Deserialize`. Semantic validation (empty strings, value ranges, regex compilation) is handled by `validate()` methods called from `from_action_config()`.
 
 ### 3.8 Logging & Tracing
 
@@ -522,13 +548,15 @@ These items are pending implementation. When picking up work, check this list:
 | Item | Status | Notes |
 |---|---|---|
 | `ETL/src/main.rs` Lambda entrypoint | Stub | Needs event deserialisation + mediator wiring |
-| `ApiDispatcher` (egress) | Stub | Returns context unchanged; needs HTTP dispatch |
+| `ApiDispatcher` (egress) | ✅ Typed config | `ApiDispatcherConfig` enum with Bearer/OAuth/OAuth2/Default variants; HTTP dispatch still stubbed |
 | `Observability` (egress) | Stub | Returns context unchanged; needs structured logging/RCA |
 | `DataValidator` / `validator.rs` | Not yet created | Mentioned in brief — in-stream regex/type validation |
-| `RenameColumn` + `DropColumn` factory registration | Missing | Engine implementations exist but not wired in `factory.rs` |
+| `RenameColumn` + `DropColumn` factory registration | ✅ Done | Wired in `factory.rs` with typed configs |
 | API Gateway auth | ✅ Done | Cognito USER_PASSWORD_AUTH + TOKEN authorizer (JWT) |
 | Smoke tests | ✅ Done | 9 tests (auth 2, config 5, settings 2) in `test/smoke-test/` |
 | Demo user provisioning | ✅ Done | `infra/modules/demo-user/` — rotates password every deploy |
+| Typed `ActionConfigPayload` | ✅ Done | All action configs are concrete typed structs; no `serde_json::Value` in pipeline |
+| ToSchema for OpenAPI | Pending | `#[schema(value_type = Object)]` hack on `ActionConfig.config` — needs proper `ToSchema` on all config types |
 | CI/CD pipeline | Not yet created | GitHub Actions for test + build + deploy |
 
 ---

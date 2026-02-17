@@ -10,6 +10,7 @@ use crate::capabilities::logic::traits::ColumnCalculator;
 use crate::domain::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 use std::path::PathBuf;
+use serde::{Deserialize, Serialize};
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -26,7 +27,7 @@ use std::path::PathBuf;
 /// | Field      | Type   | Required | Description                   |
 /// |------------|--------|----------|-------------------------------|
 /// | `csv_path` | string | **yes**  | Absolute path to the CSV file |
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CsvHrisConnectorConfig {
     pub csv_path: PathBuf,
 }
@@ -72,10 +73,9 @@ impl CsvHrisConnector {
         Self { config }
     }
 
-    /// Convenience constructor straight from manifest JSON.
-    pub fn from_action_config(value: &serde_json::Value) -> Result<Self> {
-        let config = CsvHrisConnectorConfig::from_json(value)?;
-        Ok(Self::new(config))
+    /// Construct from a deserialised config.
+    pub fn from_action_config(config: &CsvHrisConnectorConfig) -> Result<Self> {
+        Ok(Self::new(config.clone()))
     }
 }
 
@@ -296,7 +296,8 @@ employee_id,first_name,last_name,email,ssn,salary,start_date
     #[test]
     fn test_from_action_config() {
         let json = serde_json::json!({ "csv_path": "/tmp/data.csv" });
-        let connector = CsvHrisConnector::from_action_config(&json).unwrap();
+        let cfg: CsvHrisConnectorConfig = serde_json::from_value(json.clone()).unwrap();
+        let connector = CsvHrisConnector::from_action_config(&cfg).unwrap();
         assert_eq!(connector.config.csv_path, PathBuf::from("/tmp/data.csv"));
         assert_eq!(connector.id(), "csv_hris_connector");
     }

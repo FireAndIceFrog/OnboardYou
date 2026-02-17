@@ -4,6 +4,7 @@
 
 use aws_sdk_dynamodb::types::AttributeValue;
 use lambda_runtime::Error;
+use onboard_you::ApiDispatcherConfig;
 use serde::Deserialize;
 use serde_dynamo::aws_sdk_dynamodb_1 as dynamo_serde;
 
@@ -11,8 +12,8 @@ use serde_dynamo::aws_sdk_dynamodb_1 as dynamo_serde;
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StoredSettings {
-    /// Full auth configuration blob — passed directly to `ApiEngine::from_action_config`.
-    pub default_auth: serde_json::Value,
+    /// Full auth configuration — typed `ApiDispatcherConfig`.
+    pub default_auth: ApiDispatcherConfig,
 }
 
 /// Fetch organisation settings by organizationId.

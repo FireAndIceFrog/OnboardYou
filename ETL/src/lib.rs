@@ -22,5 +22,6 @@ pub mod domain;
 pub mod orchestration;
 
 pub use domain::{ActionConfig, ActionType, ColumnCalculator, Error, Manifest, OnboardingAction, Result, RosterContext};
+pub use domain::engine::manifest::ActionConfigPayload;
 pub use orchestration::{ActionFactory, PipelineRunner};
-pub use capabilities::egress::models::AuthType;
+pub use capabilities::egress::models::{AuthType, ApiDispatcherConfig};

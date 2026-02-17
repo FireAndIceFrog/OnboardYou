@@ -1,7 +1,7 @@
 //! Configuration model for the drop-column engine.
 
 use crate::domain::{Error, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 /// Configuration for the drop-column action.
@@ -17,7 +17,7 @@ use std::collections::HashSet;
 /// | Field     | Type          | Description                |
 /// |-----------|---------------|----------------------------|
 /// | `columns` | `[string]`    | List of column names to drop|
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DropConfig {
     /// List of column names to drop.
     pub columns: Vec<String>,

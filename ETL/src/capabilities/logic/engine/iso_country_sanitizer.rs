@@ -313,11 +313,10 @@ impl IsoCountrySanitizer {
         Self { config }
     }
 
-    /// Deserialise and construct from manifest JSON.
-    pub fn from_action_config(value: &serde_json::Value) -> Result<Self> {
-        let config: IsoCountrySanitizerConfig = serde_json::from_value(value.clone())?;
+    /// Construct from a deserialised config.
+    pub fn from_action_config(config: &IsoCountrySanitizerConfig) -> Result<Self> {
         config.validate()?;
-        Ok(Self::new(config))
+        Ok(Self { config: config.clone() })
     }
 }
 
@@ -451,12 +450,12 @@ mod tests {
 
     #[test]
     fn test_alpha2_output() {
-        let json = serde_json::json!({
+        let cfg: IsoCountrySanitizerConfig = serde_json::from_value(serde_json::json!({
             "source_column": "country_raw",
             "output_column": "country_code",
             "output_format": "alpha2"
-        });
-        let action = IsoCountrySanitizer::from_action_config(&json).expect("valid config");
+        })).unwrap();
+        let action = IsoCountrySanitizer::from_action_config(&cfg).expect("valid config");
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).expect("execute");
         let df = result.data.collect().expect("collect");
@@ -471,12 +470,12 @@ mod tests {
 
     #[test]
     fn test_alpha3_output() {
-        let json = serde_json::json!({
+        let cfg: IsoCountrySanitizerConfig = serde_json::from_value(serde_json::json!({
             "source_column": "country_raw",
             "output_column": "country_iso3",
             "output_format": "alpha3"
-        });
-        let action = IsoCountrySanitizer::from_action_config(&json).expect("valid config");
+        })).unwrap();
+        let action = IsoCountrySanitizer::from_action_config(&cfg).expect("valid config");
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).expect("execute");
         let df = result.data.collect().expect("collect");
@@ -491,12 +490,12 @@ mod tests {
 
     #[test]
     fn test_in_place_overwrite() {
-        let json = serde_json::json!({
+        let cfg: IsoCountrySanitizerConfig = serde_json::from_value(serde_json::json!({
             "source_column": "country_raw",
             "output_column": "country_raw",
             "output_format": "alpha2"
-        });
-        let action = IsoCountrySanitizer::from_action_config(&json).expect("valid config");
+        })).unwrap();
+        let action = IsoCountrySanitizer::from_action_config(&cfg).expect("valid config");
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).expect("execute");
         let df = result.data.collect().expect("collect");
@@ -513,12 +512,12 @@ mod tests {
         }
         .unwrap();
 
-        let json = serde_json::json!({
+        let cfg: IsoCountrySanitizerConfig = serde_json::from_value(serde_json::json!({
             "source_column": "c",
             "output_column": "iso",
             "output_format": "alpha2"
-        });
-        let action = IsoCountrySanitizer::from_action_config(&json).expect("valid config");
+        })).unwrap();
+        let action = IsoCountrySanitizer::from_action_config(&cfg).expect("valid config");
         let ctx = RosterContext::new(df.lazy());
         let result = action.execute(ctx).expect("execute");
         let df = result.data.collect().expect("collect");
@@ -532,42 +531,42 @@ mod tests {
 
     #[test]
     fn test_empty_source_column_rejected() {
-        let json = serde_json::json!({
+        let cfg: IsoCountrySanitizerConfig = serde_json::from_value(serde_json::json!({
             "source_column": "",
             "output_column": "out",
             "output_format": "alpha2"
-        });
-        assert!(IsoCountrySanitizer::from_action_config(&json).is_err());
+        })).unwrap();
+        assert!(IsoCountrySanitizer::from_action_config(&cfg).is_err());
     }
 
     #[test]
     fn test_empty_output_column_rejected() {
-        let json = serde_json::json!({
+        let cfg: IsoCountrySanitizerConfig = serde_json::from_value(serde_json::json!({
             "source_column": "in",
             "output_column": "",
             "output_format": "alpha2"
-        });
-        assert!(IsoCountrySanitizer::from_action_config(&json).is_err());
+        })).unwrap();
+        assert!(IsoCountrySanitizer::from_action_config(&cfg).is_err());
     }
 
     #[test]
     fn test_invalid_format_rejected() {
-        let json = serde_json::json!({
+        // Invalid enum value is now caught at deserialization
+        assert!(serde_json::from_value::<IsoCountrySanitizerConfig>(serde_json::json!({
             "source_column": "in",
             "output_column": "out",
             "output_format": "alpha4"
-        });
-        assert!(IsoCountrySanitizer::from_action_config(&json).is_err());
+        })).is_err());
     }
 
     #[test]
     fn test_missing_column_errors_on_collect() {
-        let json = serde_json::json!({
+        let cfg: IsoCountrySanitizerConfig = serde_json::from_value(serde_json::json!({
             "source_column": "nonexistent",
             "output_column": "out",
             "output_format": "alpha2"
-        });
-        let action = IsoCountrySanitizer::from_action_config(&json).expect("valid config");
+        })).unwrap();
+        let action = IsoCountrySanitizer::from_action_config(&cfg).expect("valid config");
         let ctx = RosterContext::new(sample_df().lazy());
         // With lazy execution the error is deferred until the LazyFrame is collected.
         let result = action.execute(ctx).expect("lazy execute succeeds");
@@ -576,12 +575,12 @@ mod tests {
 
     #[test]
     fn test_field_metadata_provenance() {
-        let json = serde_json::json!({
+        let cfg: IsoCountrySanitizerConfig = serde_json::from_value(serde_json::json!({
             "source_column": "country_raw",
             "output_column": "country_code",
             "output_format": "alpha2"
-        });
-        let action = IsoCountrySanitizer::from_action_config(&json).expect("valid config");
+        })).unwrap();
+        let action = IsoCountrySanitizer::from_action_config(&cfg).expect("valid config");
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).expect("execute");
         let meta = result
@@ -608,12 +607,12 @@ mod tests {
 
     #[test]
     fn test_from_action_config_deserialization() {
-        let json = serde_json::json!({
+        let cfg: IsoCountrySanitizerConfig = serde_json::from_value(serde_json::json!({
             "source_column": "src",
             "output_column": "dst",
             "output_format": "alpha3"
-        });
-        let action = IsoCountrySanitizer::from_action_config(&json).expect("valid");
+        })).unwrap();
+        let action = IsoCountrySanitizer::from_action_config(&cfg).expect("valid");
         assert_eq!(action.config.source_column, "src");
         assert_eq!(action.config.output_column, "dst");
         assert_eq!(action.config.output_format, CountryOutputFormat::Alpha3);

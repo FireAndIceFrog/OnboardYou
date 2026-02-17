@@ -1,9 +1,9 @@
 //! Simple retry configuration for outbound HTTP requests.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// Retry policy applied by the `ApiEngine` around `EgressRepository::send_data`.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RetryPolicy {
     pub max_attempts: u32,
     pub initial_backoff_ms: u64,

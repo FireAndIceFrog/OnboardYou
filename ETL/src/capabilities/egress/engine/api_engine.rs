@@ -20,7 +20,7 @@
 //!  EgressRepository impl (BearerRepo | OAuthRepo | OAuth2Repo)
 //! ```
 
-use crate::capabilities::egress::models::{AuthType, DispatchResponse, RetryPolicy};
+use crate::capabilities::egress::models::{ApiDispatcherConfig, DispatchResponse, RetryPolicy};
 use crate::capabilities::egress::repositories::bearer_repo::BearerRepo;
 use crate::capabilities::egress::repositories::oauth2_repo::OAuth2Repo;
 use crate::capabilities::egress::repositories::oauth_repo::OAuthRepo;
@@ -44,26 +44,21 @@ pub struct ApiEngine {
 }
 
 impl ApiEngine {
-    /// Build an `ApiEngine` from the raw manifest `ActionConfig.config` JSON.
+    /// Build an `ApiEngine` from a typed `ApiDispatcherConfig`.
     ///
-    /// Reads `"auth_type"` to select the right repository, then delegates
-    /// config parsing to that repo's `from_action_config`.
-    pub fn from_action_config(value: &serde_json::Value) -> Result<Self> {
-        let auth_type: AuthType = value
-            .get("auth_type")
-            .map(|v| serde_json::from_value(v.clone()))
-            .unwrap_or(Ok(AuthType::Bearer))
-            .map_err(|e| {
-                Error::ConfigurationError(format!(
-                    "Invalid auth_type: {e}. Expected: bearer | api_key | none | oauth | oauth1 | oauth2 | oidc | openid"
-                ))
-            })?;
-
-        let repo: Box<dyn EgressRepository> = match auth_type {
-            AuthType::Bearer => Box::new(BearerRepo::from_action_config(value)?),
-            AuthType::OAuth => Box::new(OAuthRepo::from_action_config(value)?),
-            AuthType::OAuth2 => Box::new(OAuth2Repo::from_action_config(value)?),
-            AuthType::Default => {
+    /// The config's variant selects the right repository implementation.
+    pub fn from_action_config(config: &ApiDispatcherConfig) -> Result<Self> {
+        let repo: Box<dyn EgressRepository> = match config {
+            ApiDispatcherConfig::Bearer(cfg) => {
+                Box::new(BearerRepo::from_action_config(cfg)?)
+            }
+            ApiDispatcherConfig::OAuth(cfg) => {
+                Box::new(OAuthRepo::from_action_config(cfg)?)
+            }
+            ApiDispatcherConfig::OAuth2(cfg) => {
+                Box::new(OAuth2Repo::from_action_config(cfg)?)
+            }
+            ApiDispatcherConfig::Default => {
                 return Err(Error::ConfigurationError(
                     "auth_type 'default' must be resolved to a concrete auth config \
                      before ApiEngine construction. The ETL trigger should replace \
@@ -161,6 +156,7 @@ impl ApiEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::capabilities::egress::models::AuthType;
 
     #[test]
     fn test_auth_type_serde_parsing() {
@@ -191,7 +187,8 @@ mod tests {
             "token": "sk-live-abc123"
         });
 
-        let engine = ApiEngine::from_action_config(&json);
+        let cfg: ApiDispatcherConfig = serde_json::from_value(json).unwrap();
+        let engine = ApiEngine::from_action_config(&cfg);
         assert!(engine.is_ok());
     }
 
@@ -207,7 +204,8 @@ mod tests {
             "grant_type": "client_credentials"
         });
 
-        let engine = ApiEngine::from_action_config(&json);
+        let cfg: ApiDispatcherConfig = serde_json::from_value(json).unwrap();
+        let engine = ApiEngine::from_action_config(&cfg);
         assert!(engine.is_ok());
     }
 
@@ -221,12 +219,8 @@ mod tests {
 
     #[test]
     fn test_engine_rejects_unresolved_default_auth() {
-        let json = serde_json::json!({
-            "auth_type": "default",
-            "destination_url": "https://api.example.com/employees"
-        });
-
-        let result = ApiEngine::from_action_config(&json);
+        let cfg = ApiDispatcherConfig::Default;
+        let result = ApiEngine::from_action_config(&cfg);
         assert!(result.is_err());
         let err_msg = format!("{}", result.err().unwrap());
         assert!(err_msg.contains("default"));

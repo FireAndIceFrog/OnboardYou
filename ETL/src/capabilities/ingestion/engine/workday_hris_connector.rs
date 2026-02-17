@@ -518,10 +518,9 @@ impl WorkdayHrisConnector {
         Self { config, client }
     }
 
-    /// Convenience constructor from raw manifest JSON.
-    pub fn from_action_config(value: &serde_json::Value) -> Result<Self> {
-        let config = WorkdayConfig::from_json(value)?;
-        Ok(Self::new(config))
+    /// Construct from a deserialised config.
+    pub fn from_action_config(config: &WorkdayConfig) -> Result<Self> {
+        Ok(Self::new(config.clone()))
     }
 
     /// Fetch workers from Workday, paging through all results via
@@ -1101,7 +1100,8 @@ mod tests {
             "username": "ISU_User",
             "password": "pass123"
         });
-        let connector = WorkdayHrisConnector::from_action_config(&json).unwrap();
+        let cfg: WorkdayConfig = serde_json::from_value(json.clone()).unwrap();
+        let connector = WorkdayHrisConnector::from_action_config(&cfg).unwrap();
         assert_eq!(connector.id(), "workday_hris_connector");
         assert_eq!(connector.config.tenant_id, "my_tenant");
     }

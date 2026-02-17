@@ -9,6 +9,7 @@
 //! internals are async — bridged via `tokio::runtime::Handle::block_on`.
 
 use crate::capabilities::egress::engine::api_engine::ApiEngine;
+use crate::capabilities::egress::models::ApiDispatcherConfig;
 use crate::capabilities::logic::traits::ColumnCalculator;
 use crate::domain::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
@@ -36,9 +37,9 @@ impl ApiDispatcher {
         }
     }
 
-    /// Build the engine from manifest config JSON.
-    pub fn from_action_config(value: &serde_json::Value) -> Result<Self> {
-        let engine = ApiEngine::from_action_config(value)?;
+    /// Build the engine from a typed `ApiDispatcherConfig`.
+    pub fn from_action_config(config: &ApiDispatcherConfig) -> Result<Self> {
+        let engine = ApiEngine::from_action_config(config)?;
         Ok(Self {
             engine: Some(engine),
         })
@@ -197,13 +198,13 @@ mod tests {
 
     #[test]
     fn test_api_dispatcher_from_config() {
-        let json = serde_json::json!({
+        let cfg: ApiDispatcherConfig = serde_json::from_value(serde_json::json!({
             "auth_type": "bearer",
             "destination_url": "https://api.example.com/employees",
             "token": "test-token"
-        });
+        })).unwrap();
 
-        let dispatcher = ApiDispatcher::from_action_config(&json);
+        let dispatcher = ApiDispatcher::from_action_config(&cfg);
         assert!(dispatcher.is_ok());
         assert_eq!(dispatcher.unwrap().id(), "api_dispatcher");
     }

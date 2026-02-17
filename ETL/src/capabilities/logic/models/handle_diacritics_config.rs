@@ -1,6 +1,6 @@
 //! Configuration model for the handle-diacritics engine.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// Configuration for the handle-diacritics action.
 ///
@@ -8,7 +8,7 @@ use serde::Deserialize;
 /// |-----------------|-----------|-----------|------------------------------------------------------|
 /// | `columns`       | [string]  | `[]`      | Columns to transliterate                             |
 /// | `output_suffix` | string?   | `null`    | Suffix for output columns; null = in-place replace   |
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(default)]
 pub struct HandleDiacriticsConfig {
     pub columns: Vec<String>,

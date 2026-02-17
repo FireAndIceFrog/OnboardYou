@@ -34,11 +34,10 @@ impl RenameColumn {
         Self { config }
     }
 
-    /// Deserialise and construct from manifest JSON.
-    pub fn from_action_config(value: &serde_json::Value) -> Result<Self> {
-        let config: RenameConfig = serde_json::from_value(value.clone())?;
+    /// Construct from a deserialised config.
+    pub fn from_action_config(config: &RenameConfig) -> Result<Self> {
         config.validate()?;
-        Ok(Self::new(config))
+        Ok(Self::new(config.clone()))
     }
 }
 
@@ -113,7 +112,8 @@ mod tests {
         let json = serde_json::json!({
             "mapping": { "first_name": "given_name", "last_name": "surname" }
         });
-        let action = RenameColumn::from_action_config(&json).expect("valid config");
+        let cfg: RenameConfig = serde_json::from_value(json.clone()).expect("deserialise");
+        let action = RenameColumn::from_action_config(&cfg).expect("valid config");
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).expect("execute");
         let df = result.data.collect().expect("collect");
@@ -126,18 +126,16 @@ mod tests {
 
     #[test]
     fn test_duplicate_targets_rejected_at_construction() {
-        let json = serde_json::json!({
+        let cfg: RenameConfig = serde_json::from_value(serde_json::json!({
             "mapping": { "first_name": "name", "last_name": "name" }
-        });
-        let res = RenameColumn::from_action_config(&json);
-        assert!(res.is_err());
+        })).unwrap();
+        assert!(RenameColumn::from_action_config(&cfg).is_err());
     }
 
     #[test]
     fn test_missing_mapping_key_rejected() {
         let json = serde_json::json!({ "first_name": "given_name" });
-        let res = RenameColumn::from_action_config(&json);
-        assert!(res.is_err(), "should fail without a 'mapping' key");
+        assert!(serde_json::from_value::<RenameConfig>(json.clone()).is_err());
     }
 
     #[test]
@@ -145,7 +143,8 @@ mod tests {
         let json = serde_json::json!({
             "mapping": { "first_name": "given_name" }
         });
-        let action = RenameColumn::from_action_config(&json).expect("valid config");
+        let cfg: RenameConfig = serde_json::from_value(json.clone()).expect("deserialise");
+        let action = RenameColumn::from_action_config(&cfg).expect("valid config");
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).expect("execute");
 

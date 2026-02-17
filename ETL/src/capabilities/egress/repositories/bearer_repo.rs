@@ -24,9 +24,8 @@ impl BearerRepo {
         Self { config }
     }
 
-    pub fn from_action_config(value: &serde_json::Value) -> Result<Self> {
-        let config = BearerRepoConfig::from_json(value)?;
-        Ok(Self::new(config))
+    pub fn from_action_config(config: &BearerRepoConfig) -> Result<Self> {
+        Ok(Self::new(config.clone()))
     }
 }
 

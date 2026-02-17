@@ -329,11 +329,10 @@ impl CellphoneSanitizer {
         Self { config }
     }
 
-    /// Deserialise and construct from manifest JSON.
-    pub fn from_action_config(value: &serde_json::Value) -> Result<Self> {
-        let config: CellphoneSanitizerConfig = serde_json::from_value(value.clone())?;
+    /// Construct from a deserialised config.
+    pub fn from_action_config(config: &CellphoneSanitizerConfig) -> Result<Self> {
         config.validate()?;
-        Ok(Self::new(config))
+        Ok(Self::new(config.clone()))
     }
 }
 
@@ -553,12 +552,12 @@ mod tests {
 
     #[test]
     fn test_full_execute() {
-        let json = serde_json::json!({
+        let cfg: CellphoneSanitizerConfig = serde_json::from_value(serde_json::json!({
             "phone_column": "mobile_phone",
             "country_columns": ["work_country", "home_country"],
             "output_column": "phone_intl"
-        });
-        let action = CellphoneSanitizer::from_action_config(&json).expect("valid config");
+        })).unwrap();
+        let action = CellphoneSanitizer::from_action_config(&cfg).expect("valid config");
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).expect("execute");
         let df = result.data.collect().expect("collect");
@@ -581,12 +580,12 @@ mod tests {
 
     #[test]
     fn test_in_place_overwrite() {
-        let json = serde_json::json!({
+        let cfg: CellphoneSanitizerConfig = serde_json::from_value(serde_json::json!({
             "phone_column": "mobile_phone",
             "country_columns": ["work_country"],
             "output_column": "mobile_phone"
-        });
-        let action = CellphoneSanitizer::from_action_config(&json).expect("valid config");
+        })).unwrap();
+        let action = CellphoneSanitizer::from_action_config(&cfg).expect("valid config");
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).expect("execute");
         let df = result.data.collect().expect("collect");
@@ -605,12 +604,12 @@ mod tests {
         }
         .unwrap();
 
-        let json = serde_json::json!({
+        let cfg: CellphoneSanitizerConfig = serde_json::from_value(serde_json::json!({
             "phone_column": "phone",
             "country_columns": ["primary", "fallback"],
             "output_column": "phone_intl"
-        });
-        let action = CellphoneSanitizer::from_action_config(&json).expect("valid config");
+        })).unwrap();
+        let action = CellphoneSanitizer::from_action_config(&cfg).expect("valid config");
         let ctx = RosterContext::new(df.lazy());
         let result = action.execute(ctx).expect("execute");
         let collected = result.data.collect().expect("collect");
@@ -627,12 +626,12 @@ mod tests {
         }
         .unwrap();
 
-        let json = serde_json::json!({
+        let cfg: CellphoneSanitizerConfig = serde_json::from_value(serde_json::json!({
             "phone_column": "phone",
             "country_columns": ["country"],
             "output_column": "phone_intl"
-        });
-        let action = CellphoneSanitizer::from_action_config(&json).expect("valid config");
+        })).unwrap();
+        let action = CellphoneSanitizer::from_action_config(&cfg).expect("valid config");
         let ctx = RosterContext::new(df.lazy());
         let result = action.execute(ctx).expect("execute");
         let collected = result.data.collect().expect("collect");
@@ -645,42 +644,42 @@ mod tests {
 
     #[test]
     fn test_empty_phone_column_rejected() {
-        let json = serde_json::json!({
+        let cfg: CellphoneSanitizerConfig = serde_json::from_value(serde_json::json!({
             "phone_column": "",
             "country_columns": ["c"],
             "output_column": "out"
-        });
-        assert!(CellphoneSanitizer::from_action_config(&json).is_err());
+        })).unwrap();
+        assert!(CellphoneSanitizer::from_action_config(&cfg).is_err());
     }
 
     #[test]
     fn test_empty_country_columns_rejected() {
-        let json = serde_json::json!({
+        let cfg: CellphoneSanitizerConfig = serde_json::from_value(serde_json::json!({
             "phone_column": "phone",
             "country_columns": [],
             "output_column": "out"
-        });
-        assert!(CellphoneSanitizer::from_action_config(&json).is_err());
+        })).unwrap();
+        assert!(CellphoneSanitizer::from_action_config(&cfg).is_err());
     }
 
     #[test]
     fn test_empty_output_column_rejected() {
-        let json = serde_json::json!({
+        let cfg: CellphoneSanitizerConfig = serde_json::from_value(serde_json::json!({
             "phone_column": "phone",
             "country_columns": ["c"],
             "output_column": ""
-        });
-        assert!(CellphoneSanitizer::from_action_config(&json).is_err());
+        })).unwrap();
+        assert!(CellphoneSanitizer::from_action_config(&cfg).is_err());
     }
 
     #[test]
     fn test_field_metadata_provenance() {
-        let json = serde_json::json!({
+        let cfg: CellphoneSanitizerConfig = serde_json::from_value(serde_json::json!({
             "phone_column": "mobile_phone",
             "country_columns": ["work_country"],
             "output_column": "phone_intl"
-        });
-        let action = CellphoneSanitizer::from_action_config(&json).expect("valid config");
+        })).unwrap();
+        let action = CellphoneSanitizer::from_action_config(&cfg).expect("valid config");
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).expect("execute");
         let meta = result
@@ -692,12 +691,12 @@ mod tests {
 
     #[test]
     fn test_from_action_config_deserialization() {
-        let json = serde_json::json!({
+        let cfg: CellphoneSanitizerConfig = serde_json::from_value(serde_json::json!({
             "phone_column": "ph",
             "country_columns": ["c1", "c2"],
             "output_column": "out"
-        });
-        let action = CellphoneSanitizer::from_action_config(&json).expect("valid");
+        })).unwrap();
+        let action = CellphoneSanitizer::from_action_config(&cfg).expect("valid");
         assert_eq!(action.config.phone_column, "ph");
         assert_eq!(action.config.country_columns, vec!["c1", "c2"]);
         assert_eq!(action.config.output_column, "out");
@@ -712,12 +711,12 @@ mod tests {
         }
         .unwrap();
 
-        let json = serde_json::json!({
+        let cfg: CellphoneSanitizerConfig = serde_json::from_value(serde_json::json!({
             "phone_column": "phone",
             "country_columns": ["country"],
             "output_column": "phone_intl"
-        });
-        let action = CellphoneSanitizer::from_action_config(&json).expect("valid config");
+        })).unwrap();
+        let action = CellphoneSanitizer::from_action_config(&cfg).expect("valid config");
         let ctx = RosterContext::new(df.lazy());
         let result = action.execute(ctx).expect("execute");
         let collected = result.data.collect().expect("collect");

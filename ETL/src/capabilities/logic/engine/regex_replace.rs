@@ -57,10 +57,9 @@ impl RegexReplace {
     }
 
     /// Deserialise and construct from manifest JSON.
-    pub fn from_action_config(value: &serde_json::Value) -> Result<Self> {
-        let config: RegexReplaceConfig = serde_json::from_value(value.clone())?;
+    pub fn from_action_config(config: &RegexReplaceConfig) -> Result<Self> {
         let regex = config.validate()?;
-        Ok(Self::new(config, regex))
+        Ok(Self { config: config.clone(), regex })
     }
 
     /// Apply the replacement to a single string value.
@@ -158,23 +157,23 @@ mod tests {
 
     #[test]
     fn test_id() {
-        let json = serde_json::json!({
+        let cfg: RegexReplaceConfig = serde_json::from_value(serde_json::json!({
             "column": "phone",
             "pattern": "x",
             "replacement": "y"
-        });
-        let action = RegexReplace::from_action_config(&json).unwrap();
+        })).unwrap();
+        let action = RegexReplace::from_action_config(&cfg).unwrap();
         assert_eq!(action.id(), "regex_replace");
     }
 
     #[test]
     fn test_basic_replacement() {
-        let json = serde_json::json!({
+        let cfg: RegexReplaceConfig = serde_json::from_value(serde_json::json!({
             "column": "phone",
             "pattern": "\\+44\\s?",
             "replacement": "0"
-        });
-        let action = RegexReplace::from_action_config(&json).unwrap();
+        })).unwrap();
+        let action = RegexReplace::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).unwrap();
         let df = result.data.collect().unwrap();
@@ -190,12 +189,12 @@ mod tests {
     fn test_single_capture_group() {
         // Extract area from postcode: replace the whole match keeping area code
         // Pattern with one capture group is allowed
-        let json = serde_json::json!({
+        let cfg: RegexReplaceConfig = serde_json::from_value(serde_json::json!({
             "column": "postcode",
             "pattern": "\\s+[0-9][A-Z]{2}$",
             "replacement": ""
-        });
-        let action = RegexReplace::from_action_config(&json).unwrap();
+        })).unwrap();
+        let action = RegexReplace::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).unwrap();
         let df = result.data.collect().unwrap();
@@ -212,12 +211,12 @@ mod tests {
             "val" => &["aaa"],
         }
         .unwrap();
-        let json = serde_json::json!({
+        let cfg: RegexReplaceConfig = serde_json::from_value(serde_json::json!({
             "column": "val",
             "pattern": "a",
             "replacement": "X"
-        });
-        let action = RegexReplace::from_action_config(&json).unwrap();
+        })).unwrap();
+        let action = RegexReplace::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(df.lazy());
         let result = action.execute(ctx).unwrap();
         let collected = result.data.collect().unwrap();
@@ -228,12 +227,12 @@ mod tests {
 
     #[test]
     fn test_no_match_leaves_value_unchanged() {
-        let json = serde_json::json!({
+        let cfg: RegexReplaceConfig = serde_json::from_value(serde_json::json!({
             "column": "phone",
             "pattern": "NOMATCH",
             "replacement": "X"
-        });
-        let action = RegexReplace::from_action_config(&json).unwrap();
+        })).unwrap();
+        let action = RegexReplace::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).unwrap();
         let df = result.data.collect().unwrap();
@@ -243,12 +242,12 @@ mod tests {
 
     #[test]
     fn test_field_metadata_provenance() {
-        let json = serde_json::json!({
+        let cfg: RegexReplaceConfig = serde_json::from_value(serde_json::json!({
             "column": "phone",
             "pattern": "\\+44",
             "replacement": "0"
-        });
-        let action = RegexReplace::from_action_config(&json).unwrap();
+        })).unwrap();
+        let action = RegexReplace::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).unwrap();
 
@@ -263,49 +262,49 @@ mod tests {
 
     #[test]
     fn test_missing_column_field() {
-        let json = serde_json::json!({
+        // Missing required 'column' field is now caught at deserialization
+        assert!(serde_json::from_value::<RegexReplaceConfig>(serde_json::json!({
             "pattern": "x",
             "replacement": "y"
-        });
-        assert!(RegexReplace::from_action_config(&json).is_err());
+        })).is_err());
     }
 
     #[test]
     fn test_missing_pattern_field() {
-        let json = serde_json::json!({
+        // Missing required 'pattern' field is now caught at deserialization
+        assert!(serde_json::from_value::<RegexReplaceConfig>(serde_json::json!({
             "column": "phone",
             "replacement": "y"
-        });
-        assert!(RegexReplace::from_action_config(&json).is_err());
+        })).is_err());
     }
 
     #[test]
     fn test_missing_replacement_field() {
-        let json = serde_json::json!({
+        // Missing required 'replacement' field is now caught at deserialization
+        assert!(serde_json::from_value::<RegexReplaceConfig>(serde_json::json!({
             "column": "phone",
             "pattern": "x"
-        });
-        assert!(RegexReplace::from_action_config(&json).is_err());
+        })).is_err());
     }
 
     #[test]
     fn test_empty_pattern_rejected() {
-        let json = serde_json::json!({
+        let cfg: RegexReplaceConfig = serde_json::from_value(serde_json::json!({
             "column": "phone",
             "pattern": "",
             "replacement": "y"
-        });
-        assert!(RegexReplace::from_action_config(&json).is_err());
+        })).unwrap();
+        assert!(RegexReplace::from_action_config(&cfg).is_err());
     }
 
     #[test]
     fn test_empty_column_rejected() {
-        let json = serde_json::json!({
+        let cfg: RegexReplaceConfig = serde_json::from_value(serde_json::json!({
             "column": "",
             "pattern": "x",
             "replacement": "y"
-        });
-        assert!(RegexReplace::from_action_config(&json).is_err());
+        })).unwrap();
+        assert!(RegexReplace::from_action_config(&cfg).is_err());
     }
 
     // -----------------------------------------------------------------------
@@ -315,12 +314,12 @@ mod tests {
     #[test]
     fn test_pattern_length_limit() {
         let long_pattern = "a".repeat(MAX_PATTERN_LEN + 1);
-        let json = serde_json::json!({
+        let cfg: RegexReplaceConfig = serde_json::from_value(serde_json::json!({
             "column": "phone",
             "pattern": long_pattern,
             "replacement": "x"
-        });
-        let result = RegexReplace::from_action_config(&json);
+        })).unwrap();
+        let result = RegexReplace::from_action_config(&cfg);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("pattern length"), "unexpected error: {err}");
@@ -329,12 +328,12 @@ mod tests {
     #[test]
     fn test_replacement_length_limit() {
         let long_replacement = "x".repeat(MAX_REPLACEMENT_LEN + 1);
-        let json = serde_json::json!({
+        let cfg: RegexReplaceConfig = serde_json::from_value(serde_json::json!({
             "column": "phone",
             "pattern": "a",
             "replacement": long_replacement
-        });
-        let result = RegexReplace::from_action_config(&json);
+        })).unwrap();
+        let result = RegexReplace::from_action_config(&cfg);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("replacement length"), "unexpected error: {err}");
@@ -343,12 +342,12 @@ mod tests {
     #[test]
     fn test_excessive_nesting_rejected() {
         // Depth 4 — exceeds MAX_NESTING_DEPTH of 3
-        let json = serde_json::json!({
+        let cfg: RegexReplaceConfig = serde_json::from_value(serde_json::json!({
             "column": "phone",
             "pattern": "((((a))))",
             "replacement": "x"
-        });
-        let result = RegexReplace::from_action_config(&json);
+        })).unwrap();
+        let result = RegexReplace::from_action_config(&cfg);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("nesting depth"), "unexpected error: {err}");
@@ -356,12 +355,12 @@ mod tests {
 
     #[test]
     fn test_multiple_capture_groups_rejected() {
-        let json = serde_json::json!({
+        let cfg: RegexReplaceConfig = serde_json::from_value(serde_json::json!({
             "column": "phone",
             "pattern": "(a)(b)",
             "replacement": "x"
-        });
-        let result = RegexReplace::from_action_config(&json);
+        })).unwrap();
+        let result = RegexReplace::from_action_config(&cfg);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("capture group"), "unexpected error: {err}");
@@ -370,12 +369,12 @@ mod tests {
     #[test]
     fn test_non_capturing_groups_allowed() {
         // (?:...) groups do not count towards the capture limit
-        let json = serde_json::json!({
+        let cfg: RegexReplaceConfig = serde_json::from_value(serde_json::json!({
             "column": "phone",
             "pattern": "(?:a)(?:b)(?:c)",
             "replacement": "x"
-        });
-        assert!(RegexReplace::from_action_config(&json).is_ok());
+        })).unwrap();
+        assert!(RegexReplace::from_action_config(&cfg).is_ok());
     }
 
     #[test]
@@ -385,12 +384,12 @@ mod tests {
             "val" => &["hello world"],
         }
         .unwrap();
-        let json = serde_json::json!({
+        let cfg: RegexReplaceConfig = serde_json::from_value(serde_json::json!({
             "column": "val",
             "pattern": "(hello)",
             "replacement": "$1_expanded"
-        });
-        let action = RegexReplace::from_action_config(&json).unwrap();
+        })).unwrap();
+        let action = RegexReplace::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(df.lazy());
         let result = action.execute(ctx).unwrap();
         let collected = result.data.collect().unwrap();
@@ -401,12 +400,12 @@ mod tests {
 
     #[test]
     fn test_invalid_regex_rejected() {
-        let json = serde_json::json!({
+        let cfg: RegexReplaceConfig = serde_json::from_value(serde_json::json!({
             "column": "phone",
             "pattern": "[invalid",
             "replacement": "x"
-        });
-        let result = RegexReplace::from_action_config(&json);
+        })).unwrap();
+        let result = RegexReplace::from_action_config(&cfg);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("invalid pattern"), "unexpected error: {err}");
@@ -414,12 +413,12 @@ mod tests {
 
     #[test]
     fn test_missing_column_at_runtime() {
-        let json = serde_json::json!({
+        let cfg: RegexReplaceConfig = serde_json::from_value(serde_json::json!({
             "column": "nonexistent",
             "pattern": "a",
             "replacement": "b"
-        });
-        let action = RegexReplace::from_action_config(&json).unwrap();
+        })).unwrap();
+        let action = RegexReplace::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx);
         assert!(result.is_err());
@@ -435,12 +434,12 @@ mod tests {
     fn test_null_values_preserved() {
         let s = Series::new("val".into(), &[Some("abc"), None, Some("def")]);
         let df = DataFrame::new_infer_height(vec![s.into()]).unwrap();
-        let json = serde_json::json!({
+        let cfg: RegexReplaceConfig = serde_json::from_value(serde_json::json!({
             "column": "val",
             "pattern": "b",
             "replacement": "X"
-        });
-        let action = RegexReplace::from_action_config(&json).unwrap();
+        })).unwrap();
+        let action = RegexReplace::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(df.lazy());
         let result = action.execute(ctx).unwrap();
         let collected = result.data.collect().unwrap();
@@ -456,12 +455,12 @@ mod tests {
             "val" => &["", "abc", ""],
         }
         .unwrap();
-        let json = serde_json::json!({
+        let cfg: RegexReplaceConfig = serde_json::from_value(serde_json::json!({
             "column": "val",
             "pattern": "a",
             "replacement": "X"
-        });
-        let action = RegexReplace::from_action_config(&json).unwrap();
+        })).unwrap();
+        let action = RegexReplace::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(df.lazy());
         let result = action.execute(ctx).unwrap();
         let collected = result.data.collect().unwrap();

@@ -1,13 +1,13 @@
 //! Configuration model for the bearer / API-key egress strategy.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// How the credential is attached to outbound requests.
 ///
 /// This is a pure discriminator — the actual header name or query-param key
 /// lives in [`BearerRepoConfig::placement_key`].
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum BearerPlacement {
     /// Standard `Authorization: Bearer <token>` header.
@@ -36,7 +36,7 @@ impl Default for BearerPlacement {
 ///     "placement": "authorization_header"
 /// }
 /// ```
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BearerRepoConfig {
     /// Destination endpoint URL.
     pub destination_url: String,

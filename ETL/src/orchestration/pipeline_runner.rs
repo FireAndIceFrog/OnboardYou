@@ -31,7 +31,7 @@ impl PipelineRunner {
 mod tests {
     use super::*;
     use crate::capabilities::logic::traits::ColumnCalculator;
-    use crate::domain::engine::manifest::ActionConfig;
+    use crate::domain::engine::manifest::{ActionConfig, ActionConfigPayload};
     use crate::domain::ActionType;
     use polars::prelude::*;
 
@@ -69,7 +69,7 @@ mod tests {
             actions: vec![ActionConfig {
                 id: "noop".into(),
                 action_type: ActionType::CsvHrisConnector, // type doesn't matter, action is pre-built
-                config: serde_json::json!({}),
+                config: ActionConfigPayload::CsvHrisConnector(serde_json::from_value(serde_json::json!({"csv_path": "/dev/null"})).unwrap()),
             }],
         };
         let ctx = RosterContext::new(LazyFrame::default());

@@ -5,7 +5,7 @@
 //! and injects them into the action config before factory construction.
 
 use lambda_runtime::Error;
-use onboard_you::{ActionFactory, Manifest, PipelineRunner, RosterContext};
+use onboard_you::{ActionFactory, ActionConfigPayload, Manifest, PipelineRunner, RosterContext};
 use polars::prelude::LazyFrame;
 
 use crate::models::PipelineResult;
@@ -55,7 +55,7 @@ pub async fn run(
     }
 }
 
-/// Scan the manifest for actions with `auth_type: "default"` and replace
+/// Scan the manifest for actions with `ApiDispatcher(Default)` and replace
 /// their config with the organisation's stored default auth settings.
 ///
 /// The settings lookup is lazy — only performed if at least one action
@@ -68,11 +68,10 @@ async fn resolve_default_auth(
 ) -> Result<(), Error> {
     // Quick scan: does any action use "default"?
     let needs_resolution = manifest.actions.iter().any(|ac| {
-        ac.config
-            .get("auth_type")
-            .and_then(|v| v.as_str())
-            .map(|s| s == "default")
-            .unwrap_or(false)
+        matches!(
+            ac.config,
+            ActionConfigPayload::ApiDispatcher(ref cfg) if cfg.is_default()
+        )
     });
 
     if !needs_resolution {
@@ -92,12 +91,10 @@ async fn resolve_default_auth(
 
     // Replace config for every action that uses "default"
     for action in &mut manifest.actions {
-        let is_default = action
-            .config
-            .get("auth_type")
-            .and_then(|v| v.as_str())
-            .map(|s| s == "default")
-            .unwrap_or(false);
+        let is_default = matches!(
+            action.config,
+            ActionConfigPayload::ApiDispatcher(ref cfg) if cfg.is_default()
+        );
 
         if is_default {
             tracing::info!(
@@ -105,7 +102,7 @@ async fn resolve_default_auth(
                 action_type = %action.action_type,
                 "Replacing auth_type 'default' with org settings"
             );
-            action.config = settings.default_auth.clone();
+            action.config = ActionConfigPayload::ApiDispatcher(settings.default_auth.clone());
         }
     }
 

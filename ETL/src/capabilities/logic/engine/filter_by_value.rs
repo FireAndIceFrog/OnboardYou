@@ -52,11 +52,10 @@ impl FilterByValue {
         Self { config, regex }
     }
 
-    /// Deserialise and construct from manifest JSON.
-    pub fn from_action_config(value: &serde_json::Value) -> Result<Self> {
-        let config: FilterByValueConfig = serde_json::from_value(value.clone())?;
+    /// Construct from a deserialised config.
+    pub fn from_action_config(config: &FilterByValueConfig) -> Result<Self> {
         let regex = config.validate()?;
-        Ok(Self::new(config, regex))
+        Ok(Self::new(config.clone(), regex))
     }
 
     /// Test whether a single value matches the filter pattern.
@@ -151,11 +150,11 @@ mod tests {
 
     #[test]
     fn test_id() {
-        let json = serde_json::json!({
+        let cfg: FilterByValueConfig = serde_json::from_value(serde_json::json!({
             "column": "department",
             "pattern": "Engineering"
-        });
-        let action = FilterByValue::from_action_config(&json).unwrap();
+        })).unwrap();
+        let action = FilterByValue::from_action_config(&cfg).unwrap();
         assert_eq!(action.id(), "filter_by_value");
     }
 
@@ -165,11 +164,11 @@ mod tests {
 
     #[test]
     fn test_basic_filter() {
-        let json = serde_json::json!({
+        let cfg: FilterByValueConfig = serde_json::from_value(serde_json::json!({
             "column": "department",
             "pattern": "^Engineering$"
-        });
-        let action = FilterByValue::from_action_config(&json).unwrap();
+        })).unwrap();
+        let action = FilterByValue::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).unwrap();
         let df = result.data.collect().unwrap();
@@ -186,11 +185,11 @@ mod tests {
 
     #[test]
     fn test_partial_match_filter() {
-        let json = serde_json::json!({
+        let cfg: FilterByValueConfig = serde_json::from_value(serde_json::json!({
             "column": "location",
             "pattern": "on"
-        });
-        let action = FilterByValue::from_action_config(&json).unwrap();
+        })).unwrap();
+        let action = FilterByValue::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).unwrap();
         let df = result.data.collect().unwrap();
@@ -204,11 +203,11 @@ mod tests {
 
     #[test]
     fn test_no_match_returns_empty() {
-        let json = serde_json::json!({
+        let cfg: FilterByValueConfig = serde_json::from_value(serde_json::json!({
             "column": "department",
             "pattern": "^Finance$"
-        });
-        let action = FilterByValue::from_action_config(&json).unwrap();
+        })).unwrap();
+        let action = FilterByValue::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).unwrap();
         let df = result.data.collect().unwrap();
@@ -222,11 +221,11 @@ mod tests {
             "val" => &["abc", "abcdef", "xabc"],
         }
         .unwrap();
-        let json = serde_json::json!({
+        let cfg: FilterByValueConfig = serde_json::from_value(serde_json::json!({
             "column": "val",
             "pattern": "abc"
-        });
-        let action = FilterByValue::from_action_config(&json).unwrap();
+        })).unwrap();
+        let action = FilterByValue::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(df.lazy());
         let result = action.execute(ctx).unwrap();
         let collected = result.data.collect().unwrap();
@@ -241,11 +240,11 @@ mod tests {
     fn test_null_values_dropped() {
         let s = Series::new("val".into(), &[Some("abc"), None, Some("def")]);
         let df = DataFrame::new_infer_height(vec![s.into()]).unwrap();
-        let json = serde_json::json!({
+        let cfg: FilterByValueConfig = serde_json::from_value(serde_json::json!({
             "column": "val",
             "pattern": "."
-        });
-        let action = FilterByValue::from_action_config(&json).unwrap();
+        })).unwrap();
+        let action = FilterByValue::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(df.lazy());
         let result = action.execute(ctx).unwrap();
         let collected = result.data.collect().unwrap();
@@ -267,11 +266,11 @@ mod tests {
             "val" => &["", "abc", ""],
         }
         .unwrap();
-        let json = serde_json::json!({
+        let cfg: FilterByValueConfig = serde_json::from_value(serde_json::json!({
             "column": "val",
             "pattern": "^.+$"
-        });
-        let action = FilterByValue::from_action_config(&json).unwrap();
+        })).unwrap();
+        let action = FilterByValue::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(df.lazy());
         let result = action.execute(ctx).unwrap();
         let collected = result.data.collect().unwrap();
@@ -288,36 +287,36 @@ mod tests {
 
     #[test]
     fn test_missing_column_field() {
-        let json = serde_json::json!({
+        // Missing required 'column' field is now caught at deserialization
+        assert!(serde_json::from_value::<FilterByValueConfig>(serde_json::json!({
             "pattern": "x"
-        });
-        assert!(FilterByValue::from_action_config(&json).is_err());
+        })).is_err());
     }
 
     #[test]
     fn test_missing_pattern_field() {
-        let json = serde_json::json!({
+        // Missing required 'pattern' field is now caught at deserialization
+        assert!(serde_json::from_value::<FilterByValueConfig>(serde_json::json!({
             "column": "department"
-        });
-        assert!(FilterByValue::from_action_config(&json).is_err());
+        })).is_err());
     }
 
     #[test]
     fn test_empty_pattern_rejected() {
-        let json = serde_json::json!({
+        let cfg: FilterByValueConfig = serde_json::from_value(serde_json::json!({
             "column": "department",
             "pattern": ""
-        });
-        assert!(FilterByValue::from_action_config(&json).is_err());
+        })).unwrap();
+        assert!(FilterByValue::from_action_config(&cfg).is_err());
     }
 
     #[test]
     fn test_empty_column_rejected() {
-        let json = serde_json::json!({
+        let cfg: FilterByValueConfig = serde_json::from_value(serde_json::json!({
             "column": "",
             "pattern": "x"
-        });
-        assert!(FilterByValue::from_action_config(&json).is_err());
+        })).unwrap();
+        assert!(FilterByValue::from_action_config(&cfg).is_err());
     }
 
     // -----------------------------------------------------------------------
@@ -327,11 +326,11 @@ mod tests {
     #[test]
     fn test_pattern_length_limit() {
         let long_pattern = "a".repeat(MAX_PATTERN_LEN + 1);
-        let json = serde_json::json!({
+        let cfg: FilterByValueConfig = serde_json::from_value(serde_json::json!({
             "column": "department",
             "pattern": long_pattern
-        });
-        let result = FilterByValue::from_action_config(&json);
+        })).unwrap();
+        let result = FilterByValue::from_action_config(&cfg);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("pattern length"), "unexpected error: {err}");
@@ -339,11 +338,11 @@ mod tests {
 
     #[test]
     fn test_excessive_nesting_rejected() {
-        let json = serde_json::json!({
+        let cfg: FilterByValueConfig = serde_json::from_value(serde_json::json!({
             "column": "department",
             "pattern": "((((a))))"
-        });
-        let result = FilterByValue::from_action_config(&json);
+        })).unwrap();
+        let result = FilterByValue::from_action_config(&cfg);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("nesting depth"), "unexpected error: {err}");
@@ -351,11 +350,11 @@ mod tests {
 
     #[test]
     fn test_multiple_capture_groups_rejected() {
-        let json = serde_json::json!({
+        let cfg: FilterByValueConfig = serde_json::from_value(serde_json::json!({
             "column": "department",
             "pattern": "(a)(b)(c)"
-        });
-        let result = FilterByValue::from_action_config(&json);
+        })).unwrap();
+        let result = FilterByValue::from_action_config(&cfg);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("capture group"), "unexpected error: {err}");
@@ -363,21 +362,21 @@ mod tests {
 
     #[test]
     fn test_non_capturing_groups_allowed() {
-        let json = serde_json::json!({
+        let cfg: FilterByValueConfig = serde_json::from_value(serde_json::json!({
             "column": "department",
             "pattern": "(?:Eng|Sale)s?"
-        });
-        let action = FilterByValue::from_action_config(&json);
+        })).unwrap();
+        let action = FilterByValue::from_action_config(&cfg);
         assert!(action.is_ok(), "non-capturing groups should be accepted");
     }
 
     #[test]
     fn test_invalid_regex_rejected() {
-        let json = serde_json::json!({
+        let cfg: FilterByValueConfig = serde_json::from_value(serde_json::json!({
             "column": "department",
             "pattern": "[invalid"
-        });
-        let result = FilterByValue::from_action_config(&json);
+        })).unwrap();
+        let result = FilterByValue::from_action_config(&cfg);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("invalid pattern"), "unexpected error: {err}");
@@ -389,11 +388,11 @@ mod tests {
             "other" => &["x"],
         }
         .unwrap();
-        let json = serde_json::json!({
+        let cfg: FilterByValueConfig = serde_json::from_value(serde_json::json!({
             "column": "department",
             "pattern": "x"
-        });
-        let action = FilterByValue::from_action_config(&json).unwrap();
+        })).unwrap();
+        let action = FilterByValue::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(df.lazy());
         let result = action.execute(ctx);
         assert!(result.is_err());

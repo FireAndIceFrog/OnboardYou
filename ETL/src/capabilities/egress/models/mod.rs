@@ -7,6 +7,7 @@
 //! - Per-repo configs (`BearerRepoConfig`, `OAuthRepoConfig`, `OAuth2RepoConfig`)
 
 mod auth_type;
+mod api_dispatcher_config;
 mod bearer_config;
 mod dispatch_response;
 mod oauth2_config;
@@ -14,6 +15,7 @@ mod oauth_config;
 mod retry_policy;
 
 pub use auth_type::*;
+pub use api_dispatcher_config::*;
 pub use bearer_config::*;
 pub use dispatch_response::*;
 pub use oauth2_config::*;

@@ -1,13 +1,13 @@
 //! Organization-level settings for login / authentication defaults.
 
+use onboard_you::ApiDispatcherConfig;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 /// Per-organization settings stored in DynamoDB.
 ///
-/// `default_auth` holds the full auth configuration blob that can be
-/// passed directly to `ApiEngine::from_action_config()`. It contains
-/// `auth_type` plus all strategy-specific fields:
+/// `default_auth` holds the full auth configuration that maps to a
+/// concrete `ApiDispatcherConfig` variant (Bearer, OAuth, OAuth2).
 ///
 /// **Bearer example:**
 /// ```json
@@ -42,10 +42,10 @@ pub struct OrgSettings {
     /// Unique identifier for the organization (partition key)
     pub organization_id: String,
 
-    /// Full auth configuration — passed directly to
-    /// `ApiEngine::from_action_config()`.
+    /// Full auth configuration — typed to `ApiDispatcherConfig`.
     ///
     /// Must contain `"auth_type"` plus all fields required by the
     /// chosen strategy (bearer, oauth, oauth2).
-    pub default_auth: serde_json::Value,
+    #[schema(value_type = Object)]
+    pub default_auth: ApiDispatcherConfig,
 }

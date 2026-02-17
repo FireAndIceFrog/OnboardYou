@@ -31,11 +31,10 @@ impl DropColumn {
         Self { config }
     }
 
-    /// Deserialise and construct from manifest JSON.
-    pub fn from_action_config(value: &serde_json::Value) -> Result<Self> {
-        let config: DropConfig = serde_json::from_value(value.clone())?;
+    /// Construct from a deserialised config.
+    pub fn from_action_config(config: &DropConfig) -> Result<Self> {
         config.validate()?;
-        Ok(Self::new(config))
+        Ok(Self::new(config.clone()))
     }
 }
 
@@ -105,7 +104,8 @@ mod tests {
         let json = serde_json::json!({
             "columns": ["first_name", "last_name"]
         });
-        let action = DropColumn::from_action_config(&json).expect("valid config");
+        let cfg: DropConfig = serde_json::from_value(json.clone()).expect("deserialise");
+        let action = DropColumn::from_action_config(&cfg).expect("valid config");
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).expect("execute");
         let df = result.data.collect().expect("collect");
@@ -117,18 +117,16 @@ mod tests {
 
     #[test]
     fn test_duplicate_columns_rejected_at_construction() {
-        let json = serde_json::json!({
+        let cfg: DropConfig = serde_json::from_value(serde_json::json!({
             "columns": ["first_name", "first_name"]
-        });
-        let res = DropColumn::from_action_config(&json);
-        assert!(res.is_err());
+        })).unwrap();
+        assert!(DropColumn::from_action_config(&cfg).is_err());
     }
 
     #[test]
     fn test_missing_columns_key_rejected() {
         let json = serde_json::json!({ "not_columns": ["first_name"] });
-        let res = DropColumn::from_action_config(&json);
-        assert!(res.is_err(), "should fail without a 'columns' key");
+        assert!(serde_json::from_value::<DropConfig>(json.clone()).is_err());
     }
 
     #[test]

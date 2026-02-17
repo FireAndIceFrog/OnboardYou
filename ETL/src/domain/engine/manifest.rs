@@ -67,14 +67,111 @@ pub struct Manifest {
 }
 
 /// Configuration for a single action in the pipeline
-#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Clone, Debug, Serialize, ToSchema)]
 pub struct ActionConfig {
     /// Unique identifier for this pipeline step
     pub id: String,
     /// Factory key — selects the Rust implementation (e.g. `ActionType::CsvHrisConnector`)
     pub action_type: ActionType,
     /// Action-specific configuration (shape depends on action_type)
-    pub config: serde_json::Value,
+    ///
+    /// Deserialized into the concrete typed variant matching `action_type`
+    /// via the custom `Deserialize` impl below.
+    #[schema(value_type = Object)]
+    pub config: ActionConfigPayload,
+}
+
+/// Custom deserialiser for [`ActionConfig`].
+///
+/// Reads `action_type` first, then uses it to direct the `config` blob
+/// into the correct [`ActionConfigPayload`] variant.
+impl<'de> Deserialize<'de> for ActionConfig {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct Raw {
+            id: String,
+            action_type: ActionType,
+            #[serde(default)]
+            config: serde_json::Value,
+        }
+
+        let raw = Raw::deserialize(deserializer)?;
+
+        let config = match raw.action_type {
+            ActionType::CsvHrisConnector => ActionConfigPayload::CsvHrisConnector(
+                serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
+            ),
+            ActionType::WorkdayHrisConnector => ActionConfigPayload::WorkdayHrisConnector(
+                serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
+            ),
+            ActionType::ScdType2 => ActionConfigPayload::ScdType2(
+                serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
+            ),
+            ActionType::PiiMasking => ActionConfigPayload::PiiMasking(
+                serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
+            ),
+            ActionType::IdentityDeduplicator => ActionConfigPayload::IdentityDeduplicator(
+                serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
+            ),
+            ActionType::RegexReplace => ActionConfigPayload::RegexReplace(
+                serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
+            ),
+            ActionType::IsoCountrySanitizer => ActionConfigPayload::IsoCountrySanitizer(
+                serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
+            ),
+            ActionType::CellphoneSanitizer => ActionConfigPayload::CellphoneSanitizer(
+                serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
+            ),
+            ActionType::HandleDiacritics => ActionConfigPayload::HandleDiacritics(
+                serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
+            ),
+            ActionType::RenameColumn => ActionConfigPayload::RenameColumn(
+                serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
+            ),
+            ActionType::DropColumn => ActionConfigPayload::DropColumn(
+                serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
+            ),
+            ActionType::FilterByValue => ActionConfigPayload::FilterByValue(
+                serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
+            ),
+            ActionType::ApiDispatcher => ActionConfigPayload::ApiDispatcher(
+                serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
+            ),
+        };
+
+        Ok(ActionConfig {
+            id: raw.id,
+            action_type: raw.action_type,
+            config,
+        })
+    }
+}
+
+/// Wrapper enum for action-specific config payloads.
+///
+/// Each variant currently holds the raw `serde_json::Value`. This
+/// preserves existing deserialisation behaviour while providing a
+/// discriminated variant per `ActionType` so the codebase can match on
+/// the concrete shape without relying on free-form JSON everywhere.
+#[derive(Clone, Debug, Serialize)]
+#[serde(untagged)]
+pub enum ActionConfigPayload {
+    CsvHrisConnector(crate::capabilities::ingestion::engine::CsvHrisConnectorConfig),
+    WorkdayHrisConnector(crate::capabilities::ingestion::engine::WorkdayConfig),
+    ScdType2(crate::capabilities::logic::models::ScdType2Config),
+    PiiMasking(crate::capabilities::logic::models::PIIMaskingConfig),
+    IdentityDeduplicator(crate::capabilities::logic::models::DedupConfig),
+    RegexReplace(crate::capabilities::logic::models::RegexReplaceConfig),
+    IsoCountrySanitizer(crate::capabilities::logic::models::IsoCountrySanitizerConfig),
+    CellphoneSanitizer(crate::capabilities::logic::models::CellphoneSanitizerConfig),
+    HandleDiacritics(crate::capabilities::logic::models::HandleDiacriticsConfig),
+    RenameColumn(crate::capabilities::logic::models::RenameConfig),
+    DropColumn(crate::capabilities::logic::models::DropConfig),
+    FilterByValue(crate::capabilities::logic::models::FilterByValueConfig),
+    ApiDispatcher(crate::capabilities::egress::models::ApiDispatcherConfig),
 }
 
 impl Manifest {
@@ -101,7 +198,7 @@ mod tests {
                 {
                     "id": "ingest_hris",
                     "action_type": "csv_hris_connector",
-                    "config": {}
+                    "config": { "csv_path": "/tmp/test.csv" }
                 }
             ]
         }"#;

@@ -21,7 +21,7 @@
 //! can simply use `serde_json::from_value::<PIIMaskingConfig>(…)`.
 
 use serde::de::{self, Deserializer};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -33,7 +33,7 @@ use serde::Deserialize;
 /// |----------|------------|-----------------------------------------------------------|
 /// | `Redact` | `"redact"` | Keeps the last N chars, replaces prefix with a mask string |
 /// | `Zero`   | `"zero"`   | Replaces all numeric values with `0`                       |
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum MaskStrategy {
     /// Keep the last N characters, replace prefix with `mask_prefix`.
     Redact {
@@ -58,7 +58,7 @@ pub enum MaskStrategy {
 /// | `strategy`    | string | `"redact"`  | `"redact"` or `"zero"`                 |
 /// | `keep_last`   | int    | `4`         | Characters to preserve (redact only)    |
 /// | `mask_prefix` | string | `"***-**-"` | Prefix replacing the redacted portion   |
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ColumnMask {
     pub name: String,
     pub strategy: MaskStrategy,
@@ -68,7 +68,7 @@ pub struct ColumnMask {
 ///
 /// Accepts both the new `columns`-array format and the legacy boolean
 /// format.  See module docs for examples.
-#[derive(Debug, Clone)]
+#[derive(Serialize, Debug, Clone)]
 pub struct PIIMaskingConfig {
     pub columns: Vec<ColumnMask>,
 }

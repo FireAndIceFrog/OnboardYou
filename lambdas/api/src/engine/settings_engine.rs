@@ -49,14 +49,7 @@ pub async fn upsert(
 /// use a concrete auth type (bearer, oauth, oauth2).
 fn validate(settings: &OrgSettings) -> Result<(), ApiError> {
     // Reject self-referential "default"
-    let is_default = settings
-        .default_auth
-        .get("auth_type")
-        .and_then(|v| v.as_str())
-        .map(|s| s == "default")
-        .unwrap_or(false);
-
-    if is_default {
+    if settings.default_auth.is_default() {
         return Err(ApiError::Validation(
             "default_auth cannot use auth_type 'default' — must be a concrete type \
              (bearer, oauth, oauth2)"

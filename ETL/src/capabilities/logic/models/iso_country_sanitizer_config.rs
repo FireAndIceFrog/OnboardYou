@@ -1,10 +1,10 @@
 //! Configuration model for the ISO country sanitizer engine.
 
 use crate::domain::{Error, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// Desired output ISO code format.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum CountryOutputFormat {
     Alpha2,
@@ -18,7 +18,7 @@ pub enum CountryOutputFormat {
 /// | `source_column` | string | Column containing the raw country value               |
 /// | `output_column` | string | Column to write the normalised ISO code into          |
 /// | `output_format` | string | `"alpha2"` or `"alpha3"`                              |
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct IsoCountrySanitizerConfig {
     /// Column to read the raw country value from.
     pub source_column: String,

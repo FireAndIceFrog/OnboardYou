@@ -49,10 +49,9 @@ impl IdentityDeduplicator {
         Self { config }
     }
 
-    /// Deserialise and construct from manifest JSON.
-    pub fn from_action_config(value: &serde_json::Value) -> Result<Self> {
-        let config: DedupConfig = serde_json::from_value(value.clone())?;
-        Ok(Self::new(config))
+    /// Construct from a deserialised config.
+    pub fn from_action_config(config: &DedupConfig) -> Result<Self> {
+        Ok(Self::new(config.clone()))
     }
 }
 

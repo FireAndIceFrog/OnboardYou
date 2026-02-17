@@ -1,7 +1,7 @@
 //! Configuration model for the rename-column engine.
 
 use crate::domain::{Error, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
 /// Configuration for the rename-column action.
@@ -20,7 +20,7 @@ use std::collections::{HashMap, HashSet};
 /// | Field     | Type                    | Description                               |
 /// |-----------|-------------------------|-------------------------------------------|
 /// | `mapping` | `{ from: to, … }`       | Dictionary of source → target column names |
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RenameConfig {
     /// Source → target column name mapping.
     pub mapping: HashMap<String, String>,

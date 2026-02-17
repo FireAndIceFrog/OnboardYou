@@ -2,6 +2,7 @@
 //!
 //! Omits `organizationId` which the controller fills from Claims.
 
+use onboard_you::ApiDispatcherConfig;
 use serde::Deserialize;
 use utoipa::ToSchema;
 
@@ -11,8 +12,9 @@ use super::OrgSettings;
 #[derive(Debug, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SettingsRequest {
-    /// Full auth configuration blob.
-    pub default_auth: serde_json::Value,
+    /// Full auth configuration — typed to `ApiDispatcherConfig`.
+    #[schema(value_type = Object)]
+    pub default_auth: ApiDispatcherConfig,
 }
 
 impl SettingsRequest {
