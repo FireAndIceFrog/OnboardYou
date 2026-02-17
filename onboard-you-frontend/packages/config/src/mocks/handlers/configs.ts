@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import type { PipelineConfig } from '@/shared/domain/types';
+import type { PipelineConfig } from '@/generated/api';
 
 /**
  * Mock pipeline configs matching the Rust PipelineConfig schema exactly.
@@ -19,7 +19,7 @@ const MOCK_CONFIGS: PipelineConfig[] = [
       actions: [
         {
           id: 'ingest',
-          actionType: 'workday_hris_connector',
+          action_type: 'workday_hris_connector',
           config: {
             name: 'Workday HCM Fetch',
             endpoint: 'https://wd5-impl.workday.com/ccx/service/acme/Human_Resources/v40.1',
@@ -29,7 +29,7 @@ const MOCK_CONFIGS: PipelineConfig[] = [
         },
         {
           id: 'dedup',
-          actionType: 'identity_deduplicator',
+          action_type: 'identity_deduplicator',
           config: {
             name: 'Deduplication',
             strategy: 'composite_key',
@@ -38,7 +38,7 @@ const MOCK_CONFIGS: PipelineConfig[] = [
         },
         {
           id: 'mask-pii',
-          actionType: 'pii_masking',
+          action_type: 'pii_masking',
           config: {
             name: 'PII Masking',
             columns: [
@@ -49,7 +49,7 @@ const MOCK_CONFIGS: PipelineConfig[] = [
         },
         {
           id: 'rename',
-          actionType: 'rename_column',
+          action_type: 'rename_column',
           config: {
             name: 'Field Normalisation',
             renames: { Worker_ID: 'employeeId', Personal_Name: 'legalName' },
@@ -57,7 +57,7 @@ const MOCK_CONFIGS: PipelineConfig[] = [
         },
         {
           id: 'dispatch',
-          actionType: 'api_dispatcher',
+          action_type: 'api_dispatcher',
           config: {
             name: 'Push to Client HRIS',
             auth_type: 'default',
@@ -78,7 +78,7 @@ const MOCK_CONFIGS: PipelineConfig[] = [
       actions: [
         {
           id: 'ingest',
-          actionType: 'csv_hris_connector',
+          action_type: 'csv_hris_connector',
           config: {
             name: 'CSV Upload Fetch',
             csv_path: 's3://onboardyou-landing/globex/latest.csv',
@@ -86,7 +86,7 @@ const MOCK_CONFIGS: PipelineConfig[] = [
         },
         {
           id: 'filter',
-          actionType: 'filter_by_value',
+          action_type: 'filter_by_value',
           config: {
             name: 'Active Employees Only',
             column: 'employmentStatus',
@@ -96,7 +96,7 @@ const MOCK_CONFIGS: PipelineConfig[] = [
         },
         {
           id: 'drop',
-          actionType: 'drop_column',
+          action_type: 'drop_column',
           config: {
             name: 'Drop Internal Fields',
             columns: ['internalNote', 'legacyId'],
@@ -104,7 +104,7 @@ const MOCK_CONFIGS: PipelineConfig[] = [
         },
         {
           id: 'dispatch',
-          actionType: 'api_dispatcher',
+          action_type: 'api_dispatcher',
           config: {
             name: 'Push to Globex API',
             auth_type: 'bearer',
@@ -128,7 +128,7 @@ const MOCK_CONFIGS: PipelineConfig[] = [
       actions: [
         {
           id: 'ingest',
-          actionType: 'workday_hris_connector',
+          action_type: 'workday_hris_connector',
           config: {
             name: 'Workday Benefits Fetch',
             endpoint: 'https://wd5-impl.workday.com/ccx/service/initech/Benefits/v40.1',
@@ -138,7 +138,7 @@ const MOCK_CONFIGS: PipelineConfig[] = [
         },
         {
           id: 'sanitize-phones',
-          actionType: 'cellphone_sanitizer',
+          action_type: 'cellphone_sanitizer',
           config: {
             name: 'Phone Number Cleanup',
             column: 'phone',
@@ -147,7 +147,7 @@ const MOCK_CONFIGS: PipelineConfig[] = [
         },
         {
           id: 'sanitize-countries',
-          actionType: 'iso_country_sanitizer',
+          action_type: 'iso_country_sanitizer',
           config: {
             name: 'Country Code Normalisation',
             column: 'country',
@@ -155,7 +155,7 @@ const MOCK_CONFIGS: PipelineConfig[] = [
         },
         {
           id: 'diacritics',
-          actionType: 'handle_diacritics',
+          action_type: 'handle_diacritics',
           config: {
             name: 'Diacritics Handling',
             columns: ['firstName', 'lastName'],
@@ -163,7 +163,7 @@ const MOCK_CONFIGS: PipelineConfig[] = [
         },
         {
           id: 'scd',
-          actionType: 'scd_type_2',
+          action_type: 'scd_type_2',
           config: {
             name: 'SCD Type 2 History',
             entity_column: 'employeeId',
@@ -172,7 +172,7 @@ const MOCK_CONFIGS: PipelineConfig[] = [
         },
         {
           id: 'dispatch',
-          actionType: 'api_dispatcher',
+          action_type: 'api_dispatcher',
           config: {
             name: 'Push to Initech Benefits API',
             auth_type: 'oauth2',
@@ -239,13 +239,13 @@ export const configHandlers = [
   http.post(`${API_BASE}/config/:customerCompanyId/validate`, async ({ request }) => {
     const body = (await request.json()) as PipelineConfig;
     const steps = body.pipeline.actions.map((action) => ({
-      actionId: action.id,
-      actionType: action.actionType,
-      columnsAfter: Object.keys(action.config).filter((k) => k !== 'name'),
+      action_id: action.id,
+      action_type: action.action_type,
+      columns_after: Object.keys(action.config as Record<string, unknown>).filter((k) => k !== 'name'),
     }));
     return HttpResponse.json({
       steps,
-      finalColumns: steps.length > 0 ? steps[steps.length - 1].columnsAfter : [],
+      final_columns: steps.length > 0 ? steps[steps.length - 1].columns_after : [],
     });
   }),
 ];

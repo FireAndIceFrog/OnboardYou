@@ -13,7 +13,7 @@ import {
   type EdgeChange,
 } from '@xyflow/react';
 import type { RootState, ThunkExtra } from '@/store';
-import type { PipelineConfig, ActionConfig, ValidationResult } from '@/shared/domain/types';
+import type { PipelineConfig, ActionConfig, ValidationResult } from '@/generated/api';
 import { actionCategory } from '@/shared/domain/types';
 import type { ConfigDetailsState } from '../domain/types';
 import { fetchConfig, saveConfig as saveConfigService, validateConfig as validateConfigService } from '../services/configDetailsService';
@@ -51,9 +51,9 @@ export const fetchConfigDetails = createAsyncThunk<
   { extra: ThunkExtra }
 >(
   'configDetails/fetchConfigDetails',
-  async ({ customerCompanyId }, { rejectWithValue, extra }) => {
+  async ({ customerCompanyId }, { rejectWithValue }) => {
     try {
-      const config = await fetchConfig(extra.apiClient, customerCompanyId);
+      const config = await fetchConfig(customerCompanyId);
       const { nodes, edges } = convertToFlow(config.pipeline);
       return { config, nodes, edges };
     } catch (err) {
@@ -70,9 +70,14 @@ export const saveConfigThunk = createAsyncThunk<
   { extra: ThunkExtra }
 >(
   'configDetails/saveConfig',
-  async ({ customerCompanyId, data }, { rejectWithValue, extra }) => {
+  async ({ customerCompanyId, data }, { rejectWithValue }) => {
     try {
-      return await saveConfigService(extra.apiClient, customerCompanyId, data);
+      return await saveConfigService(customerCompanyId, {
+        name: data.name,
+        cron: data.cron,
+        pipeline: data.pipeline,
+        image: data.image,
+      });
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to save configuration';
@@ -87,9 +92,14 @@ export const validateConfigThunk = createAsyncThunk<
   { extra: ThunkExtra }
 >(
   'configDetails/validateConfig',
-  async ({ customerCompanyId, data }, { rejectWithValue, extra }) => {
+  async ({ customerCompanyId, data }, { rejectWithValue }) => {
     try {
-      return await validateConfigService(extra.apiClient, customerCompanyId, data);
+      return await validateConfigService(customerCompanyId, {
+        name: data.name,
+        cron: data.cron,
+        pipeline: data.pipeline,
+        image: data.image,
+      });
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to validate configuration';
@@ -132,7 +142,7 @@ const configDetailsSlice = createSlice({
     },
     addFlowAction(state, action: PayloadAction<ActionConfig>) {
       const actionCfg = action.payload;
-      const category = actionCategory(actionCfg.actionType);
+      const category = actionCategory(actionCfg.action_type);
       const idx = state.nodes.length;
 
       const newNode: Node = {
@@ -140,8 +150,8 @@ const configDetailsSlice = createSlice({
         type: category,
         position: { x: START_X + idx * NODE_GAP_X, y: START_Y },
         data: {
-          label: (actionCfg.config.name as string) ?? actionCfg.id,
-          actionType: actionCfg.actionType,
+          label: ((actionCfg.config as Record<string, unknown>)?.name as string) ?? actionCfg.id,
+          actionType: actionCfg.action_type,
           category,
           config: actionCfg.config,
         },

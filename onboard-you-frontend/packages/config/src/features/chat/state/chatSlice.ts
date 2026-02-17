@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/store';
-import type { ChatMessage, ActionConfig, PipelineConfig } from '@/shared/domain/types';
+import type { ActionConfig, PipelineConfig } from '@/generated/api';
+import type { ChatMessage } from '@/shared/domain/types';
 import type { ChatState } from '../domain/types';
 import { generateResponse, deriveFlowAction } from '../services/chatService';
 

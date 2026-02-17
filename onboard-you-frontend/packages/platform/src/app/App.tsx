@@ -2,10 +2,14 @@ import { Provider } from 'react-redux';
 import { RouterProvider } from 'react-router-dom';
 import { store } from '@/store';
 import { initAuth } from '@/features/auth/state/authSlice';
+import { configureApiClient } from '@/shared/services/configureApiClient';
 import { ErrorBoundary } from '@/shared/ui/ErrorBoundary';
 import { useThemeEffect } from '@/shared/hooks/useThemeEffect';
 import { router } from './routes';
 import '@/styles/global.scss';
+
+// Configure the generated API client with baseUrl + auth interceptor
+configureApiClient();
 
 // Initialise auth on startup (mock auto-login / session check)
 store.dispatch(initAuth());

@@ -47,7 +47,7 @@ describe('chatSlice', () => {
       messages: [mockMessage],
       isTyping: true,
       error: 'some error',
-      lastFlowAction: { id: 'step-1', actionType: 'pii_masking', config: {} },
+      lastFlowAction: { id: 'step-1', action_type: 'pii_masking', config: {} },
     };
     const state = reducer(dirtyState, clearChat());
     expect(state.messages).toEqual([]);
@@ -72,7 +72,7 @@ describe('chatSlice', () => {
   });
 
   it('setLastFlowAction stores the action', () => {
-    const action = { id: 'step-1', actionType: 'regex_replace', config: { name: 'Clean' } };
+    const action = { id: 'step-1', action_type: 'regex_replace' as const, config: { name: 'Clean' } };
     const state = reducer(initialState, setLastFlowAction(action));
     expect(state.lastFlowAction).toEqual(action);
   });

@@ -1,4 +1,4 @@
-import type { PipelineConfig } from '@/shared/domain/types';
+import type { PipelineConfig } from '@/generated/api';
 
 export interface ConfigListState {
   configs: PipelineConfig[];

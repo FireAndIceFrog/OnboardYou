@@ -21,15 +21,15 @@ export function convertToFlow(manifest: Manifest): { nodes: Node[]; edges: Edge[
   const edges: Edge[] = [];
 
   manifest.actions.forEach((action, idx) => {
-    const category = actionCategory(action.actionType);
+    const category = actionCategory(action.action_type);
 
     const node: Node = {
       id: action.id,
       type: category,
       position: { x: START_X + idx * NODE_GAP_X, y: START_Y },
       data: {
-        label: (action.config.name as string) ?? businessLabel(action.actionType),
-        actionType: action.actionType,
+        label: ((action.config as Record<string, unknown>)?.name as string) ?? businessLabel(action.action_type),
+        actionType: action.action_type,
         category,
         config: action.config,
       },

@@ -22,7 +22,7 @@ export function useSettingsState() {
   const { settings, saved, dirty, isLoading, isSaving, error } = useAppSelector(
     (state) => state.settings,
   );
-  const { apiClient, showNotification } = useGlobal();
+  const { showNotification } = useGlobal();
 
   /* ── Load settings on mount ─────────────────────────────── */
   const fetchedRef = useRef(false);
@@ -30,8 +30,8 @@ export function useSettingsState() {
   useEffect(() => {
     if (fetchedRef.current) return;
     fetchedRef.current = true;
-    dispatch(fetchSettingsThunk(apiClient));
-  }, [dispatch, apiClient]);
+    dispatch(fetchSettingsThunk());
+  }, [dispatch]);
 
   /* ── Generic updaters ───────────────────────────────────── */
   const updateBearer = useCallback(
@@ -73,7 +73,7 @@ export function useSettingsState() {
   );
 
   const handleSave = useCallback(async () => {
-    const result = await dispatch(saveSettingsThunk({ apiClient, settings }));
+    const result = await dispatch(saveSettingsThunk({ settings }));
     if (saveSettingsThunk.fulfilled.match(result)) {
       showNotification('Settings saved successfully', 'success');
     } else {
@@ -82,7 +82,7 @@ export function useSettingsState() {
         'error',
       );
     }
-  }, [dispatch, apiClient, settings, showNotification]);
+  }, [dispatch, settings, showNotification]);
 
   const handleTestConnection = useCallback(() => {
     const url =

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { convertToFlow } from './pipelineLayoutService';
-import type { Manifest } from '@/shared/domain/types';
+import type { Manifest } from '@/generated/api';
 
 describe('convertToFlow', () => {
   it('returns no nodes or edges for an empty pipeline', () => {
@@ -14,7 +14,7 @@ describe('convertToFlow', () => {
     const manifest: Manifest = {
       version: '1',
       actions: [
-        { id: 'step-1', actionType: 'csv_hris_connector', config: { name: 'Import CSV' } },
+        { id: 'step-1', action_type: 'csv_hris_connector', config: { name: 'Import CSV' } },
       ],
     };
     const { nodes, edges } = convertToFlow(manifest);
@@ -28,9 +28,9 @@ describe('convertToFlow', () => {
     const manifest: Manifest = {
       version: '1',
       actions: [
-        { id: 'step-1', actionType: 'csv_hris_connector', config: { name: 'Import' } },
-        { id: 'step-2', actionType: 'pii_masking', config: { name: 'Mask PII' } },
-        { id: 'step-3', actionType: 'api_dispatch', config: { name: 'Send to API' } },
+        { id: 'step-1', action_type: 'csv_hris_connector', config: { name: 'Import' } },
+        { id: 'step-2', action_type: 'pii_masking', config: { name: 'Mask PII' } },
+        { id: 'step-3', action_type: 'api_dispatcher', config: { name: 'Send to API' } },
       ],
     };
     const { nodes, edges } = convertToFlow(manifest);
@@ -49,9 +49,9 @@ describe('convertToFlow', () => {
     const manifest: Manifest = {
       version: '1',
       actions: [
-        { id: 'a', actionType: 'csv_hris_connector', config: {} },
-        { id: 'b', actionType: 'pii_masking', config: {} },
-        { id: 'c', actionType: 'api_dispatch', config: {} },
+        { id: 'a', action_type: 'csv_hris_connector', config: {} },
+        { id: 'b', action_type: 'pii_masking', config: {} },
+        { id: 'c', action_type: 'api_dispatcher', config: {} },
       ],
     };
     const { nodes } = convertToFlow(manifest);
@@ -71,9 +71,9 @@ describe('convertToFlow', () => {
     const manifest: Manifest = {
       version: '1',
       actions: [
-        { id: 'ing', actionType: 'csv_hris_connector', config: {} },
-        { id: 'logic', actionType: 'pii_masking', config: {} },
-        { id: 'eg', actionType: 'api_dispatcher', config: {} },
+        { id: 'ing', action_type: 'csv_hris_connector', config: {} },
+        { id: 'logic', action_type: 'pii_masking', config: {} },
+        { id: 'eg', action_type: 'api_dispatcher', config: {} },
       ],
     };
     const { nodes } = convertToFlow(manifest);

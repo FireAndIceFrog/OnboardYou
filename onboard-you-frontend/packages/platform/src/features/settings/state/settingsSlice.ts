@@ -11,7 +11,6 @@ import {
   fetchSettings as fetchSettingsApi,
   saveSettings as saveSettingsApi,
 } from '../services/settingsService';
-import type { ApiClient } from '@/shared/services';
 import type { RootState } from '@/store';
 
 /* ── State type ───────────────────────────────────────────── */
@@ -40,9 +39,9 @@ const initialState: SettingsState = {
 
 export const fetchSettingsThunk = createAsyncThunk(
   'settings/fetchSettings',
-  async (apiClient: ApiClient, { rejectWithValue }) => {
+  async (_: void, { rejectWithValue }) => {
     try {
-      return await fetchSettingsApi(apiClient);
+      return await fetchSettingsApi();
     } catch (err: unknown) {
       /* 404 means no settings saved yet — use defaults */
       if (typeof err === 'object' && err !== null && 'statusCode' in err) {
@@ -60,11 +59,11 @@ export const fetchSettingsThunk = createAsyncThunk(
 export const saveSettingsThunk = createAsyncThunk(
   'settings/saveSettings',
   async (
-    { apiClient, settings }: { apiClient: ApiClient; settings: EgressSettings },
+    { settings }: { settings: EgressSettings },
     { rejectWithValue },
   ) => {
     try {
-      return await saveSettingsApi(apiClient, settings);
+      return await saveSettingsApi(settings);
     } catch (err: unknown) {
       if (typeof err === 'object' && err !== null && 'statusCode' in err && 'message' in err) {
         return rejectWithValue(err.message);

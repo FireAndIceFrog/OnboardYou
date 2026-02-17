@@ -1,8 +1,9 @@
-import type { ApiClient } from '@/shared/services';
-import type { PipelineConfig } from '@/shared/domain/types';
+import { listConfigs } from '@/generated/api';
+import type { PipelineConfig } from '@/generated/api';
 
-export async function fetchConfigs(apiClient: ApiClient): Promise<PipelineConfig[]> {
-  return apiClient.get<PipelineConfig[]>('/config');
+export async function fetchConfigs(): Promise<PipelineConfig[]> {
+  const { data } = await listConfigs({ throwOnError: true });
+  return data;
 }
 
 // Note: The backend API does not currently expose a DELETE endpoint.

@@ -1,1 +1,1 @@
-export type { ApiClient } from './apiClient';
+export { configureApiClient } from './configureApiClient';

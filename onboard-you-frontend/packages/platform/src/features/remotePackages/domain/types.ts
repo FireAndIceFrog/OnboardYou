@@ -12,7 +12,7 @@ export interface RemotePackageConfig {
 }
 
 export type SetGlobalValueFn = (value: {
-  apiClient: unknown;
+  apiBaseUrl: string;
   showNotification: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
   theme: 'light' | 'dark';
 }) => void;

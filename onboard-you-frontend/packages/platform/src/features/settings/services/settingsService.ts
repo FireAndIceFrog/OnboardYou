@@ -1,4 +1,4 @@
-import type { ApiClient } from '@/shared/services';
+import { getSettings as getSettingsApi, upsertSettings as upsertSettingsApi } from '@/generated/api';
 import type {
   EgressSettings,
   AuthType,
@@ -107,18 +107,18 @@ export function fromApi(raw: OrgSettingsPayload): EgressSettings {
 
 /* ── API calls ─────────────────────────────────────────────── */
 
-export async function fetchSettings(
-  apiClient: ApiClient,
-): Promise<EgressSettings> {
-  const raw = await apiClient.get<OrgSettingsPayload>('/settings');
-  return fromApi(raw);
+export async function fetchSettings(): Promise<EgressSettings> {
+  const { data } = await getSettingsApi({ throwOnError: true });
+  return fromApi({ defaultAuth: data.defaultAuth as Record<string, unknown> });
 }
 
 export async function saveSettings(
-  apiClient: ApiClient,
   settings: EgressSettings,
 ): Promise<EgressSettings> {
   const body = toApi(settings);
-  const raw = await apiClient.put<OrgSettingsPayload>('/settings', body);
-  return fromApi(raw);
+  const { data } = await upsertSettingsApi({
+    body: { defaultAuth: body.defaultAuth },
+    throwOnError: true,
+  });
+  return fromApi({ defaultAuth: data.defaultAuth as Record<string, unknown> });
 }

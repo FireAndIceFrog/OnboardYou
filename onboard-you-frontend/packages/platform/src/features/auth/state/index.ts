@@ -5,7 +5,6 @@ export {
   setError,
   logout,
   initAuth,
-  exchangeCode,
   performLogin,
   performLogout,
   selectAuth,

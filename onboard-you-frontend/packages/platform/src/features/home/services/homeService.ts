@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next';
-import type { ApiClient } from '@/shared/services/apiClient';
+import { client } from '@/generated/api/client.gen';
 import type { StatCardData } from '@/features/home/domain/types';
 
 /** Shape returned by the dashboard stats API endpoint. */
@@ -19,10 +19,14 @@ interface DashboardStatsResponse {
 /**
  * Fetch dashboard stats from the API and map them to StatCardData[].
  */
-export async function fetchDashboardStats(
-  apiClient: ApiClient,
-): Promise<StatCardData[]> {
-  const res = await apiClient.get<DashboardStatsResponse>('/dashboard/stats');
+export async function fetchDashboardStats(): Promise<StatCardData[]> {
+  const { data: res } = await client.get<DashboardStatsResponse>({
+    url: '/dashboard/stats',
+  });
+
+  if (!res) {
+    throw new Error('Dashboard stats response was empty');
+  }
 
   return [
     {

@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { selectAuth, performLogin, performLogout } from '@/features/auth/state/authSlice';
 import {
@@ -8,7 +7,7 @@ import {
   dismissNotification,
   selectGlobal,
 } from '@/shared/state/globalSlice';
-import { ApiClient } from '@/shared/services/apiClient';
+import { API_BASE_URL } from '@/shared/domain/constants';
 import type { Organization, NotificationType } from '@/shared/domain/types';
 
 export function useGlobal() {
@@ -16,17 +15,13 @@ export function useGlobal() {
   const authState = useAppSelector(selectAuth);
   const globalState = useAppSelector(selectGlobal);
 
-  const apiClient = useMemo(
-    () => new ApiClient(() => authState.token),
-    [authState.token],
-  );
-
   return {
     // Auth
     user: authState.user,
     isAuthenticated: authState.isAuthenticated,
     token: authState.token,
-    login: () => dispatch(performLogin()),
+    login: (email: string, password: string) =>
+      dispatch(performLogin({ email, password })),
     logout: () => dispatch(performLogout()),
 
     // Organization
@@ -43,7 +38,8 @@ export function useGlobal() {
       dispatch(showNotification(message, type)),
     dismissNotification: (id: string) => dispatch(dismissNotification(id)),
 
-    // API
-    apiClient,
+    // API — the generated client singleton is configured in App.tsx;
+    // remote packages receive the baseUrl so they can configure their own.
+    apiBaseUrl: API_BASE_URL,
   };
 }

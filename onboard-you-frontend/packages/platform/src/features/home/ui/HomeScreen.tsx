@@ -10,7 +10,7 @@ import styles from './HomeScreen.module.scss';
 
 export function HomeScreen() {
   const { t } = useTranslation();
-  const { user, apiClient } = useGlobal();
+  const { user } = useGlobal();
   const userName = user?.name ?? 'there';
 
   const [stats, setStats] = useState<StatCardData[] | null>(null);
@@ -27,7 +27,7 @@ export function HomeScreen() {
       }
 
       try {
-        const data = await fetchDashboardStats(apiClient);
+        const data = await fetchDashboardStats();
         if (!cancelled) setStats(data);
       } catch {
         if (!cancelled) setStats(null);
@@ -38,7 +38,7 @@ export function HomeScreen() {
 
     loadStats();
     return () => { cancelled = true; };
-  }, [apiClient, t]);
+  }, [t]);
 
   const placeholderStats: StatCardData[] = [
     { label: t('home.stats.connectedSystems'), value: '—', icon: '🔗' },

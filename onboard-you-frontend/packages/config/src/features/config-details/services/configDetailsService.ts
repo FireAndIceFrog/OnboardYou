@@ -1,33 +1,53 @@
-import type { ApiClient } from '@/shared/services';
-import type { PipelineConfig, ValidationResult } from '@/shared/domain/types';
+import {
+  getConfig as getConfigApi,
+  createConfig as createConfigApi,
+  updateConfig as updateConfigApi,
+  validateConfig as validateConfigApi,
+} from '@/generated/api';
+import type { PipelineConfig, ValidationResult, ConfigRequest } from '@/generated/api';
 
 export async function fetchConfig(
-  apiClient: ApiClient,
   customerCompanyId: string,
 ): Promise<PipelineConfig> {
-  return apiClient.get<PipelineConfig>(`/config/${customerCompanyId}`);
+  const { data } = await getConfigApi({
+    path: { customer_company_id: customerCompanyId },
+    throwOnError: true,
+  });
+  return data;
 }
 
 export async function createConfig(
-  apiClient: ApiClient,
   customerCompanyId: string,
-  data: PipelineConfig,
+  body: ConfigRequest,
 ): Promise<PipelineConfig> {
-  return apiClient.post<PipelineConfig>(`/config/${customerCompanyId}`, data);
+  const { data } = await createConfigApi({
+    path: { customer_company_id: customerCompanyId },
+    body,
+    throwOnError: true,
+  });
+  return data;
 }
 
 export async function saveConfig(
-  apiClient: ApiClient,
   customerCompanyId: string,
-  data: PipelineConfig,
+  body: ConfigRequest,
 ): Promise<PipelineConfig> {
-  return apiClient.put<PipelineConfig>(`/config/${customerCompanyId}`, data);
+  const { data } = await updateConfigApi({
+    path: { customer_company_id: customerCompanyId },
+    body,
+    throwOnError: true,
+  });
+  return data;
 }
 
 export async function validateConfig(
-  apiClient: ApiClient,
   customerCompanyId: string,
-  data: PipelineConfig,
+  body: ConfigRequest,
 ): Promise<ValidationResult> {
-  return apiClient.post<ValidationResult>(`/config/${customerCompanyId}/validate`, data);
+  const { data } = await validateConfigApi({
+    path: { customer_company_id: customerCompanyId },
+    body,
+    throwOnError: true,
+  });
+  return data;
 }

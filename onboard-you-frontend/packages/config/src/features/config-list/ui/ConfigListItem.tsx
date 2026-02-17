@@ -70,9 +70,9 @@ export function ConfigListItem({ config }: ConfigListItemProps) {
           <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
           <span
             className={styles.updatedAt}
-            title={`Last edited: ${fullDate(config.lastEdited)}`}
+            title={`Last edited: ${fullDate(config.lastEdited ?? '')}`}
           >
-            {relativeTime(config.lastEdited)}
+            {relativeTime(config.lastEdited ?? '')}
           </span>
         </div>
       </div>

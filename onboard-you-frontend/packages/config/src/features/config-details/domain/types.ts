@@ -1,5 +1,5 @@
 import type { Node, Edge } from '@xyflow/react';
-import type { PipelineConfig } from '@/shared/domain/types';
+import type { PipelineConfig } from '@/generated/api';
 
 export interface ConfigDetailsState {
   config: PipelineConfig | null;

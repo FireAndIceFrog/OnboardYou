@@ -21,7 +21,7 @@ export {
 export type { GlobalState } from './state/globalSlice';
 
 // Services
-export { ApiClient } from './services';
+export { configureApiClient } from './services';
 
 // Hooks
 export { useGlobal } from './hooks';

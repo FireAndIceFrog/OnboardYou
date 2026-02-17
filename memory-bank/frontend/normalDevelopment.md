@@ -16,8 +16,16 @@ We use `@hey-api/openapi-ts` to generate TypeScript types and SDK from the backe
 
 Each package has an `openapi-ts.config.ts` pointing to the repo-root `openapi.json` and outputs to `src/generated/api/`. Generated files include types, SDK functions, and client utilities. Run `make openapi` from the repo root to regenerate everything.
 
+## Generated API Client
+All API calls use the `@hey-api/openapi-ts` generated client (Fetch-based singleton). Auth tokens are injected automatically via a request interceptor that reads from `sessionStorage('oy_access_token')`.
+
+- **Platform**: `configureApiClient()` called once in `App.tsx` on startup. Sets `baseUrl` and registers the Bearer token interceptor.
+- **Config**: receives `apiBaseUrl` (string) from platform via Module Federation `setGlobalValue()`. Its own `configureApiClient(baseUrl)` is called inside `setGlobalValue()` to configure its separate client copy.
+- **Services** import SDK functions directly (e.g. `listConfigs`, `getConfig`, `createConfig`) — no manual `fetch` or `ApiClient` class.
+- **Generated types** use **snake_case** field names matching the Rust backend wire format (e.g. `action_type`, `action_id`, `columns_after`). Internal UI properties (like React Flow node `data.actionType`) remain camelCase where appropriate.
+
 ## Use Global hook
-We expose a hook called useGlobal. the details of this hook should also be exposed via the store extras - everything in this store is what you need to make api calls including authorization and authentication checks. 
+The `useGlobal` hook exposes `apiBaseUrl` (string), `showNotification` (function), and `theme`. The platform passes `apiBaseUrl` to remote packages; each package configures its own generated client copy. Store thunk extras only contain `showNotification` — API calls go through the generated client singleton, not through thunk extras.
 
 ## Config package. 
 This is the package we are using to manage, upgrade and store client integrations. 

@@ -1,40 +1,24 @@
-/* ── Backend-aligned types ───────────────────────────────── */
+/* ── Re-exported generated API types (single source of truth) ── */
 
-/** Matches the Rust PipelineConfig exactly (camelCase via serde) */
-export interface PipelineConfig {
-  name: string;
-  image?: string;
-  cron: string;
-  organizationId: string;
-  customerCompanyId: string;
-  lastEdited: string;
-  pipeline: Manifest;
-}
+export type {
+  PipelineConfig,
+  Manifest,
+  ActionConfig,
+  ActionType,
+  ValidationResult,
+  StepValidation,
+  ConfigRequest,
+  LoginRequest,
+  LoginResponse,
+  OrgSettings,
+  SettingsRequest,
+  ErrorResponse,
+} from '@/generated/api';
 
-/** Rust Manifest — flat list of actions */
-export interface Manifest {
-  version: string;
-  actions: ActionConfig[];
-}
+/* ── Internal import for helpers that reference generated types ── */
+import type { PipelineConfig } from '@/generated/api';
 
-/** Single pipeline action (Rust ActionConfig) */
-export interface ActionConfig {
-  id: string;
-  actionType: string;
-  config: Record<string, unknown>;
-}
-
-/** Dry-run validation result */
-export interface ValidationResult {
-  steps: StepValidation[];
-  finalColumns: string[];
-}
-
-export interface StepValidation {
-  actionId: string;
-  actionType: string;
-  columnsAfter: string[];
-}
+/* ── UI-only constants & helpers ─────────────────────────── */
 
 /** Known action-type categories for React Flow node styling. */
 export const ACTION_CATEGORIES: Record<string, 'ingestion' | 'logic' | 'egress'> = {
@@ -118,7 +102,7 @@ export type SystemStatus = 'healthy' | 'syncing' | 'paused' | 'needs-attention';
 
 export function deriveStatus(config: PipelineConfig): SystemStatus {
   // Simple heuristic — could be replaced by API data later
-  const lastEdited = new Date(config.lastEdited).getTime();
+  const lastEdited = new Date(config.lastEdited ?? 0).getTime();
   const now = Date.now();
   const hoursSinceEdit = (now - lastEdited) / (1000 * 60 * 60);
 
