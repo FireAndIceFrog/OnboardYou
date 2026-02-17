@@ -1,30 +1,24 @@
 ##──────────────────────────────────────────────────────────────
-## Input variables
+## Demo User module
+##
+## Creates (or resets) Cognito demo users with randomly
+## generated passwords that rotate on every deploy.
 ##──────────────────────────────────────────────────────────────
 
+variable "user_pool_id" {
+  description = "Cognito User Pool ID to create demo users in"
+  type        = string
+}
+
 variable "aws_region" {
-  description = "AWS region to deploy into"
+  description = "AWS region the Cognito pool lives in (passed to CLI commands)"
   type        = string
-  default     = "eu-east-1"
 }
 
-variable "environment" {
-  description = "Deployment environment (dev / staging / prod)"
-  type        = string
-  default     = "dev"
-}
-
-variable "log_retention_days" {
-  description = "CloudWatch log retention in days"
-  type        = number
-  default     = 14
-}
-
-variable "demo_users" {
-  description = "Demo users provisioned on every deploy (password auto-rotated)"
+variable "users" {
+  description = "List of demo users to provision"
   type = list(object({
     email           = string
     organization_id = optional(string, "demo-org")
   }))
-  default = []
 }

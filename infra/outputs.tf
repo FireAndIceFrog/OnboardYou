@@ -17,6 +17,14 @@ output "login_endpoint_example" {
   value       = "curl -X POST ${module.api.invoke_url}/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"user@example.com\",\"password\":\"…\"}'"
 }
 
+# ── Demo user credentials (rotated every deploy) ─────────────
+
+output "demo_credentials" {
+  description = "Map of email → password for every demo user (rotated every deploy)"
+  value       = module.demo_user.credentials
+  sensitive   = true
+}
+
 output "config_table_name" {
   description = "DynamoDB table for pipeline configs"
   value       = module.pipeline_configs_table.name

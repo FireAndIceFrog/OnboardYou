@@ -1,7 +1,7 @@
 VENV := .venv/bin/activate
 
 .PHONY: setup build-lambdas build-config-api build-etl-trigger build-authorizer \
-        plan apply deploy clean
+        plan apply deploy clean smoke-test
 
 ##──────────────────────────────────────────────────────────────
 ## Setup — create venv and install cargo-lambda
@@ -54,6 +54,16 @@ apply:
 ##──────────────────────────────────────────────────────────────
 
 deploy: plan apply
+
+##──────────────────────────────────────────────────────────────
+## Smoke tests — sync credentials from tofu output, then run
+##──────────────────────────────────────────────────────────────
+
+smoke-test:
+	@echo "▸ Syncing smoke-test .env from tofu output…"
+	cd test/smoke-test && bash ./sync-env.sh
+	@echo "▸ Running smoke tests…"
+	cd test/smoke-test && pnpm test
 
 clean:
 	cargo clean

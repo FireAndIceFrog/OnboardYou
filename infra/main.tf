@@ -14,6 +14,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.6"
+    }
   }
 
   # Uncomment and configure for remote state:
@@ -66,6 +70,17 @@ module "org_settings_table" {
 module "cognito" {
   source      = "./modules/cognito"
   environment = var.environment
+}
+
+# ══════════════════════════════════════════════════════════════
+# Demo user — password rotated every deploy
+# ══════════════════════════════════════════════════════════════
+
+module "demo_user" {
+  source       = "./modules/demo-user"
+  user_pool_id = module.cognito.user_pool_id
+  aws_region   = var.aws_region
+  users        = var.demo_users
 }
 
 # ══════════════════════════════════════════════════════════════

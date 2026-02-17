@@ -2,3 +2,8 @@
 aws_region         = "eu-west-1"
 environment        = "dev"
 log_retention_days = 14
+
+demo_users = [
+  { email = "demo@onboardyou.com", organization_id = "qa-org" },
+  # { email = "qa@onboardyou.com", organization_id = "qa-org" },
+]
