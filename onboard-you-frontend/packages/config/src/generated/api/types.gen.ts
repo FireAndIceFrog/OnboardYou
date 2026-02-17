@@ -14,13 +14,26 @@ export type ActionConfig = {
     action_type: ActionType;
     /**
      * Action-specific configuration (shape depends on action_type)
+     *
+     * Deserialized into the concrete typed variant matching `action_type`
+     * via the custom `Deserialize` impl below.
      */
-    config: unknown;
+    config: ActionConfigPayload;
     /**
      * Unique identifier for this pipeline step
      */
     id: string;
 };
+
+/**
+ * Wrapper enum for action-specific config payloads.
+ *
+ * Each variant holds the **concrete, typed** configuration struct for
+ * its `ActionType`.  The `#[serde(untagged)]` attribute produces flat
+ * JSON serialisation (no wrapper key), while `ToSchema` generates a
+ * `oneOf` schema listing every config variant for OpenAPI.
+ */
+export type ActionConfigPayload = CsvHrisConnectorConfig | WorkdayConfig | ScdType2Config | PiiMaskingConfig | DedupConfig | RegexReplaceConfig | IsoCountrySanitizerConfig | CellphoneSanitizerConfig | HandleDiacriticsConfig | RenameConfig | DropConfig | FilterByValueConfig | ApiDispatcherConfig;
 
 /**
  * All known action types in the pipeline.
@@ -48,6 +61,125 @@ export type ActionConfig = {
 export type ActionType = 'csv_hris_connector' | 'workday_hris_connector' | 'scd_type_2' | 'pii_masking' | 'identity_deduplicator' | 'regex_replace' | 'iso_country_sanitizer' | 'cellphone_sanitizer' | 'handle_diacritics' | 'rename_column' | 'drop_column' | 'filter_by_value' | 'api_dispatcher';
 
 /**
+ * Fully-typed API dispatcher configuration.
+ *
+ * The `Default` variant is a meta-type: the ETL trigger resolves it to
+ * the organisation's stored settings **before** pipeline construction.
+ * If it reaches `ApiEngine` unresolved, construction fails.
+ */
+export type ApiDispatcherConfig = {
+    /**
+     * No auth / static bearer token / custom API key.
+     */
+    Bearer: BearerRepoConfig;
+} | {
+    /**
+     * OAuth 1.0a signed requests.
+     */
+    OAuth: OAuthRepoConfig;
+} | {
+    /**
+     * OAuth2 client credentials or authorization code flow.
+     */
+    OAuth2: OAuth2RepoConfig;
+} | 'Default';
+
+/**
+ * How the credential is attached to outbound requests.
+ *
+ * This is a pure discriminator — the actual header name or query-param key
+ * lives in [`BearerRepoConfig::placement_key`].
+ */
+export type BearerPlacement = 'authorization_header' | 'custom_header' | 'query_param';
+
+/**
+ * Configuration for the bearer / API-key strategy.
+ *
+ * # JSON config (manifest)
+ *
+ * ```json
+ * {
+ * "destination_url": "https://api.customer.com/employees",
+ * "auth_type": "bearer",
+ * "token": "sk-live-abc123",
+ * "placement": "authorization_header"
+ * }
+ * ```
+ */
+export type BearerRepoConfig = {
+    /**
+     * Destination endpoint URL.
+     */
+    destination_url: string;
+    /**
+     * Extra static headers to attach (e.g. `Content-Type`).
+     */
+    extra_headers?: {
+        [key: string]: string;
+    };
+    /**
+     * Where to place the token on the request.
+     */
+    placement?: BearerPlacement;
+    /**
+     * Header name or query-param key (used with `CustomHeader` / `QueryParam`).
+     * Defaults to `"X-API-Key"` for custom headers, `"api_key"` for query params.
+     */
+    placement_key?: string | null;
+    /**
+     * The static token / API key. `None` means no authentication.
+     */
+    token?: string | null;
+};
+
+/**
+ * Configuration for the cellphone sanitizer action.
+ *
+ * | Field              | Type       | Description                                             |
+ * |--------------------|------------|---------------------------------------------------------|
+ * | `phone_column`     | string     | Column containing the raw phone number                  |
+ * | `country_columns`  | `[string]` | Priority-ordered country columns (ISO 2 or 3 values)   |
+ * | `output_column`    | string     | Column to write the internationalised number into       |
+ */
+export type CellphoneSanitizerConfig = {
+    /**
+     * Priority-ordered list of columns whose values are ISO 2/3 country
+     * codes.  The first non-null value that resolves to a known calling
+     * code wins.
+     */
+    country_columns: Array<string>;
+    /**
+     * Column to write the sanitised international number into.
+     */
+    output_column: string;
+    /**
+     * Column holding the raw phone number.
+     */
+    phone_column: string;
+};
+
+/**
+ * Configuration for a single column to mask.
+ *
+ * # JSON shape
+ *
+ * ```json
+ * { "name": "ssn", "strategy": "redact", "keep_last": 4, "mask_prefix": "***-**-" }
+ * ```
+ *
+ * | Field         | Type   | Default     | Description                             |
+ * |---------------|--------|-------------|-----------------------------------------|
+ * | `name`        | string | —           | Column name to mask                     |
+ * | `strategy`    | string | `"redact"`  | `"redact"` or `"zero"`                 |
+ * | `keep_last`   | int    | `4`         | Characters to preserve (redact only)    |
+ * | `mask_prefix` | string | `"***-**-"` | Prefix replacing the redacted portion   |
+ */
+export type ColumnMask = {
+    name: string;
+    strategy: MaskStrategy;
+};
+
+/**
  * Request body for `POST /config/{id}` and `PUT /config/{id}`.
  *
  * Clients send only the fields they own; the server stamps identity
@@ -73,6 +205,82 @@ export type ConfigRequest = {
 };
 
 /**
+ * Desired output ISO code format.
+ */
+export type CountryOutputFormat = 'alpha2' | 'alpha3';
+
+/**
+ * Configuration extracted from the manifest `ActionConfig.config` JSON.
+ *
+ * # JSON config
+ *
+ * ```json
+ * { "csv_path": "/data/employees.csv" }
+ * ```
+ *
+ * | Field      | Type   | Required | Description                   |
+ * |------------|--------|----------|-------------------------------|
+ * | `csv_path` | string | **yes**  | Absolute path to the CSV file |
+ */
+export type CsvHrisConnectorConfig = {
+    csv_path: string;
+};
+
+/**
+ * Configuration for the identity deduplicator.
+ *
+ * Columns are inspected in priority order — the first non-null value across
+ * the listed columns becomes the dedup key for that row.
+ *
+ * # JSON config
+ *
+ * ```json
+ * {
+ * "columns": ["national_id", "email"],
+ * "employee_id_column": "employee_id"
+ * }
+ * ```
+ *
+ * | Field                | Type     | Default                    | Description                                          |
+ * |----------------------|----------|----------------------------|------------------------------------------------------|
+ * | `columns`            | string[] | `["national_id", "email"]` | Columns to inspect for the dedup key (priority order) |
+ * | `employee_id_column` | string   | `"employee_id"`            | Column whose value is used as the canonical ID        |
+ */
+export type DedupConfig = {
+    /**
+     * Columns to inspect (in priority order) when building the dedup key.
+     * The first non-null value across these columns becomes the key.
+     */
+    columns?: Array<string>;
+    /**
+     * The column that holds the employee identifier (used for canonical_id).
+     */
+    employee_id_column?: string;
+};
+
+/**
+ * Configuration for the drop-column action.
+ *
+ * # JSON config
+ *
+ * ```json
+ * {
+ * "columns": ["col1", "col2"]
+ * }
+ * ```
+ *
+ * | Field     | Type          | Description                |
+ * |-----------|---------------|----------------------------|
+ * | `columns` | `[string]`    | List of column names to drop|
+ */
+export type DropConfig = {
+    /**
+     * List of column names to drop.
+     */
+    columns: Array<string>;
+};
+
+/**
  * JSON error envelope returned to clients.
  */
 export type ErrorResponse = {
@@ -80,6 +288,63 @@ export type ErrorResponse = {
      * Human-readable error description
      */
     error: string;
+};
+
+/**
+ * Configuration for the filter-by-value action.
+ *
+ * | Field    | Type   | Description                                             |
+ * |----------|--------|---------------------------------------------------------|
+ * | `column` | string | Target column whose values are tested against the regex |
+ * | `pattern`| string | Regex pattern (Rust `regex` syntax); rows that match    |
+ * |          |        | are **kept**, non-matching rows are dropped              |
+ */
+export type FilterByValueConfig = {
+    /**
+     * Column to filter on.
+     */
+    column: string;
+    /**
+     * The raw regex pattern.
+     */
+    pattern: string;
+};
+
+/**
+ * Configuration for the handle-diacritics action.
+ *
+ * | Field           | Type      | Default   | Description                                          |
+ * |-----------------|-----------|-----------|------------------------------------------------------|
+ * | `columns`       | [string]  | `[]`      | Columns to transliterate                             |
+ * | `output_suffix` | string?   | `null`    | Suffix for output columns; null = in-place replace   |
+ */
+export type HandleDiacriticsConfig = {
+    columns?: Array<string>;
+    output_suffix?: string | null;
+};
+
+/**
+ * Configuration for the ISO country sanitizer action.
+ *
+ * | Field           | Type   | Description                                          |
+ * |-----------------|--------|------------------------------------------------------|
+ * | `source_column` | string | Column containing the raw country value               |
+ * | `output_column` | string | Column to write the normalised ISO code into          |
+ * | `output_format` | string | `"alpha2"` or `"alpha3"`                              |
+ */
+export type IsoCountrySanitizerConfig = {
+    /**
+     * Column to write the normalised code to.
+     */
+    output_column: string;
+    /**
+     * Desired output format.
+     */
+    output_format: CountryOutputFormat;
+    /**
+     * Column to read the raw country value from.
+     */
+    source_column: string;
 };
 
 /**
@@ -137,11 +402,120 @@ export type Manifest = {
 };
 
 /**
+ * The masking strategy for a single column.
+ *
+ * | Strategy | JSON key   | Effect                                                    |
+ * |----------|------------|-----------------------------------------------------------|
+ * | `Redact` | `"redact"` | Keeps the last N chars, replaces prefix with a mask string |
+ * | `Zero`   | `"zero"`   | Replaces all numeric values with `0`                       |
+ */
+export type MaskStrategy = {
+    /**
+     * Keep the last N characters, replace prefix with `mask_prefix`.
+     */
+    Redact: {
+        keep_last: number;
+        mask_prefix: string;
+    };
+} | 'Zero';
+
+/**
+ * The OAuth2 grant type this repo instance should use.
+ */
+export type OAuth2GrantType = 'client_credentials' | 'authorization_code';
+
+/**
+ * Configuration for OAuth2-authenticated egress.
+ *
+ * # JSON config (manifest)
+ *
+ * ```json
+ * {
+ * "destination_url": "https://api.customer.com/v2/employees",
+ * "auth_type": "oauth2",
+ * "grant_type": "client_credentials",
+ * "client_id": "app-12345",
+ * "client_secret": "secret-value",
+ * "token_url": "https://auth.customer.com/oauth/token",
+ * "scopes": ["employees.write"]
+ * }
+ * ```
+ */
+export type OAuth2RepoConfig = {
+    /**
+     * OAuth2 client identifier.
+     */
+    client_id: string;
+    /**
+     * OAuth2 client secret.
+     */
+    client_secret: string;
+    /**
+     * Destination endpoint URL.
+     */
+    destination_url: string;
+    /**
+     * Grant type variant.
+     */
+    grant_type?: OAuth2GrantType;
+    /**
+     * Pre-obtained refresh token (required for `AuthorizationCode` grant).
+     */
+    refresh_token?: string | null;
+    /**
+     * Requested scopes.
+     */
+    scopes?: Array<string>;
+    /**
+     * Token endpoint URL (the authorization server).
+     */
+    token_url: string;
+};
+
+/**
+ * Configuration for OAuth 1.0a signed requests.
+ *
+ * # JSON config (manifest)
+ *
+ * ```json
+ * {
+ * "destination_url": "https://legacy.customer.com/api/roster",
+ * "auth_type": "oauth",
+ * "consumer_key": "ck_abc123",
+ * "consumer_secret": "cs_secret",
+ * "access_token": "at_token",
+ * "token_secret": "ts_secret"
+ * }
+ * ```
+ */
+export type OAuthRepoConfig = {
+    /**
+     * OAuth 1.0a access token.
+     */
+    access_token: string;
+    /**
+     * OAuth 1.0a consumer key.
+     */
+    consumer_key: string;
+    /**
+     * OAuth 1.0a consumer secret.
+     */
+    consumer_secret: string;
+    /**
+     * Destination endpoint URL.
+     */
+    destination_url: string;
+    /**
+     * OAuth 1.0a token secret.
+     */
+    token_secret: string;
+};
+
+/**
  * Per-organization settings stored in DynamoDB.
  *
- * `default_auth` holds the full auth configuration blob that can be
- * passed directly to `ApiEngine::from_action_config()`. It contains
- * `auth_type` plus all strategy-specific fields:
+ * `default_auth` holds the full auth configuration that maps to a
+ * concrete `ApiDispatcherConfig` variant (Bearer, OAuth, OAuth2).
  *
  * **Bearer example:**
  * ```json
@@ -173,17 +547,28 @@ export type Manifest = {
  */
 export type OrgSettings = {
     /**
-     * Full auth configuration — passed directly to
-     * `ApiEngine::from_action_config()`.
+     * Full auth configuration — typed to `ApiDispatcherConfig`.
      *
      * Must contain `"auth_type"` plus all fields required by the
      * chosen strategy (bearer, oauth, oauth2).
      */
-    defaultAuth: unknown;
+    defaultAuth: {
+        [key: string]: unknown;
+    };
     /**
      * Unique identifier for the organization (partition key)
      */
     organizationId: string;
+};
+
+/**
+ * Configuration for PII masking.
+ *
+ * Accepts both the new `columns`-array format and the legacy boolean
+ * format.  See module docs for examples.
+ */
+export type PiiMaskingConfig = {
+    columns: Array<ColumnMask>;
 };
 
 /**
@@ -232,13 +617,94 @@ export type PipelineConfig = {
 };
 
 /**
+ * Configuration for the regex-replace action.
+ *
+ * | Field         | Type   | Description                                    |
+ * |---------------|--------|------------------------------------------------|
+ * | `column`      | string | Target column to apply the replacement to      |
+ * | `pattern`     | string | Regex pattern (Rust `regex` syntax)            |
+ * | `replacement` | string | Literal replacement for the matched substring  |
+ */
+export type RegexReplaceConfig = {
+    /**
+     * Column to operate on.
+     */
+    column: string;
+    /**
+     * The raw regex pattern.
+     */
+    pattern: string;
+    /**
+     * Literal replacement text (backreference syntax is **not** honoured).
+     */
+    replacement: string;
+};
+
+/**
+ * Configuration for the rename-column action.
+ *
+ * # JSON config
+ *
+ * ```json
+ * {
+ * "mapping": {
+ * "first_name": "given_name",
+ * "last_name": "surname"
+ * }
+ * }
+ * ```
+ *
+ * | Field     | Type                    | Description                               |
+ * |-----------|-------------------------|-------------------------------------------|
+ * | `mapping` | `{ from: to, … }`       | Dictionary of source → target column names |
+ */
+export type RenameConfig = {
+    /**
+     * Source → target column name mapping.
+     */
+    mapping: {
+        [key: string]: string;
+    };
+};
+
+/**
+ * Configuration for SCD Type 2 effective dating.
+ *
+ * # JSON config
+ *
+ * ```json
+ * {
+ * "entity_column": "employee_id",
+ * "date_column": "start_date"
+ * }
+ * ```
+ *
+ * | Field           | Type   | Default         | Description                                      |
+ * |-----------------|--------|-----------------|--------------------------------------------------|
+ * | `entity_column` | string | `"employee_id"` | Column that identifies the entity (partition key) |
+ * | `date_column`   | string | `"start_date"`  | Column holding the date used for versioning       |
+ */
+export type ScdType2Config = {
+    /**
+     * The column that holds the date / timestamp to use for versioning.
+     */
+    date_column?: string;
+    /**
+     * The column that identifies the entity (partitioning column).
+     */
+    entity_column?: string;
+};
+
+/**
  * Request body for `PUT /settings`.
  */
 export type SettingsRequest = {
     /**
-     * Full auth configuration blob.
+     * Full auth configuration — typed to `ApiDispatcherConfig`.
      */
-    defaultAuth: unknown;
+    defaultAuth: {
+        [key: string]: unknown;
+    };
 };
 
 /**
@@ -271,6 +737,57 @@ export type ValidationResult = {
      * Per-step column snapshots (in execution order).
      */
     steps: Array<StepValidation>;
+};
+
+/**
+ * Configuration extracted from the manifest `ActionConfig.config` JSON.
+ *
+ * # JSON config example
+ *
+ * ```json
+ * {
+ * "tenant_url": "https://wd3-impl-services1.workday.com",
+ * "tenant_id": "acme_corp",
+ * "username": "ISU_Onboarding",
+ * "password": "env:WORKDAY_PASSWORD",
+ * "worker_count_limit": 200,
+ * "response_group": {
+ * "include_personal_information": true,
+ * "include_employment_information": true,
+ * "include_compensation": true,
+ * "include_organizations": true,
+ * "include_roles": false
+ * }
+ * }
+ * ```
+ *
+ * | Field                  | Type   | Required | Description                                         |
+ * |------------------------|--------|----------|-----------------------------------------------------|
+ * | `tenant_url`           | string | **yes**  | Workday tenant base URL                              |
+ * | `tenant_id`            | string | **yes**  | Workday tenant identifier                            |
+ * | `username`             | string | **yes**  | Integration System User (ISU) username               |
+ * | `password`             | string | **yes**  | ISU password (prefix `env:` to read from env var)    |
+ * | `worker_count_limit`   | u32    | no       | Max workers per page (default 200)                   |
+ * | `response_group`       | object | no       | Sections to include in Get_Workers response          |
+ */
+export type WorkdayConfig = {
+    password: string;
+    response_group?: WorkdayResponseGroup;
+    tenant_id: string;
+    tenant_url: string;
+    username: string;
+    worker_count_limit?: number;
+};
+
+/**
+ * Controls which data sections are included in the `Get_Workers` response.
+ */
+export type WorkdayResponseGroup = {
+    include_compensation?: boolean;
+    include_employment_information?: boolean;
+    include_organizations?: boolean;
+    include_personal_information?: boolean;
+    include_roles?: boolean;
 };
 
 export type LoginData = {

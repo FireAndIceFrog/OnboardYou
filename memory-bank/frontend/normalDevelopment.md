@@ -30,6 +30,20 @@ The `useGlobal` hook exposes `apiBaseUrl` (string), `showNotification` (function
 ## Config package. 
 This is the package we are using to manage, upgrade and store client integrations. 
 
+### Typed action configs (ActionConfigPayload)
+All pipeline action configs are strongly typed from the OpenAPI spec. The generated union type `ActionConfigPayload` covers all 13 config variants: `WorkdayConfig`, `CsvHrisConnectorConfig`, `ScdType2Config`, `PiiMaskingConfig`, `DedupConfig`, `RegexReplaceConfig`, `IsoCountrySanitizerConfig`, `CellphoneSanitizerConfig`, `HandleDiacriticsConfig`, `RenameConfig`, `DropConfig`, `FilterByValueConfig`, `ApiDispatcherConfig`.
+
+**Rules for config objects:**
+- Always import config types from `@/generated/api` (or the barrel re-export in `@/shared/domain/types`).
+- When constructing a config literal for a known action type, annotate it with `satisfies SpecificConfigType as ActionConfigPayload` to get structural checking while keeping the union type for the `ActionConfig.config` field.
+- Never cast configs to `Record<string, unknown>` — use the typed union directly.
+- None of the backend config types have a `name` field. For human-readable node labels, use the `businessLabel(actionType)` helper from `@/shared/domain/types`.
+- `WorkdayConfig.response_group` is a `WorkdayResponseGroup` object (boolean fields), NOT a comma-separated string. The `buildResponseGroup(csv)` helper in `features/config-details/domain/types.ts` converts the form's toggle string to the typed object at the `initNewConfig` boundary.
+- `ApiDispatcherConfig` is an externally-tagged enum in the generated types (`{ Bearer: BearerRepoConfig } | { OAuth: OAuthRepoConfig } | { OAuth2: OAuth2RepoConfig } | 'Default'`). Note: the backend wire format currently uses a custom serializer that flattens this — the OpenAPI schema and real wire format may diverge for this type until the backend `ToSchema` is aligned with the custom serde impl.
+
+### Mock data conventions
+MSW mock handlers in `src/mocks/handlers/configs.ts` use `satisfies ConcreteType as ActionConfigPayload` assertions on every config object. This gives compile-time checking that mock data matches the backend schema.
+
 # Folder structure
 We are using a feature-first folder structure. 
 

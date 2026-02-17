@@ -13,9 +13,10 @@ import {
   type EdgeChange,
 } from '@xyflow/react';
 import type { RootState, ThunkExtra } from '@/store';
-import type { PipelineConfig, ActionConfig, ValidationResult, ActionType } from '@/generated/api';
-import { actionCategory } from '@/shared/domain/types';
+import type { PipelineConfig, ActionConfig, ValidationResult, ActionType, WorkdayConfig, CsvHrisConnectorConfig } from '@/generated/api';
+import { actionCategory, businessLabel } from '@/shared/domain/types';
 import type { ConfigDetailsState, ConnectionForm } from '../domain/types';
+import { buildResponseGroup } from '../domain/types';
 import { fetchConfig, createConfig as createConfigService, saveConfig as saveConfigService, validateConfig as validateConfigService } from '../services/configDetailsService';
 import { convertToFlow } from '../services/pipelineLayoutService';
 
@@ -173,7 +174,7 @@ const configDetailsSlice = createSlice({
         type: category,
         position: { x: START_X + idx * NODE_GAP_X, y: START_Y },
         data: {
-          label: ((actionCfg.config as Record<string, unknown>)?.name as string) ?? actionCfg.id,
+          label: businessLabel(actionCfg.action_type),
           actionType: actionCfg.action_type,
           category,
           config: actionCfg.config,
@@ -211,19 +212,17 @@ const configDetailsSlice = createSlice({
         form.system === 'workday' ? 'workday_hris_connector' : 'csv_hris_connector';
 
       // Build connector-specific config payload
-      const connectorConfig: Record<string, unknown> =
+      const connectorConfig: WorkdayConfig | CsvHrisConnectorConfig =
         form.system === 'workday'
           ? {
-              name: form.displayName || 'Workday HCM Fetch',
-              endpoint: form.workday.tenantUrl,
+              tenant_url: form.workday.tenantUrl,
               tenant_id: form.workday.tenantId,
-              auth: 'ws_security',
               username: form.workday.username,
-              response_group: form.workday.responseGroup,
-              pageSize: Number(form.workday.workerCountLimit) || 200,
+              password: form.workday.password,
+              worker_count_limit: Number(form.workday.workerCountLimit) || 200,
+              response_group: buildResponseGroup(form.workday.responseGroup),
             }
           : {
-              name: form.displayName || 'CSV Upload Fetch',
               csv_path: form.csv.csvPath,
             };
 

@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { selectSelectedNode, deselectNode } from '../state/configDetailsSlice';
 import { businessLabel } from '@/shared/domain/types';
+import type { ActionConfigPayload } from '@/generated/api';
 import styles from './ConfigDetailsForm.module.scss';
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -20,13 +21,13 @@ export function ConfigDetailsForm() {
   const nodeData = selectedNode.data as Record<string, unknown>;
   const category = (nodeData.category as string) ?? 'logic';
   const actionType = (nodeData.actionType as string) ?? '';
-  const config = nodeData.config as Record<string, unknown> | undefined;
+  const config = nodeData.config as ActionConfigPayload | undefined;
 
   const handleClose = () => {
     dispatch(deselectNode());
   };
 
-  const configEntries = config ? Object.entries(config) : [];
+  const configEntries = config && typeof config === 'object' ? Object.entries(config) : [];
 
   return (
     <div className={styles.formPanel}>

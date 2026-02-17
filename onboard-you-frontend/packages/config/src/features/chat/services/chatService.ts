@@ -1,5 +1,5 @@
 import i18n from '@/i18n';
-import type { PipelineConfig, ActionConfig } from '@/generated/api';
+import type { PipelineConfig, ActionConfig, ActionConfigPayload } from '@/generated/api';
 import { businessLabel } from '@/shared/domain/types';
 
 /**
@@ -14,10 +14,10 @@ export function deriveFlowAction(userMessage: string): ActionConfig | null {
       id: `step-${Date.now()}`,
       action_type: 'cellphone_sanitizer',
       config: {
-        name: 'Clean Phone Numbers',
-        column: 'phone',
-        default_country: 'US',
-      },
+        phone_column: 'phone',
+        country_columns: ['country'],
+        output_column: 'phone_intl',
+      } satisfies ActionConfigPayload,
     };
   }
 
@@ -26,11 +26,10 @@ export function deriveFlowAction(userMessage: string): ActionConfig | null {
       id: `step-${Date.now()}`,
       action_type: 'regex_replace',
       config: {
-        name: 'Clean Up Address Data',
         column: 'address',
         pattern: '\\s+',
         replacement: ' ',
-      },
+      } satisfies ActionConfigPayload,
     };
   }
 
@@ -39,10 +38,9 @@ export function deriveFlowAction(userMessage: string): ActionConfig | null {
       id: `step-${Date.now()}`,
       action_type: 'identity_deduplicator',
       config: {
-        name: 'Remove Duplicates',
-        strategy: 'composite_key',
-        keys: ['employeeId', 'email'],
-      },
+        columns: ['national_id', 'email'],
+        employee_id_column: 'employee_id',
+      } satisfies ActionConfigPayload,
     };
   }
 
@@ -51,12 +49,11 @@ export function deriveFlowAction(userMessage: string): ActionConfig | null {
       id: `step-${Date.now()}`,
       action_type: 'pii_masking',
       config: {
-        name: 'Mask Sensitive Data',
         columns: [
-          { column: 'ssn', strategy: 'full' },
-          { column: 'email', strategy: 'partial' },
+          { name: 'ssn', strategy: { Redact: { keep_last: 4, mask_prefix: '***-**-' } } },
+          { name: 'salary', strategy: 'Zero' },
         ],
-      },
+      } satisfies ActionConfigPayload,
     };
   }
 
@@ -65,9 +62,10 @@ export function deriveFlowAction(userMessage: string): ActionConfig | null {
       id: `step-${Date.now()}`,
       action_type: 'iso_country_sanitizer',
       config: {
-        name: 'Standardise Country Codes',
-        column: 'country',
-      },
+        source_column: 'country',
+        output_column: 'country_iso',
+        output_format: 'alpha2',
+      } satisfies ActionConfigPayload,
     };
   }
 
@@ -76,9 +74,8 @@ export function deriveFlowAction(userMessage: string): ActionConfig | null {
       id: `step-${Date.now()}`,
       action_type: 'handle_diacritics',
       config: {
-        name: 'Fix Special Characters',
         columns: ['firstName', 'lastName'],
-      },
+      } satisfies ActionConfigPayload,
     };
   }
 
@@ -111,7 +108,7 @@ export function generateResponse(config: PipelineConfig, userMessage: string): s
   // ── Informational responses ────────────────────────────────
   if (lower.includes('explain') || lower.includes('what does') || lower.includes('describe')) {
     const steps = actions
-      .map((a, i) => `${i + 1}. **${((a.config as Record<string, unknown>)?.name as string) || businessLabel(a.action_type)}**`)
+      .map((a, i) => `${i + 1}. **${businessLabel(a.action_type)}**`)
       .join('\n');
     return i18n.t('chat.responses.explain', { name: config.name, count: actions.length, steps });
   }

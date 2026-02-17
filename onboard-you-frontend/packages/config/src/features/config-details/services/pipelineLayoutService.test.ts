@@ -14,7 +14,7 @@ describe('convertToFlow', () => {
     const manifest: Manifest = {
       version: '1',
       actions: [
-        { id: 'step-1', action_type: 'csv_hris_connector', config: { name: 'Import CSV' } },
+        { id: 'step-1', action_type: 'csv_hris_connector', config: { csv_path: '/tmp/test.csv' } },
       ],
     };
     const { nodes, edges } = convertToFlow(manifest);
@@ -28,9 +28,9 @@ describe('convertToFlow', () => {
     const manifest: Manifest = {
       version: '1',
       actions: [
-        { id: 'step-1', action_type: 'csv_hris_connector', config: { name: 'Import' } },
-        { id: 'step-2', action_type: 'pii_masking', config: { name: 'Mask PII' } },
-        { id: 'step-3', action_type: 'api_dispatcher', config: { name: 'Send to API' } },
+        { id: 'step-1', action_type: 'csv_hris_connector', config: { csv_path: '/tmp/test.csv' } },
+        { id: 'step-2', action_type: 'pii_masking', config: { columns: [] } },
+        { id: 'step-3', action_type: 'api_dispatcher', config: { Bearer: { destination_url: 'https://example.com' } } },
       ],
     };
     const { nodes, edges } = convertToFlow(manifest);
@@ -49,9 +49,9 @@ describe('convertToFlow', () => {
     const manifest: Manifest = {
       version: '1',
       actions: [
-        { id: 'a', action_type: 'csv_hris_connector', config: {} },
-        { id: 'b', action_type: 'pii_masking', config: {} },
-        { id: 'c', action_type: 'api_dispatcher', config: {} },
+        { id: 'a', action_type: 'csv_hris_connector', config: { csv_path: '/tmp/a.csv' } },
+        { id: 'b', action_type: 'pii_masking', config: { columns: [] } },
+        { id: 'c', action_type: 'api_dispatcher', config: { Bearer: { destination_url: 'https://example.com' } } },
       ],
     };
     const { nodes } = convertToFlow(manifest);
@@ -71,9 +71,9 @@ describe('convertToFlow', () => {
     const manifest: Manifest = {
       version: '1',
       actions: [
-        { id: 'ing', action_type: 'csv_hris_connector', config: {} },
-        { id: 'logic', action_type: 'pii_masking', config: {} },
-        { id: 'eg', action_type: 'api_dispatcher', config: {} },
+        { id: 'ing', action_type: 'csv_hris_connector', config: { csv_path: '/tmp/test.csv' } },
+        { id: 'logic', action_type: 'pii_masking', config: { columns: [] } },
+        { id: 'eg', action_type: 'api_dispatcher', config: { Bearer: { destination_url: 'https://example.com' } } },
       ],
     };
     const { nodes } = convertToFlow(manifest);

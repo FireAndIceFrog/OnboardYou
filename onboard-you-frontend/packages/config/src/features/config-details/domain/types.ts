@@ -1,5 +1,5 @@
 import type { Node, Edge } from '@xyflow/react';
-import type { PipelineConfig } from '@/generated/api';
+import type { PipelineConfig, WorkdayResponseGroup } from '@/generated/api';
 
 export interface ConfigDetailsState {
   config: PipelineConfig | null;
@@ -51,17 +51,39 @@ export const INITIAL_CONNECTION_FORM: ConnectionForm = {
     username: '',
     password: '',
     workerCountLimit: '200',
-    responseGroup: 'personal_info,employment_info',
+    responseGroup: 'include_personal_information,include_employment_information',
   },
   csv: {
     csvPath: '',
   },
 };
 
+/**
+ * Response group toggle options.
+ *
+ * `value` matches the boolean field name on the generated
+ * `WorkdayResponseGroup` type so we can build the object directly
+ * from the active toggles.
+ */
 export const RESPONSE_GROUP_OPTIONS = [
-  { value: 'personal_info', label: 'Personal Information' },
-  { value: 'employment_info', label: 'Employment Information' },
-  { value: 'compensation', label: 'Compensation' },
-  { value: 'organizations', label: 'Organizations' },
-  { value: 'roles', label: 'Roles' },
+  { value: 'include_personal_information', label: 'Personal Information' },
+  { value: 'include_employment_information', label: 'Employment Information' },
+  { value: 'include_compensation', label: 'Compensation' },
+  { value: 'include_organizations', label: 'Organizations' },
+  { value: 'include_roles', label: 'Roles' },
 ] as const;
+
+/**
+ * Convert the comma-separated toggle string kept in the connection
+ * form into a typed `WorkdayResponseGroup` object for the manifest.
+ */
+export function buildResponseGroup(csv: string): WorkdayResponseGroup {
+  const active = new Set(csv.split(',').filter(Boolean));
+  return {
+    include_personal_information: active.has('include_personal_information'),
+    include_employment_information: active.has('include_employment_information'),
+    include_compensation: active.has('include_compensation'),
+    include_organizations: active.has('include_organizations'),
+    include_roles: active.has('include_roles'),
+  };
+}
