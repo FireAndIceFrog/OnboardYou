@@ -1,6 +1,7 @@
 //! Configuration model for SCD Type 2 effective dating.
 
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// Configuration for SCD Type 2 effective dating.
 ///
@@ -17,7 +18,7 @@ use serde::{Deserialize, Serialize};
 /// |-----------------|--------|-----------------|--------------------------------------------------|
 /// | `entity_column` | string | `"employee_id"` | Column that identifies the entity (partition key) |
 /// | `date_column`   | string | `"start_date"`  | Column holding the date used for versioning       |
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, ToSchema)]
 #[serde(default)]
 pub struct ScdType2Config {
     /// The column that identifies the entity (partitioning column).

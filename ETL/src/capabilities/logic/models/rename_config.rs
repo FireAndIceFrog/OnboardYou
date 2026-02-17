@@ -3,6 +3,7 @@
 use crate::domain::{Error, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use utoipa::ToSchema;
 
 /// Configuration for the rename-column action.
 ///
@@ -20,7 +21,7 @@ use std::collections::{HashMap, HashSet};
 /// | Field     | Type                    | Description                               |
 /// |-----------|-------------------------|-------------------------------------------|
 /// | `mapping` | `{ from: to, … }`       | Dictionary of source → target column names |
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, ToSchema)]
 pub struct RenameConfig {
     /// Source → target column name mapping.
     pub mapping: HashMap<String, String>,

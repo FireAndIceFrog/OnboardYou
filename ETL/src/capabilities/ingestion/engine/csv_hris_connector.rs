@@ -11,6 +11,7 @@ use crate::domain::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -27,8 +28,9 @@ use serde::{Deserialize, Serialize};
 /// | Field      | Type   | Required | Description                   |
 /// |------------|--------|----------|-------------------------------|
 /// | `csv_path` | string | **yes**  | Absolute path to the CSV file |
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, ToSchema)]
 pub struct CsvHrisConnectorConfig {
+    #[schema(value_type = String)]
     pub csv_path: PathBuf,
 }
 

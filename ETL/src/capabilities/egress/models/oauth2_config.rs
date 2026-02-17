@@ -1,9 +1,10 @@
 //! Configuration model for OAuth2 egress strategy (Client Credentials & Auth Code / OIDC).
 
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// The OAuth2 grant type this repo instance should use.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum OAuth2GrantType {
     /// Machine-to-machine: `client_id` + `client_secret` → access token.
@@ -33,7 +34,7 @@ impl Default for OAuth2GrantType {
 ///     "scopes": ["employees.write"]
 /// }
 /// ```
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct OAuth2RepoConfig {
     /// Destination endpoint URL.
     pub destination_url: String,

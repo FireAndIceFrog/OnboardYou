@@ -1,6 +1,7 @@
 //! Configuration model for OAuth 1.0a egress strategy.
 
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// Configuration for OAuth 1.0a signed requests.
 ///
@@ -16,7 +17,7 @@ use serde::{Deserialize, Serialize};
 ///     "token_secret": "ts_secret"
 /// }
 /// ```
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct OAuthRepoConfig {
     /// Destination endpoint URL.
     pub destination_url: String,

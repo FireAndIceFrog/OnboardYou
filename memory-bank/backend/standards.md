@@ -324,10 +324,11 @@ let df = df! {
 
 ### 3.7 Serde Conventions
 
-- **Config structs** derive both `Serialize` and `Deserialize` so they can be used as `ActionConfigPayload` variants.
+- **Config structs** derive `Serialize`, `Deserialize`, and `ToSchema` so they can be used as `ActionConfigPayload` variants and appear in the OpenAPI spec.
 - **`ActionConfig`** uses a custom `Deserialize` impl that reads `action_type` first, then deserializes the `config` JSON blob into the matching `ActionConfigPayload` variant. This is the single dispatch point for typed config deserialization.
-- **`ActionConfigPayload`** is a `#[serde(untagged)]` enum with `Serialize` only — deserialization is handled by the parent `ActionConfig`'s custom impl.
-- **`ApiDispatcherConfig`** has custom `Serialize`/`Deserialize` impls that flatten inner config fields + inject/read `auth_type` as a discriminator.
+- **`ActionConfigPayload`** is a `#[serde(untagged)]` enum with `Serialize` and `ToSchema` — deserialization is handled by the parent `ActionConfig`'s custom impl. utoipa generates a `oneOf` schema listing all 13 config variants.
+- **`ApiDispatcherConfig`** has custom `Serialize`/`Deserialize` impls that flatten inner config fields + inject/read `auth_type` as a discriminator. Derives `ToSchema` (externally-tagged enum schema).
+- **All nested types** (e.g. `BearerPlacement`, `OAuth2GrantType`, `CountryOutputFormat`, `MaskStrategy`, `ColumnMask`, `WorkdayResponseGroup`) also derive `ToSchema`.
 - **Lambda API models** use `#[serde(rename_all = "camelCase")]` for JSON APIs.
 - **Internal manifest types** use `snake_case` (Rust default serde mapping).
 - **Validation split:** Structural validation (required fields, types) is handled by serde's `Deserialize`. Semantic validation (empty strings, value ranges, regex compilation) is handled by `validate()` methods called from `from_action_config()`.
@@ -556,7 +557,7 @@ These items are pending implementation. When picking up work, check this list:
 | Smoke tests | ✅ Done | 9 tests (auth 2, config 5, settings 2) in `test/smoke-test/` |
 | Demo user provisioning | ✅ Done | `infra/modules/demo-user/` — rotates password every deploy |
 | Typed `ActionConfigPayload` | ✅ Done | All action configs are concrete typed structs; no `serde_json::Value` in pipeline |
-| ToSchema for OpenAPI | Pending | `#[schema(value_type = Object)]` hack on `ActionConfig.config` — needs proper `ToSchema` on all config types |
+| ToSchema for OpenAPI | ✅ Done | All 13 config types + 7 nested types derive `ToSchema`; `ActionConfigPayload` is `oneOf` in the OpenAPI spec; `ApiDispatcherConfig` uses externally-tagged enum schema |
 | CI/CD pipeline | Not yet created | GitHub Actions for test + build + deploy |
 
 ---

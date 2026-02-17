@@ -77,7 +77,6 @@ pub struct ActionConfig {
     ///
     /// Deserialized into the concrete typed variant matching `action_type`
     /// via the custom `Deserialize` impl below.
-    #[schema(value_type = Object)]
     pub config: ActionConfigPayload,
 }
 
@@ -152,11 +151,11 @@ impl<'de> Deserialize<'de> for ActionConfig {
 
 /// Wrapper enum for action-specific config payloads.
 ///
-/// Each variant currently holds the raw `serde_json::Value`. This
-/// preserves existing deserialisation behaviour while providing a
-/// discriminated variant per `ActionType` so the codebase can match on
-/// the concrete shape without relying on free-form JSON everywhere.
-#[derive(Clone, Debug, Serialize)]
+/// Each variant holds the **concrete, typed** configuration struct for
+/// its `ActionType`.  The `#[serde(untagged)]` attribute produces flat
+/// JSON serialisation (no wrapper key), while `ToSchema` generates a
+/// `oneOf` schema listing every config variant for OpenAPI.
+#[derive(Clone, Debug, Serialize, ToSchema)]
 #[serde(untagged)]
 pub enum ActionConfigPayload {
     CsvHrisConnector(crate::capabilities::ingestion::engine::CsvHrisConnectorConfig),

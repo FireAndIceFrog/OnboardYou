@@ -1,6 +1,7 @@
 //! Configuration model for the identity deduplicator engine.
 
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// Configuration for the identity deduplicator.
 ///
@@ -20,7 +21,7 @@ use serde::{Deserialize, Serialize};
 /// |----------------------|----------|----------------------------|------------------------------------------------------|
 /// | `columns`            | string[] | `["national_id", "email"]` | Columns to inspect for the dedup key (priority order) |
 /// | `employee_id_column` | string   | `"employee_id"`            | Column whose value is used as the canonical ID        |
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, ToSchema)]
 #[serde(default)]
 pub struct DedupConfig {
     /// Columns to inspect (in priority order) when building the dedup key.

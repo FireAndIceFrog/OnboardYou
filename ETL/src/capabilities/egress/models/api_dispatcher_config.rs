@@ -25,13 +25,14 @@ use super::{AuthType, BearerRepoConfig, OAuth2RepoConfig, OAuthRepoConfig};
 use serde::de::Deserializer;
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// Fully-typed API dispatcher configuration.
 ///
 /// The `Default` variant is a meta-type: the ETL trigger resolves it to
 /// the organisation's stored settings **before** pipeline construction.
 /// If it reaches `ApiEngine` unresolved, construction fails.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToSchema)]
 pub enum ApiDispatcherConfig {
     /// No auth / static bearer token / custom API key.
     Bearer(BearerRepoConfig),

@@ -2,6 +2,7 @@
 
 use crate::domain::{Error, Result};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// Configuration for the cellphone sanitizer action.
 ///
@@ -10,7 +11,7 @@ use serde::{Deserialize, Serialize};
 /// | `phone_column`     | string     | Column containing the raw phone number                  |
 /// | `country_columns`  | `[string]` | Priority-ordered country columns (ISO 2 or 3 values)   |
 /// | `output_column`    | string     | Column to write the internationalised number into       |
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, ToSchema)]
 pub struct CellphoneSanitizerConfig {
     /// Column holding the raw phone number.
     pub phone_column: String,

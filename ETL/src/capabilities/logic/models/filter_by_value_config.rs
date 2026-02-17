@@ -2,6 +2,7 @@
 
 use crate::domain::{Error, Result};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use super::SafeRegex;
 
 /// Configuration for the filter-by-value action.
@@ -11,7 +12,7 @@ use super::SafeRegex;
 /// | `column` | string | Target column whose values are tested against the regex |
 /// | `pattern`| string | Regex pattern (Rust `regex` syntax); rows that match    |
 /// |          |        | are **kept**, non-matching rows are dropped              |
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, ToSchema)]
 pub struct FilterByValueConfig {
     /// Column to filter on.
     pub column: String,

@@ -2,9 +2,10 @@
 
 use crate::domain::{Error, Result};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// Desired output ISO code format.
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum CountryOutputFormat {
     Alpha2,
@@ -18,7 +19,7 @@ pub enum CountryOutputFormat {
 /// | `source_column` | string | Column containing the raw country value               |
 /// | `output_column` | string | Column to write the normalised ISO code into          |
 /// | `output_format` | string | `"alpha2"` or `"alpha3"`                              |
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, ToSchema)]
 pub struct IsoCountrySanitizerConfig {
     /// Column to read the raw country value from.
     pub source_column: String,

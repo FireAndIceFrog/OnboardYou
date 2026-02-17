@@ -518,13 +518,58 @@
             "description": "Factory key — selects the Rust implementation (e.g. `ActionType::CsvHrisConnector`)"
           },
           "config": {
-            "description": "Action-specific configuration (shape depends on action_type)"
+            "$ref": "#/components/schemas/ActionConfigPayload",
+            "description": "Action-specific configuration (shape depends on action_type)\n\nDeserialized into the concrete typed variant matching `action_type`\nvia the custom `Deserialize` impl below."
           },
           "id": {
             "type": "string",
             "description": "Unique identifier for this pipeline step"
           }
         }
+      },
+      "ActionConfigPayload": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/CsvHrisConnectorConfig"
+          },
+          {
+            "$ref": "#/components/schemas/WorkdayConfig"
+          },
+          {
+            "$ref": "#/components/schemas/ScdType2Config"
+          },
+          {
+            "$ref": "#/components/schemas/PIIMaskingConfig"
+          },
+          {
+            "$ref": "#/components/schemas/DedupConfig"
+          },
+          {
+            "$ref": "#/components/schemas/RegexReplaceConfig"
+          },
+          {
+            "$ref": "#/components/schemas/IsoCountrySanitizerConfig"
+          },
+          {
+            "$ref": "#/components/schemas/CellphoneSanitizerConfig"
+          },
+          {
+            "$ref": "#/components/schemas/HandleDiacriticsConfig"
+          },
+          {
+            "$ref": "#/components/schemas/RenameConfig"
+          },
+          {
+            "$ref": "#/components/schemas/DropConfig"
+          },
+          {
+            "$ref": "#/components/schemas/FilterByValueConfig"
+          },
+          {
+            "$ref": "#/components/schemas/ApiDispatcherConfig"
+          }
+        ],
+        "description": "Wrapper enum for action-specific config payloads.\n\nEach variant holds the **concrete, typed** configuration struct for\nits `ActionType`.  The `#[serde(untagged)]` attribute produces flat\nJSON serialisation (no wrapper key), while `ToSchema` generates a\n`oneOf` schema listing every config variant for OpenAPI."
       },
       "ActionType": {
         "type": "string",
@@ -544,6 +589,149 @@
           "filter_by_value",
           "api_dispatcher"
         ]
+      },
+      "ApiDispatcherConfig": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "No auth / static bearer token / custom API key.",
+            "required": [
+              "Bearer"
+            ],
+            "properties": {
+              "Bearer": {
+                "$ref": "#/components/schemas/BearerRepoConfig",
+                "description": "No auth / static bearer token / custom API key."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "OAuth 1.0a signed requests.",
+            "required": [
+              "OAuth"
+            ],
+            "properties": {
+              "OAuth": {
+                "$ref": "#/components/schemas/OAuthRepoConfig",
+                "description": "OAuth 1.0a signed requests."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "OAuth2 client credentials or authorization code flow.",
+            "required": [
+              "OAuth2"
+            ],
+            "properties": {
+              "OAuth2": {
+                "$ref": "#/components/schemas/OAuth2RepoConfig",
+                "description": "OAuth2 client credentials or authorization code flow."
+              }
+            }
+          },
+          {
+            "type": "string",
+            "description": "Placeholder — resolved to a concrete type at runtime.",
+            "enum": [
+              "Default"
+            ]
+          }
+        ],
+        "description": "Fully-typed API dispatcher configuration.\n\nThe `Default` variant is a meta-type: the ETL trigger resolves it to\nthe organisation's stored settings **before** pipeline construction.\nIf it reaches `ApiEngine` unresolved, construction fails."
+      },
+      "BearerPlacement": {
+        "type": "string",
+        "description": "How the credential is attached to outbound requests.\n\nThis is a pure discriminator — the actual header name or query-param key\nlives in [`BearerRepoConfig::placement_key`].",
+        "enum": [
+          "authorization_header",
+          "custom_header",
+          "query_param"
+        ]
+      },
+      "BearerRepoConfig": {
+        "type": "object",
+        "description": "Configuration for the bearer / API-key strategy.\n\n# JSON config (manifest)\n\n```json\n{\n    \"destination_url\": \"https://api.customer.com/employees\",\n    \"auth_type\": \"bearer\",\n    \"token\": \"sk-live-abc123\",\n    \"placement\": \"authorization_header\"\n}\n```",
+        "required": [
+          "destination_url"
+        ],
+        "properties": {
+          "destination_url": {
+            "type": "string",
+            "description": "Destination endpoint URL."
+          },
+          "extra_headers": {
+            "type": "object",
+            "description": "Extra static headers to attach (e.g. `Content-Type`).",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "placement": {
+            "$ref": "#/components/schemas/BearerPlacement",
+            "description": "Where to place the token on the request."
+          },
+          "placement_key": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Header name or query-param key (used with `CustomHeader` / `QueryParam`).\nDefaults to `\"X-API-Key\"` for custom headers, `\"api_key\"` for query params."
+          },
+          "token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The static token / API key. `None` means no authentication."
+          }
+        }
+      },
+      "CellphoneSanitizerConfig": {
+        "type": "object",
+        "description": "Configuration for the cellphone sanitizer action.\n\n| Field              | Type       | Description                                             |\n|--------------------|------------|---------------------------------------------------------|\n| `phone_column`     | string     | Column containing the raw phone number                  |\n| `country_columns`  | `[string]` | Priority-ordered country columns (ISO 2 or 3 values)   |\n| `output_column`    | string     | Column to write the internationalised number into       |",
+        "required": [
+          "phone_column",
+          "country_columns",
+          "output_column"
+        ],
+        "properties": {
+          "country_columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Priority-ordered list of columns whose values are ISO 2/3 country\ncodes.  The first non-null value that resolves to a known calling\ncode wins."
+          },
+          "output_column": {
+            "type": "string",
+            "description": "Column to write the sanitised international number into."
+          },
+          "phone_column": {
+            "type": "string",
+            "description": "Column holding the raw phone number."
+          }
+        }
+      },
+      "ColumnMask": {
+        "type": "object",
+        "description": "Configuration for a single column to mask.\n\n# JSON shape\n\n```json\n{ \"name\": \"ssn\", \"strategy\": \"redact\", \"keep_last\": 4, \"mask_prefix\": \"***-**-\" }\n```\n\n| Field         | Type   | Default     | Description                             |\n|---------------|--------|-------------|-----------------------------------------|\n| `name`        | string | —           | Column name to mask                     |\n| `strategy`    | string | `\"redact\"`  | `\"redact\"` or `\"zero\"`                 |\n| `keep_last`   | int    | `4`         | Characters to preserve (redact only)    |\n| `mask_prefix` | string | `\"***-**-\"` | Prefix replacing the redacted portion   |",
+        "required": [
+          "name",
+          "strategy"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/MaskStrategy"
+          }
+        }
       },
       "ConfigRequest": {
         "type": "object",
@@ -575,6 +763,64 @@
           }
         }
       },
+      "CountryOutputFormat": {
+        "type": "string",
+        "description": "Desired output ISO code format.",
+        "enum": [
+          "alpha2",
+          "alpha3"
+        ]
+      },
+      "CsvHrisConnectorConfig": {
+        "type": "object",
+        "description": "Configuration extracted from the manifest `ActionConfig.config` JSON.\n\n# JSON config\n\n```json\n{ \"csv_path\": \"/data/employees.csv\" }\n```\n\n| Field      | Type   | Required | Description                   |\n|------------|--------|----------|-------------------------------|\n| `csv_path` | string | **yes**  | Absolute path to the CSV file |",
+        "required": [
+          "csv_path"
+        ],
+        "properties": {
+          "csv_path": {
+            "type": "string"
+          }
+        }
+      },
+      "DedupConfig": {
+        "type": "object",
+        "description": "Configuration for the identity deduplicator.\n\nColumns are inspected in priority order — the first non-null value across\nthe listed columns becomes the dedup key for that row.\n\n# JSON config\n\n```json\n{\n  \"columns\": [\"national_id\", \"email\"],\n  \"employee_id_column\": \"employee_id\"\n}\n```\n\n| Field                | Type     | Default                    | Description                                          |\n|----------------------|----------|----------------------------|------------------------------------------------------|\n| `columns`            | string[] | `[\"national_id\", \"email\"]` | Columns to inspect for the dedup key (priority order) |\n| `employee_id_column` | string   | `\"employee_id\"`            | Column whose value is used as the canonical ID        |",
+        "properties": {
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Columns to inspect (in priority order) when building the dedup key.\nThe first non-null value across these columns becomes the key.",
+            "default": [
+              "national_id",
+              "email"
+            ]
+          },
+          "employee_id_column": {
+            "type": "string",
+            "description": "The column that holds the employee identifier (used for canonical_id).",
+            "default": "employee_id"
+          }
+        }
+      },
+      "DropConfig": {
+        "type": "object",
+        "description": "Configuration for the drop-column action.\n\n# JSON config\n\n```json\n{\n  \"columns\": [\"col1\", \"col2\"]\n}\n```\n\n| Field     | Type          | Description                |\n|-----------|---------------|----------------------------|\n| `columns` | `[string]`    | List of column names to drop|",
+        "required": [
+          "columns"
+        ],
+        "properties": {
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of column names to drop."
+          }
+        }
+      },
       "ErrorResponse": {
         "type": "object",
         "description": "JSON error envelope returned to clients.",
@@ -585,6 +831,67 @@
           "error": {
             "type": "string",
             "description": "Human-readable error description"
+          }
+        }
+      },
+      "FilterByValueConfig": {
+        "type": "object",
+        "description": "Configuration for the filter-by-value action.\n\n| Field    | Type   | Description                                             |\n|----------|--------|---------------------------------------------------------|\n| `column` | string | Target column whose values are tested against the regex |\n| `pattern`| string | Regex pattern (Rust `regex` syntax); rows that match    |\n|          |        | are **kept**, non-matching rows are dropped              |",
+        "required": [
+          "column",
+          "pattern"
+        ],
+        "properties": {
+          "column": {
+            "type": "string",
+            "description": "Column to filter on."
+          },
+          "pattern": {
+            "type": "string",
+            "description": "The raw regex pattern."
+          }
+        }
+      },
+      "HandleDiacriticsConfig": {
+        "type": "object",
+        "description": "Configuration for the handle-diacritics action.\n\n| Field           | Type      | Default   | Description                                          |\n|-----------------|-----------|-----------|------------------------------------------------------|\n| `columns`       | [string]  | `[]`      | Columns to transliterate                             |\n| `output_suffix` | string?   | `null`    | Suffix for output columns; null = in-place replace   |",
+        "properties": {
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "output_suffix": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          }
+        }
+      },
+      "IsoCountrySanitizerConfig": {
+        "type": "object",
+        "description": "Configuration for the ISO country sanitizer action.\n\n| Field           | Type   | Description                                          |\n|-----------------|--------|------------------------------------------------------|\n| `source_column` | string | Column containing the raw country value               |\n| `output_column` | string | Column to write the normalised ISO code into          |\n| `output_format` | string | `\"alpha2\"` or `\"alpha3\"`                              |",
+        "required": [
+          "source_column",
+          "output_column",
+          "output_format"
+        ],
+        "properties": {
+          "output_column": {
+            "type": "string",
+            "description": "Column to write the normalised code to."
+          },
+          "output_format": {
+            "$ref": "#/components/schemas/CountryOutputFormat",
+            "description": "Desired output format."
+          },
+          "source_column": {
+            "type": "string",
+            "description": "Column to read the raw country value from."
           }
         }
       },
@@ -663,20 +970,161 @@
           }
         }
       },
+      "MaskStrategy": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "Keep the last N characters, replace prefix with `mask_prefix`.",
+            "required": [
+              "Redact"
+            ],
+            "properties": {
+              "Redact": {
+                "type": "object",
+                "description": "Keep the last N characters, replace prefix with `mask_prefix`.",
+                "required": [
+                  "keep_last",
+                  "mask_prefix"
+                ],
+                "properties": {
+                  "keep_last": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "mask_prefix": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "string",
+            "description": "Replace all values with zero (for numeric columns).",
+            "enum": [
+              "Zero"
+            ]
+          }
+        ],
+        "description": "The masking strategy for a single column.\n\n| Strategy | JSON key   | Effect                                                    |\n|----------|------------|-----------------------------------------------------------|\n| `Redact` | `\"redact\"` | Keeps the last N chars, replaces prefix with a mask string |\n| `Zero`   | `\"zero\"`   | Replaces all numeric values with `0`                       |"
+      },
+      "OAuth2GrantType": {
+        "type": "string",
+        "description": "The OAuth2 grant type this repo instance should use.",
+        "enum": [
+          "client_credentials",
+          "authorization_code"
+        ]
+      },
+      "OAuth2RepoConfig": {
+        "type": "object",
+        "description": "Configuration for OAuth2-authenticated egress.\n\n# JSON config (manifest)\n\n```json\n{\n    \"destination_url\": \"https://api.customer.com/v2/employees\",\n    \"auth_type\": \"oauth2\",\n    \"grant_type\": \"client_credentials\",\n    \"client_id\": \"app-12345\",\n    \"client_secret\": \"secret-value\",\n    \"token_url\": \"https://auth.customer.com/oauth/token\",\n    \"scopes\": [\"employees.write\"]\n}\n```",
+        "required": [
+          "destination_url",
+          "client_id",
+          "client_secret",
+          "token_url"
+        ],
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "description": "OAuth2 client identifier."
+          },
+          "client_secret": {
+            "type": "string",
+            "description": "OAuth2 client secret."
+          },
+          "destination_url": {
+            "type": "string",
+            "description": "Destination endpoint URL."
+          },
+          "grant_type": {
+            "$ref": "#/components/schemas/OAuth2GrantType",
+            "description": "Grant type variant."
+          },
+          "refresh_token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Pre-obtained refresh token (required for `AuthorizationCode` grant)."
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Requested scopes."
+          },
+          "token_url": {
+            "type": "string",
+            "description": "Token endpoint URL (the authorization server)."
+          }
+        }
+      },
+      "OAuthRepoConfig": {
+        "type": "object",
+        "description": "Configuration for OAuth 1.0a signed requests.\n\n# JSON config (manifest)\n\n```json\n{\n    \"destination_url\": \"https://legacy.customer.com/api/roster\",\n    \"auth_type\": \"oauth\",\n    \"consumer_key\": \"ck_abc123\",\n    \"consumer_secret\": \"cs_secret\",\n    \"access_token\": \"at_token\",\n    \"token_secret\": \"ts_secret\"\n}\n```",
+        "required": [
+          "destination_url",
+          "consumer_key",
+          "consumer_secret",
+          "access_token",
+          "token_secret"
+        ],
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "description": "OAuth 1.0a access token."
+          },
+          "consumer_key": {
+            "type": "string",
+            "description": "OAuth 1.0a consumer key."
+          },
+          "consumer_secret": {
+            "type": "string",
+            "description": "OAuth 1.0a consumer secret."
+          },
+          "destination_url": {
+            "type": "string",
+            "description": "Destination endpoint URL."
+          },
+          "token_secret": {
+            "type": "string",
+            "description": "OAuth 1.0a token secret."
+          }
+        }
+      },
       "OrgSettings": {
         "type": "object",
-        "description": "Per-organization settings stored in DynamoDB.\n\n`default_auth` holds the full auth configuration blob that can be\npassed directly to `ApiEngine::from_action_config()`. It contains\n`auth_type` plus all strategy-specific fields:\n\n**Bearer example:**\n```json\n{\n  \"organizationId\": \"acme-corp\",\n  \"defaultAuth\": {\n    \"auth_type\": \"bearer\",\n    \"destination_url\": \"https://api.example.com/employees\",\n    \"token\": \"sk-live-abc123\"\n  }\n}\n```\n\n**OAuth2 example:**\n```json\n{\n  \"organizationId\": \"acme-corp\",\n  \"defaultAuth\": {\n    \"auth_type\": \"oauth2\",\n    \"destination_url\": \"https://api.example.com/v2/employees\",\n    \"client_id\": \"app-12345\",\n    \"client_secret\": \"secret-value\",\n    \"token_url\": \"https://auth.example.com/oauth/token\",\n    \"scopes\": [\"employees.write\"],\n    \"grant_type\": \"client_credentials\"\n  }\n}\n```",
+        "description": "Per-organization settings stored in DynamoDB.\n\n`default_auth` holds the full auth configuration that maps to a\nconcrete `ApiDispatcherConfig` variant (Bearer, OAuth, OAuth2).\n\n**Bearer example:**\n```json\n{\n  \"organizationId\": \"acme-corp\",\n  \"defaultAuth\": {\n    \"auth_type\": \"bearer\",\n    \"destination_url\": \"https://api.example.com/employees\",\n    \"token\": \"sk-live-abc123\"\n  }\n}\n```\n\n**OAuth2 example:**\n```json\n{\n  \"organizationId\": \"acme-corp\",\n  \"defaultAuth\": {\n    \"auth_type\": \"oauth2\",\n    \"destination_url\": \"https://api.example.com/v2/employees\",\n    \"client_id\": \"app-12345\",\n    \"client_secret\": \"secret-value\",\n    \"token_url\": \"https://auth.example.com/oauth/token\",\n    \"scopes\": [\"employees.write\"],\n    \"grant_type\": \"client_credentials\"\n  }\n}\n```",
         "required": [
           "organizationId",
           "defaultAuth"
         ],
         "properties": {
           "defaultAuth": {
-            "description": "Full auth configuration — passed directly to\n`ApiEngine::from_action_config()`.\n\nMust contain `\"auth_type\"` plus all fields required by the\nchosen strategy (bearer, oauth, oauth2)."
+            "type": "object",
+            "description": "Full auth configuration — typed to `ApiDispatcherConfig`.\n\nMust contain `\"auth_type\"` plus all fields required by the\nchosen strategy (bearer, oauth, oauth2)."
           },
           "organizationId": {
             "type": "string",
             "description": "Unique identifier for the organization (partition key)"
+          }
+        }
+      },
+      "PIIMaskingConfig": {
+        "type": "object",
+        "description": "Configuration for PII masking.\n\nAccepts both the new `columns`-array format and the legacy boolean\nformat.  See module docs for examples.",
+        "required": [
+          "columns"
+        ],
+        "properties": {
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ColumnMask"
+            }
           }
         }
       },
@@ -724,6 +1172,64 @@
           }
         }
       },
+      "RegexReplaceConfig": {
+        "type": "object",
+        "description": "Configuration for the regex-replace action.\n\n| Field         | Type   | Description                                    |\n|---------------|--------|------------------------------------------------|\n| `column`      | string | Target column to apply the replacement to      |\n| `pattern`     | string | Regex pattern (Rust `regex` syntax)            |\n| `replacement` | string | Literal replacement for the matched substring  |",
+        "required": [
+          "column",
+          "pattern",
+          "replacement"
+        ],
+        "properties": {
+          "column": {
+            "type": "string",
+            "description": "Column to operate on."
+          },
+          "pattern": {
+            "type": "string",
+            "description": "The raw regex pattern."
+          },
+          "replacement": {
+            "type": "string",
+            "description": "Literal replacement text (backreference syntax is **not** honoured)."
+          }
+        }
+      },
+      "RenameConfig": {
+        "type": "object",
+        "description": "Configuration for the rename-column action.\n\n# JSON config\n\n```json\n{\n  \"mapping\": {\n    \"first_name\": \"given_name\",\n    \"last_name\": \"surname\"\n  }\n}\n```\n\n| Field     | Type                    | Description                               |\n|-----------|-------------------------|-------------------------------------------|\n| `mapping` | `{ from: to, … }`       | Dictionary of source → target column names |",
+        "required": [
+          "mapping"
+        ],
+        "properties": {
+          "mapping": {
+            "type": "object",
+            "description": "Source → target column name mapping.",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ScdType2Config": {
+        "type": "object",
+        "description": "Configuration for SCD Type 2 effective dating.\n\n# JSON config\n\n```json\n{\n  \"entity_column\": \"employee_id\",\n  \"date_column\": \"start_date\"\n}\n```\n\n| Field           | Type   | Default         | Description                                      |\n|-----------------|--------|-----------------|--------------------------------------------------|\n| `entity_column` | string | `\"employee_id\"` | Column that identifies the entity (partition key) |\n| `date_column`   | string | `\"start_date\"`  | Column holding the date used for versioning       |",
+        "properties": {
+          "date_column": {
+            "type": "string",
+            "description": "The column that holds the date / timestamp to use for versioning.",
+            "default": "start_date"
+          },
+          "entity_column": {
+            "type": "string",
+            "description": "The column that identifies the entity (partitioning column).",
+            "default": "employee_id"
+          }
+        }
+      },
       "SettingsRequest": {
         "type": "object",
         "description": "Request body for `PUT /settings`.",
@@ -732,7 +1238,8 @@
         ],
         "properties": {
           "defaultAuth": {
-            "description": "Full auth configuration blob."
+            "type": "object",
+            "description": "Full auth configuration — typed to `ApiDispatcherConfig`."
           }
         }
       },
@@ -783,6 +1290,59 @@
               "$ref": "#/components/schemas/StepValidation"
             },
             "description": "Per-step column snapshots (in execution order)."
+          }
+        }
+      },
+      "WorkdayConfig": {
+        "type": "object",
+        "description": "Configuration extracted from the manifest `ActionConfig.config` JSON.\n\n# JSON config example\n\n```json\n{\n  \"tenant_url\": \"https://wd3-impl-services1.workday.com\",\n  \"tenant_id\": \"acme_corp\",\n  \"username\": \"ISU_Onboarding\",\n  \"password\": \"env:WORKDAY_PASSWORD\",\n  \"worker_count_limit\": 200,\n  \"response_group\": {\n    \"include_personal_information\": true,\n    \"include_employment_information\": true,\n    \"include_compensation\": true,\n    \"include_organizations\": true,\n    \"include_roles\": false\n  }\n}\n```\n\n| Field                  | Type   | Required | Description                                         |\n|------------------------|--------|----------|-----------------------------------------------------|\n| `tenant_url`           | string | **yes**  | Workday tenant base URL                              |\n| `tenant_id`            | string | **yes**  | Workday tenant identifier                            |\n| `username`             | string | **yes**  | Integration System User (ISU) username               |\n| `password`             | string | **yes**  | ISU password (prefix `env:` to read from env var)    |\n| `worker_count_limit`   | u32    | no       | Max workers per page (default 200)                   |\n| `response_group`       | object | no       | Sections to include in Get_Workers response          |",
+        "required": [
+          "tenant_url",
+          "tenant_id",
+          "username",
+          "password"
+        ],
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "response_group": {
+            "$ref": "#/components/schemas/WorkdayResponseGroup"
+          },
+          "tenant_id": {
+            "type": "string"
+          },
+          "tenant_url": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "worker_count_limit": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
+      "WorkdayResponseGroup": {
+        "type": "object",
+        "description": "Controls which data sections are included in the `Get_Workers` response.",
+        "properties": {
+          "include_compensation": {
+            "type": "boolean"
+          },
+          "include_employment_information": {
+            "type": "boolean"
+          },
+          "include_organizations": {
+            "type": "boolean"
+          },
+          "include_personal_information": {
+            "type": "boolean"
+          },
+          "include_roles": {
+            "type": "boolean"
           }
         }
       }

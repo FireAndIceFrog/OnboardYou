@@ -22,7 +22,7 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use engine::validation_engine::{StepValidation, ValidationResult};
-use onboard_you::{ActionConfig, ActionType, Manifest};
+use onboard_you::{ActionConfig, ActionConfigPayload, ActionType, Manifest};
 
 /// OpenAPI documentation for the OnboardYou Config API.
 #[derive(OpenApi)]
@@ -50,6 +50,7 @@ use onboard_you::{ActionConfig, ActionType, Manifest};
         ConfigRequest,
         Manifest,
         ActionConfig,
+        ActionConfigPayload,
         ActionType,
         ValidationResult,
         StepValidation,

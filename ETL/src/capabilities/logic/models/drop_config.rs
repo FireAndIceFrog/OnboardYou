@@ -3,6 +3,7 @@
 use crate::domain::{Error, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use utoipa::ToSchema;
 
 /// Configuration for the drop-column action.
 ///
@@ -17,7 +18,7 @@ use std::collections::HashSet;
 /// | Field     | Type          | Description                |
 /// |-----------|---------------|----------------------------|
 /// | `columns` | `[string]`    | List of column names to drop|
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, ToSchema)]
 pub struct DropConfig {
     /// List of column names to drop.
     pub columns: Vec<String>,

@@ -25,6 +25,7 @@ use crate::domain::{Error, OnboardingAction, Result, RosterContext};
 use crate::orchestration::clients::soap_client::{ReqwestSoapClient, SoapClient};
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 // ───────────────────────────────────────────────────────────────────────────
 // Configuration
@@ -66,7 +67,7 @@ pub const WORKDAY_HR_NAMESPACE: &str =
 /// | `password`             | string | **yes**  | ISU password (prefix `env:` to read from env var)    |
 /// | `worker_count_limit`   | u32    | no       | Max workers per page (default 200)                   |
 /// | `response_group`       | object | no       | Sections to include in Get_Workers response          |
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct WorkdayConfig {
     pub tenant_url: String,
     pub tenant_id: String,
@@ -83,7 +84,7 @@ fn default_worker_count_limit() -> u32 {
 }
 
 /// Controls which data sections are included in the `Get_Workers` response.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct WorkdayResponseGroup {
     #[serde(default = "default_true")]
     pub include_personal_information: bool,
