@@ -146,12 +146,13 @@ module "config_api" {
   log_retention_days = var.log_retention_days
 
   environment_variables = {
-    CONFIG_TABLE_NAME    = module.pipeline_configs_table.name
-    SETTINGS_TABLE_NAME  = module.org_settings_table.name
-    ETL_LAMBDA_ARN       = module.etl_trigger.arn
-    SCHEDULER_ROLE_ARN   = aws_iam_role.scheduler_execution.arn
-    COGNITO_CLIENT_ID    = module.cognito.client_id
-    RUST_LOG             = "info"
+    CONFIG_TABLE_NAME                     = module.pipeline_configs_table.name
+    SETTINGS_TABLE_NAME                   = module.org_settings_table.name
+    ETL_LAMBDA_ARN                        = module.etl_trigger.arn
+    SCHEDULER_ROLE_ARN                    = aws_iam_role.scheduler_execution.arn
+    COGNITO_CLIENT_ID                     = module.cognito.client_id
+    AWS_LAMBDA_HTTP_IGNORE_STAGE_IN_PATH  = "true"
+    RUST_LOG                              = "info"
   }
 
   iam_policy_statements = [
@@ -190,9 +191,8 @@ module "frontend" {
 # API Gateway
 # ══════════════════════════════════════════════════════════════
 #
-# To add a new route, just add an entry to the routes map.
-# The module handles resource creation, method + integration,
-# CORS OPTIONS, deployment triggers, and lambda permissions.
+# To add a new route, just add an entry to the routes list.
+# Paths ending with /* create a {proxy+} catch-all.
 #
 # ──────────────────────────────────────────────────────────────
 
@@ -203,11 +203,6 @@ module "api" {
   environment = var.environment
   stage_name  = "v1"
 
-  # ── Routing ──────────────────────────────────────────────────
-  # /config       → GET (list)
-  # /config/{…}   → Axum router in the Lambda handles all sub-paths
-  base_path_part       = "config"
-  base_methods         = ["GET"]
   lambda_invoke_arn    = module.config_api.invoke_arn
   lambda_function_name = module.config_api.function_name
 
@@ -216,6 +211,11 @@ module "api" {
   authorizer_uri           = module.authorizer.invoke_arn
   authorizer_function_name = module.authorizer.function_name
 
-  # ── Unauthenticated /auth path (login) ──────────────────────
-  auth_path_enabled = true
+  # ── Routes ──────────────────────────────────────────────────
+  routes = [
+    { path = "config",   methods = ["GET"] },
+    { path = "config/*" },
+    { path = "auth/*",   auth = false },
+    { path = "settings", methods = ["GET", "PUT"] },
+  ]
 }

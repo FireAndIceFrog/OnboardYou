@@ -8,7 +8,7 @@ use axum::{
 };
 
 use crate::engine;
-use crate::models::{ApiError, AppState, Claims, ErrorResponse, PipelineConfig};
+use crate::models::{ApiError, AppState, Claims, ConfigRequest, ErrorResponse, PipelineConfig};
 use engine::validation_engine::ValidationResult;
 
 /// GET /config
@@ -74,7 +74,7 @@ pub async fn get_config(
         ("customer_company_id" = String, Path, description = "Unique identifier for the customer company"),
     ),
     request_body(
-        content = PipelineConfig,
+        content = ConfigRequest,
         description = "Pipeline configuration to create",
     ),
     responses(
@@ -88,11 +88,12 @@ pub async fn create_config(
     State(state): State<AppState>,
     claims: Claims,
     Path(customer_company_id): Path<String>,
-    Json(body): Json<PipelineConfig>,
+    Json(body): Json<ConfigRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
     engine::validation_engine::validate_pipeline(&body.pipeline)?;
+    let config = body.into_config();
     let saved =
-        engine::config_engine::upsert(&state, &claims.organization_id, &customer_company_id, body)
+        engine::config_engine::upsert(&state, &claims.organization_id, &customer_company_id, config)
             .await?;
     Ok((StatusCode::OK, Json(saved)))
 }
@@ -110,7 +111,7 @@ pub async fn create_config(
         ("customer_company_id" = String, Path, description = "Unique identifier for the customer company"),
     ),
     request_body(
-        content = PipelineConfig,
+        content = ConfigRequest,
         description = "Pipeline configuration to update",
     ),
     responses(
@@ -124,11 +125,12 @@ pub async fn update_config(
     State(state): State<AppState>,
     claims: Claims,
     Path(customer_company_id): Path<String>,
-    Json(body): Json<PipelineConfig>,
+    Json(body): Json<ConfigRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
     engine::validation_engine::validate_pipeline(&body.pipeline)?;
+    let config = body.into_config();
     let saved =
-        engine::config_engine::upsert(&state, &claims.organization_id, &customer_company_id, body)
+        engine::config_engine::upsert(&state, &claims.organization_id, &customer_company_id, config)
             .await?;
     Ok((StatusCode::OK, Json(saved)))
 }
@@ -146,7 +148,7 @@ pub async fn update_config(
         ("customer_company_id" = String, Path, description = "Unique identifier for the customer company"),
     ),
     request_body(
-        content = PipelineConfig,
+        content = ConfigRequest,
         description = "Pipeline configuration to validate (only the pipeline field is used)",
     ),
     responses(
@@ -158,7 +160,7 @@ pub async fn update_config(
 pub async fn validate_config(
     claims: Claims,
     Path(_customer_company_id): Path<String>,
-    Json(body): Json<PipelineConfig>,
+    Json(body): Json<ConfigRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
     let _ = &claims; // org scoping available if needed later
     let result = engine::validation_engine::validate_pipeline(&body.pipeline)?;

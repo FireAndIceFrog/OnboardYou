@@ -1,5 +1,5 @@
 ##──────────────────────────────────────────────────────────────
-## API Gateway module — variables  (proxy pattern)
+## API Gateway module — variables  (route-list pattern)
 ##──────────────────────────────────────────────────────────────
 
 variable "api_name" {
@@ -30,16 +30,19 @@ variable "endpoint_type" {
   default     = "REGIONAL"
 }
 
-variable "base_path_part" {
-  description = "Root resource path segment (e.g. 'config')"
-  type        = string
-  default     = "config"
-}
-
-variable "base_methods" {
-  description = "HTTP methods on the base resource itself (e.g. ['GET'] for list)"
-  type        = list(string)
-  default     = []
+variable "routes" {
+  description = <<-EOT
+    Flat list of API routes.  Each entry creates the necessary API Gateway
+    resources, methods, integrations, and CORS pre-flight.
+    - path ending with "/*"  → {proxy+} child with ANY method (catch-all)
+    - path without "/*"      → resource with the listed HTTP methods
+    Set auth = false to skip the authorizer (e.g. public login).
+  EOT
+  type = list(object({
+    path    = string
+    methods = optional(list(string), [])
+    auth    = optional(bool, true)
+  }))
 }
 
 variable "lambda_invoke_arn" {
@@ -73,7 +76,7 @@ variable "authorizer_function_name" {
 variable "xray_enabled" {
   description = "Enable X-Ray tracing on the stage"
   type        = bool
-  default     = true
+  default     = false
 }
 
 # ── CORS defaults ────────────────────────────────────────────
@@ -90,16 +93,3 @@ variable "cors_allowed_origin" {
   default     = "*"
 }
 
-# ── Public auth path (login, no authorizer) ──────────────────
-
-variable "auth_path_enabled" {
-  description = "Create an /auth/{proxy+} resource with NONE authorization (for login)"
-  type        = bool
-  default     = false
-}
-
-variable "auth_path_part" {
-  description = "Path segment for the unauthenticated auth route"
-  type        = string
-  default     = "auth"
-}

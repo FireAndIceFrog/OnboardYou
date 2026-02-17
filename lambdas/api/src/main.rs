@@ -15,7 +15,7 @@ use axum::{
 use controllers::{create_config, get_config, list_configs, update_config, validate_config};
 use controllers::{get_settings, upsert_settings};
 use controllers::login;
-use models::{AppState, ErrorResponse, LoginRequest, LoginResponse, OrgSettings, PipelineConfig};
+use models::{AppState, ConfigRequest, ErrorResponse, LoginRequest, LoginResponse, OrgSettings, PipelineConfig, SettingsRequest};
 use tracing_subscriber::{fmt, EnvFilter};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -46,6 +46,7 @@ use onboard_you::{ActionConfig, ActionType, Manifest};
         LoginRequest,
         LoginResponse,
         PipelineConfig,
+        ConfigRequest,
         Manifest,
         ActionConfig,
         ActionType,
@@ -53,6 +54,7 @@ use onboard_you::{ActionConfig, ActionType, Manifest};
         StepValidation,
         ErrorResponse,
         OrgSettings,
+        SettingsRequest,
     )),
     tags(
         (name = "Authentication", description = "Login and token management"),

@@ -8,7 +8,7 @@ use axum::{
 };
 
 use crate::engine;
-use crate::models::{ApiError, AppState, Claims, ErrorResponse, OrgSettings};
+use crate::models::{ApiError, AppState, Claims, ErrorResponse, OrgSettings, SettingsRequest};
 
 /// GET /settings
 ///
@@ -42,7 +42,7 @@ pub async fn get_settings(
     path = "/settings",
     tag = "Settings",
     request_body(
-        content = OrgSettings,
+        content = SettingsRequest,
         description = "Organization settings to save",
     ),
     responses(
@@ -55,8 +55,9 @@ pub async fn get_settings(
 pub async fn upsert_settings(
     State(state): State<AppState>,
     claims: Claims,
-    Json(body): Json<OrgSettings>,
+    Json(body): Json<SettingsRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let saved = engine::settings_engine::upsert(&state, &claims.organization_id, body).await?;
+    let settings = body.into_settings();
+    let saved = engine::settings_engine::upsert(&state, &claims.organization_id, settings).await?;
     Ok((StatusCode::OK, Json(saved)))
 }

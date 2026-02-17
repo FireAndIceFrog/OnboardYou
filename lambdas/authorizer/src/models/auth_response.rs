@@ -17,11 +17,24 @@ impl AuthResponse {
     /// into the authorizer context so downstream lambdas can read it.
     pub fn allow(principal_id: &str, organization_id: &str, method_arn: &str) -> Self {
         // Widen the resource to the stage root so the cached policy covers every method.
-        let resource = method_arn
-            .splitn(2, "/*/")
-            .next()
-            .map(|base| format!("{base}/*"))
-            .unwrap_or_else(|| "*".to_string());
+        // ARN format: arn:aws:execute-api:{region}:{account}:{api-id}/{stage}/{method}/{resource}
+        // We keep everything up to and including {stage}/ then wildcard the rest.
+        let resource = {
+            let parts: Vec<&str> = method_arn.splitn(2, ':').collect();
+            if method_arn.contains("execute-api") {
+                // Split on '/' and take the first 6 colon-delimited + 2 slash-delimited segments
+                // i.e. everything through {api-id}/{stage}/*
+                let segments: Vec<&str> = method_arn.split('/').collect();
+                if segments.len() >= 2 {
+                    format!("{}/{}/*", segments[0], segments[1])
+                } else {
+                    format!("{method_arn}/*")
+                }
+            } else {
+                let _ = parts;
+                "*".to_string()
+            }
+        };
 
         Self {
             principal_id: principal_id.to_string(),
