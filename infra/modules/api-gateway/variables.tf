@@ -93,3 +93,8 @@ variable "cors_allowed_origin" {
   default     = "*"
 }
 
+variable "env_postfix" {
+  description = "Unique postfix for resource names"
+  type        = string
+}
+

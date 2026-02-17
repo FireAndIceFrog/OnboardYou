@@ -89,3 +89,8 @@ variable "log_retention_days" {
   type        = number
   default     = 14
 }
+
+variable "env_postfix" {
+  description = "Unique postfix for resource names"
+  type        = string
+}

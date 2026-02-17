@@ -10,8 +10,13 @@ variable "environment" {
   type        = string
 }
 
+variable "env_postfix" {
+  description = "Unique postfix for resource names"
+  type        = string
+}
+
 resource "aws_cognito_user_pool" "main" {
-  name = "onboardyou-${var.environment}"
+  name = "onboardyou-${var.environment}-${var.env_postfix}"
 
   auto_verified_attributes = ["email"]
   username_attributes      = ["email"]
@@ -50,7 +55,7 @@ resource "aws_cognito_user_pool" "main" {
 }
 
 resource "aws_cognito_user_pool_client" "api" {
-  name         = "onboardyou-api-client"
+  name         = "onboardyou-api-client-${var.env_postfix}"
   user_pool_id = aws_cognito_user_pool.main.id
 
   explicit_auth_flows = [

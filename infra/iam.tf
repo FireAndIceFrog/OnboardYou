@@ -17,7 +17,7 @@ data "aws_iam_policy_document" "scheduler_assume" {
 }
 
 resource "aws_iam_role" "scheduler_execution" {
-  name               = "onboardyou-scheduler-role-${var.environment}"
+  name               = "onboardyou-scheduler-role-${var.environment}-${var.env_postfix}"
   assume_role_policy = data.aws_iam_policy_document.scheduler_assume.json
 }
 

@@ -8,7 +8,7 @@
 ##──────────────────────────────────────────────────────────────
 
 locals {
-  bucket_name = "${var.project_prefix}-frontend-${var.environment}"
+  bucket_name = "${var.project_prefix}-frontend-${var.environment}-${var.env_postfix}"
 }
 
 # ══════════════════════════════════════════════════════════════
@@ -56,7 +56,7 @@ resource "aws_s3_bucket_public_access_block" "frontend" {
 # ══════════════════════════════════════════════════════════════
 
 resource "aws_cloudfront_origin_access_control" "frontend" {
-  name                              = "${var.project_prefix}-frontend-oac-${var.environment}"
+  name                              = "${var.project_prefix}-frontend-oac-${var.environment}-${var.env_postfix}"
   description                       = "OAC for ${local.bucket_name}"
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
@@ -96,7 +96,7 @@ resource "aws_s3_bucket_policy" "frontend" {
 # ══════════════════════════════════════════════════════════════
 
 resource "aws_cloudfront_response_headers_policy" "security" {
-  name = "${var.project_prefix}-security-headers-${var.environment}"
+  name = "${var.project_prefix}-security-headers-${var.environment}-${var.env_postfix}"
 
   security_headers_config {
     strict_transport_security {
@@ -137,7 +137,7 @@ resource "aws_cloudfront_distribution" "frontend" {
   is_ipv6_enabled     = true
   default_root_object = var.default_root_object
   price_class         = var.price_class
-  comment             = "${var.project_prefix} frontend (${var.environment})"
+  comment             = "${var.project_prefix} frontend (${var.environment}-${var.env_postfix})"
   wait_for_deployment = false
 
   origin {
@@ -218,6 +218,6 @@ resource "aws_cloudfront_distribution" "frontend" {
   }
 
   tags = {
-    Name = "${var.project_prefix}-frontend-${var.environment}"
+    Name = local.bucket_name
   }
 }

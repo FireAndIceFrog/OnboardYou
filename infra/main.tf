@@ -34,11 +34,9 @@ provider "aws" {
   region = var.aws_region
 
   default_tags {
-    tags = {
-      Project     = "OnboardYou"
-      ManagedBy   = "OpenTofu"
+    tags = merge(var.tags, {
       Environment = var.environment
-    }
+    })
   }
 }
 
@@ -50,7 +48,7 @@ data "aws_caller_identity" "current" {}
 
 module "pipeline_configs_table" {
   source      = "./modules/dynamodb"
-  table_name  = "PipelineConfigs"
+  table_name  = "PipelineConfigs-${var.env_postfix}"
   hash_key    = "organizationId"
   range_key   = "customerCompanyId"
   enable_pitr = false
@@ -58,7 +56,7 @@ module "pipeline_configs_table" {
 
 module "org_settings_table" {
   source      = "./modules/dynamodb"
-  table_name  = "OrgSettings"
+  table_name  = "OrgSettings-${var.env_postfix}"
   hash_key    = "organizationId"
   enable_pitr = false
 }
@@ -70,6 +68,7 @@ module "org_settings_table" {
 module "cognito" {
   source      = "./modules/cognito"
   environment = var.environment
+  env_postfix = var.env_postfix
 }
 
 # ══════════════════════════════════════════════════════════════
@@ -93,6 +92,7 @@ module "etl_trigger" {
   function_name  = "etl-trigger"
   description    = "Invoked by EventBridge Scheduler — reads config from DynamoDB, runs the ETL pipeline"
   environment    = var.environment
+  env_postfix    = var.env_postfix
   source_binary  = "${path.module}/../target/lambda/etl-trigger/bootstrap"
   memory_size    = 512
   timeout        = 300
@@ -119,6 +119,7 @@ module "authorizer" {
   function_name  = "authorizer"
   description    = "Lambda Authorizer — validates Cognito JWTs and injects organizationId into request context"
   environment    = var.environment
+  env_postfix    = var.env_postfix
   source_binary  = "${path.module}/../target/lambda/authorizer/bootstrap"
   memory_size    = 128
   timeout        = 10
@@ -139,6 +140,7 @@ module "config_api" {
   function_name  = "config-api"
   description    = "Config API — GET /config, CRUD /config/{id}, POST /config/{id}/validate"
   environment    = var.environment
+  env_postfix    = var.env_postfix
   source_binary  = "${path.module}/../target/lambda/config-api/bootstrap"
   memory_size    = 256
   timeout        = 30
@@ -183,6 +185,7 @@ module "frontend" {
   source         = "./modules/frontend-hosting"
   project_prefix = "onboardyou"
   environment    = var.environment
+  env_postfix    = var.env_postfix
   api_origin     = module.api.invoke_url
   price_class    = "PriceClass_100"
 }
@@ -201,6 +204,7 @@ module "api" {
   api_name    = "onboardyou-api"
   description = "OnboardYou Config API — manage ETL pipeline configurations"
   environment = var.environment
+  env_postfix = var.env_postfix
   stage_name  = "v1"
 
   lambda_invoke_arn    = module.config_api.invoke_arn

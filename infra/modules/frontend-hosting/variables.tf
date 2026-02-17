@@ -29,3 +29,8 @@ variable "price_class" {
   type        = string
   default     = "PriceClass_100"
 }
+
+variable "env_postfix" {
+  description = "Unique postfix for resource names"
+  type        = string
+}

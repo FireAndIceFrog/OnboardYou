@@ -8,7 +8,7 @@
 ##──────────────────────────────────────────────────────────────
 
 locals {
-  full_function_name = "${var.project_prefix}-${var.function_name}-${var.environment}"
+  full_function_name = "${var.project_prefix}-${var.function_name}-${var.environment}-${var.env_postfix}"
   has_custom_policy  = length(var.iam_policy_statements) > 0
 }
 
@@ -27,7 +27,7 @@ data "aws_iam_policy_document" "assume" {
 }
 
 resource "aws_iam_role" "this" {
-  name               = "${var.project_prefix}-${var.function_name}-role-${var.environment}"
+  name               = "${var.project_prefix}-${var.function_name}-role-${var.environment}-${var.env_postfix}"
   assume_role_policy = data.aws_iam_policy_document.assume.json
 }
 

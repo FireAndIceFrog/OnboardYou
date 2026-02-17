@@ -1,7 +1,13 @@
 # Copy to terraform.tfvars and customise
 aws_region         = "eu-west-1"
 environment        = "dev"
+env_postfix        = "a1b2"
 log_retention_days = 14
+
+tags = {
+  Project   = "OnboardYou"
+  ManagedBy = "OpenTofu"
+}
 
 demo_users = [
   { email = "demo@onboardyou.com", organization_id = "qa-org" },

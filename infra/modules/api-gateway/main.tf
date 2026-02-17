@@ -40,7 +40,7 @@ locals {
 # ══════════════════════════════════════════════════════════════
 
 resource "aws_api_gateway_rest_api" "this" {
-  name        = "${var.api_name}-${var.environment}"
+  name        = "${var.api_name}-${var.environment}-${var.env_postfix}"
   description = var.description
 
   endpoint_configuration {
@@ -55,7 +55,7 @@ resource "aws_api_gateway_rest_api" "this" {
 resource "aws_api_gateway_authorizer" "token" {
   count                            = var.authorization == "CUSTOM" ? 1 : 0
   rest_api_id                      = aws_api_gateway_rest_api.this.id
-  name                             = "onboardyou-authorizer"
+  name                             = "onboardyou-authorizer-${var.env_postfix}"
   type                             = "TOKEN"
   authorizer_uri                   = var.authorizer_uri
   authorizer_result_ttl_in_seconds = 300
