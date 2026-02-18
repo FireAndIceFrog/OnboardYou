@@ -103,6 +103,57 @@ Using accessible tags allows users to read our code easier - instead of reading 
 
 When we need to create a readable list of items we should use <dd> and <dt> for items. Follow best practices as much as possible here. 
 
+# UI Component Library — Chakra UI v3
+
+The **platform** package uses **Chakra UI v3** (`@chakra-ui/react`) as the component library. There is **no SCSS** — all styling is done via Chakra style props and semantic tokens.
+
+## Key decisions
+- **No dark mode** — we ship light-only to keep things simple and maintainable.
+- **No custom shared UI primitives** — use Chakra's built-in `Button`, `Badge`, `Spinner`, `Card`, `Input`, `Field`, `NativeSelect`, `Menu`, etc. directly. The old `shared/ui/Button`, `Badge`, `Card`, `Spinner` directories have been deleted.
+- **ErrorBoundary** remains a custom class component in `shared/ui/ErrorBoundary/` since Chakra doesn't provide one.
+- The **config** package has **not** been migrated yet and still uses SCSS + its own shared components.
+
+## Theme
+Defined in `src/theme/index.ts` using `createSystem(defaultConfig, config)`. The custom config only overrides fonts (Inter/JetBrains Mono) and adds global CSS for the React Flow SVG fix. All colors, spacing, radii, shadows use Chakra defaults.
+
+## How to style components
+- Use Chakra **style props** directly on components: `<Box p={4} bg="bg.subtle" borderRadius="lg">`.
+- Use **semantic tokens** for colors: `fg`, `fg.muted`, `fg.error`, `bg`, `bg.subtle`, `border`, `border.emphasized`, etc.
+- Use **color palettes** for variants: `colorPalette="blue"`, `colorPalette="red"`, `colorPalette="green"`.
+- Use **responsive objects** for breakpoints: `columns={{ base: 1, md: 2, lg: 4 }}`.
+- **Never** create `.module.scss` or `.css` files — use Chakra style props only.
+
+## Component mapping (old → new)
+| Old (SCSS)                 | New (Chakra v3)                                      |
+|---------------------------|------------------------------------------------------|
+| `<Button variant="primary">` | `<Button colorPalette="blue">`                     |
+| `<Button variant="secondary">` | `<Button variant="outline">`                    |
+| `<Button variant="ghost">`   | `<Button variant="ghost">`                        |
+| `<Button variant="danger">`  | `<Button colorPalette="red">`                     |
+| `<Badge variant="active">`   | `<Badge colorPalette="green">`                    |
+| `<Badge variant="draft">`    | `<Badge colorPalette="gray">`                     |
+| `<Badge variant="error">`    | `<Badge colorPalette="red">`                      |
+| `<Badge variant="info">`     | `<Badge colorPalette="blue">`                     |
+| `<Card>`                     | `<Card.Root>` + `<Card.Body>`                     |
+| `<Spinner size="md">`        | `<Spinner size="md">` (from `@chakra-ui/react`)   |
+| Custom `<FieldError>`        | `<Field.ErrorText>` or thin `<FieldError>` wrapper |
+| `<select>` + SCSS            | `<NativeSelect.Root>` + `.Field` + `.Indicator`    |
+| Custom dropdown              | `<Menu.Root>` + `.Trigger` + `.Content` + `.Item`  |
+
+## ChakraProvider
+Wrapped at the top of `App.tsx` around `RouterProvider`:
+```tsx
+<ChakraProvider value={system}>
+  <RouterProvider router={router} />
+</ChakraProvider>
+```
+
+## Layout constants
+Sidebar width, header height, etc. are plain TypeScript constants in the layout components (not in a theme file):
+- `HEADER_HEIGHT = '64px'`
+- `SIDEBAR_WIDTH = '260px'`
+- `SIDEBAR_COLLAPSED_WIDTH = '64px'`
+
 # Translations
 We should create a translations file per package. React-i18next is the package of choice here
 

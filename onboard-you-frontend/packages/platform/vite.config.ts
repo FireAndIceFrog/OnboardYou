@@ -39,13 +39,6 @@ export default defineConfig(({ mode }) => {
       '@': resolve(__dirname, 'src'),
     },
   },
-  css: {
-    preprocessorOptions: {
-      scss: {
-        api: 'modern-compiler',
-      },
-    },
-  },
   server: {
     port: 5173,
     strictPort: false,

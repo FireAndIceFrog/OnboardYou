@@ -1,6 +1,8 @@
 // Shared UI components
-export { Button, Spinner, Badge, Card, ErrorBoundary } from './ui';
-export type { ButtonProps, SpinnerProps, BadgeProps, CardProps } from './ui';
+export { ErrorBoundary } from './ui';
+
+// Re-export Chakra primitives used by remote packages for convenience
+export { Button, Spinner, Badge } from '@chakra-ui/react';
 
 // Domain
 export * from './domain';
