@@ -12,8 +12,8 @@
 
 mod common;
 
-use common::mock_data::{full_pipeline_manifest, write_generated_csv};
-use onboard_you::{ActionFactory, Manifest, PipelineRunner, RosterContext};
+use common::mock_data::{full_pipeline_manifest, generate_hris_csv};
+use onboard_you::{ActionFactory, Manifest, RosterContext};
 use polars::prelude::*;
 use std::time::Instant;
 
@@ -59,32 +59,56 @@ fn get_rss_bytes() -> usize {
 }
 
 /// Execute the full pipeline on a generated CSV of `n` rows, returning metrics.
+///
+/// The first manifest action (`csv_hris_connector`) would try to download from
+/// S3, which is unavailable in tests.  Instead we:
+///   1. Generate the CSV in-memory and read it directly into a Polars DataFrame.
+///   2. Build a `RosterContext` from that DataFrame.
+///   3. Parse the manifest, but only run actions[1..] (skipping the connector).
 fn run_full_pipeline(n: usize) -> RunMetrics {
-    // 1. Generate CSV to a temp file
-    let (_tmp, csv_path) = write_generated_csv(n);
-    let csv_str = csv_path.to_str().expect("path to str");
+    // 1. Generate CSV in-memory → Polars DataFrame (no temp file / no S3)
+    let csv_bytes = generate_hris_csv(n);
+    let cursor = std::io::Cursor::new(csv_bytes.as_bytes());
+    let df = CsvReader::new(cursor)
+        .finish()
+        .expect("parse generated CSV into DataFrame");
 
-    // 2. Parse the manifest that chains every action
-    let manifest_json = full_pipeline_manifest(csv_str);
+    // 2. Build a RosterContext seeded with the generated data
+    let initial_context = RosterContext::new(df.lazy());
+
+    // 3. Parse the manifest — the connector config must be valid JSON even
+    //    though we never call its execute().
+    let generated_columns: &[&str] = &[
+        "employee_id", "first_name", "last_name", "email",
+        "national_id", "ssn", "salary", "start_date",
+        "country_raw", "mobile_phone",
+    ];
+    let manifest_json = full_pipeline_manifest(
+        "data.csv",
+        generated_columns,
+    );
     let manifest = Manifest::from_json(&manifest_json).expect("parse manifest");
 
-    // 3. Resolve all actions via the factory
+    // 4. Resolve all actions via the factory, but skip the first (csv_hris_connector)
     let actions: Vec<_> = manifest
         .actions
         .iter()
+        .skip(1)
         .map(|ac| ActionFactory::create(ac).expect(&format!("create action '{}'", ac.action_type)))
         .collect();
 
-    // 4. Run the pipeline, timing each action individually
+    // 5. Run the pipeline, timing each action individually
     let rss_before = get_rss_bytes();
-    let mut context = RosterContext::new(LazyFrame::default());
+    let mut context = initial_context;
     let mut action_timings: Vec<(String, f64)> = Vec::with_capacity(actions.len());
     let total_start = Instant::now();
 
     let mut success = true;
     for (i, action) in actions.iter().enumerate() {
-        let action_id = manifest.actions[i].id.clone();
-        let action_type = manifest.actions[i].action_type.clone();
+        // Index into manifest.actions offset by 1 since we skipped the connector
+        let action_cfg = &manifest.actions[i + 1];
+        let action_id = action_cfg.id.clone();
+        let action_type = action_cfg.action_type.clone();
 
         let t0 = Instant::now();
         match action.execute(context) {

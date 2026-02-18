@@ -197,7 +197,7 @@ mod tests {
                 {
                     "id": "ingest_hris",
                     "action_type": "csv_hris_connector",
-                    "config": { "csv_path": "/tmp/test.csv" }
+                    "config": { "filename": "data.csv", "columns": ["a", "b"] }
                 }
             ]
         }"#;

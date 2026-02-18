@@ -140,8 +140,9 @@ pub fn write_generated_csv(n: usize) -> (tempfile::NamedTempFile, PathBuf) {
 // Manifest helpers
 // ---------------------------------------------------------------------------
 
-/// Manifest that uses the CSV connector, pointing at a given path.
-pub fn sample_csv_manifest(csv_path: &str) -> String {
+/// Manifest that uses the CSV connector with S3 URI and declared columns.
+pub fn sample_csv_manifest(s3_uri: &str, columns: &[&str]) -> String {
+    let cols_json: Vec<String> = columns.iter().map(|c| format!("\"{}\"" , c)).collect();
     format!(
         r#"{{
   "version": "1.0",
@@ -149,11 +150,12 @@ pub fn sample_csv_manifest(csv_path: &str) -> String {
     {{
       "id": "ingest_hris",
       "action_type": "csv_hris_connector",
-      "config": {{ "csv_path": "{}" }}
+      "config": {{ "s3_uri": "{}", "columns": [{}] }}
     }}
   ]
 }}"#,
-        csv_path
+        s3_uri,
+        cols_json.join(", "),
     )
 }
 
@@ -171,7 +173,9 @@ pub fn sample_csv_manifest(csv_path: &str) -> String {
 ///  9. pii_masking           — mask ssn, salary
 /// 10. rename_column         — rename national_id → nid
 /// 11. drop_column           — drop the is_duplicate helper column
-pub fn full_pipeline_manifest(csv_path: &str) -> String {
+pub fn full_pipeline_manifest(filename: &str, columns: &[&str]) -> String {
+    let cols_json: Vec<String> = columns.iter().map(|c| format!("\"{}\"", c)).collect();
+    let cols_str = cols_json.join(", ");
     format!(
         r#"{{
   "version": "1.0",
@@ -179,7 +183,7 @@ pub fn full_pipeline_manifest(csv_path: &str) -> String {
     {{
       "id": "ingest",
       "action_type": "csv_hris_connector",
-      "config": {{ "csv_path": "{csv_path}" }}
+      "config": {{ "filename": "{filename}", "columns": [{cols_str}] }}
     }},
     {{
       "id": "diacritics",
@@ -275,7 +279,10 @@ pub const SAMPLE_MANIFEST_JSON: &str = r#"{
     {
       "id": "hris_connector",
       "action_type": "csv_hris_connector",
-      "config": {}
+      "config": {
+        "filename": "data.csv",
+        "columns": ["employee_id", "first_name", "last_name", "email", "ssn", "salary", "start_date"]
+      }
     }
   ]
 }"#;

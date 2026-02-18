@@ -62,10 +62,11 @@ OnboardYou/
 │   │       ├── controllers/
 │   │       │   ├── auth_controller.rs      # POST /auth/login (no JWT required)
 │   │       │   ├── config_controller.rs    # CRUD /config
+│   │       │   ├── csv_upload_controller.rs # POST csv-upload, GET csv-columns
 │   │       │   └── settings_controller.rs  # GET/PUT /settings
-│   │       ├── engine/      # Business logic (ConfigEngine, AuthEngine, SettingsEngine)
+│   │       ├── engine/      # Business logic (ConfigEngine, AuthEngine, SettingsEngine, CsvUploadEngine)
 │   │       ├── models/      # PipelineConfig, ApiError, AppState, LoginRequest/Response
-│   │       └── repositories/ # DynamoDB, EventBridge Scheduler, Cognito
+│   │       └── repositories/ # DynamoDB, EventBridge Scheduler, Cognito, S3
 │   ├── authorizer/          # Lambda Authorizer
 │   │   └── src/
 │   │       ├── main.rs      # lambda_runtime handler
@@ -512,6 +513,33 @@ cargo test -p onboard_you -- --nocapture
 | API Gateway | REST API, `v1` stage, CORS enabled, X-Ray tracing |
 | IAM | Least-privilege roles per Lambda, separate scheduler execution role |
 
+### 6.3 CSV Upload Architecture (S3)
+
+CSV files are uploaded by the frontend directly to S3 via presigned PUT URLs. The architecture:
+
+**S3 bucket:** `onboardyou-csv-uploads-{postfix}` (module in `infra/modules/csv-upload-bucket/`)
+- AES256 encryption, all public access blocked
+- CORS allows PUT/GET from allowed origins
+- Lifecycle policy expires objects after configurable retention period
+
+**S3 key convention:** `{organization_id}/{customer_company_id}/{filename}`
+- Users only see/configure the `filename` (e.g. `"employees.csv"`)
+- The path prefix is computed at runtime — users never interact with it
+
+**Upload flow:**
+1. Frontend calls `POST /config/{company_id}/csv-upload?filename=employees.csv`
+2. API returns a presigned PUT URL (24h TTL) + the computed S3 key
+3. Frontend uploads CSV directly to S3 using the presigned URL
+4. Frontend calls `GET /config/{company_id}/csv-columns?filename=employees.csv`
+5. API reads the CSV header row from S3 and returns column names
+6. Frontend stores `{ "filename": "employees.csv", "columns": [...] }` in the pipeline config
+
+**Runtime resolution:**
+- `CsvHrisConnectorConfig` stores only `filename` + `columns` (user-facing)
+- `resolved_s3_key` is `Option<String>`, skipped during serialisation (`serde(skip_serializing_if)`)
+- The ETL trigger's `resolve_csv_s3_keys()` fills `resolved_s3_key` from `org_id/company_id/filename` before the factory builds actions
+- `download_from_s3()` reads `CSV_UPLOAD_BUCKET` from env and uses the resolved key
+
 ---
 
 ## 7. Build & Deploy
@@ -558,6 +586,7 @@ These items are pending implementation. When picking up work, check this list:
 | Demo user provisioning | ✅ Done | `infra/modules/demo-user/` — rotates password every deploy |
 | Typed `ActionConfigPayload` | ✅ Done | All action configs are concrete typed structs; no `serde_json::Value` in pipeline |
 | ToSchema for OpenAPI | ✅ Done | All 13 config types + 7 nested types derive `ToSchema`; `ActionConfigPayload` is `oneOf` in the OpenAPI spec; `ApiDispatcherConfig` uses externally-tagged enum schema |
+| CSV S3 upload | ✅ Done | S3 bucket + presigned upload route + column discovery route; CSV config stores `filename` only |
 | CI/CD pipeline | Not yet created | GitHub Actions for test + build + deploy |
 
 ---

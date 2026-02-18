@@ -69,7 +69,7 @@ mod tests {
             actions: vec![ActionConfig {
                 id: "noop".into(),
                 action_type: ActionType::CsvHrisConnector, // type doesn't matter, action is pre-built
-                config: ActionConfigPayload::CsvHrisConnector(serde_json::from_value(serde_json::json!({"csv_path": "/dev/null"})).unwrap()),
+                config: ActionConfigPayload::CsvHrisConnector(serde_json::from_value(serde_json::json!({"filename": "data.csv", "columns": ["a"]})).unwrap()),
             }],
         };
         let ctx = RosterContext::new(LazyFrame::default());

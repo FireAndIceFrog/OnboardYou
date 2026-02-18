@@ -31,6 +31,9 @@ pub async fn run(
     // 3. Resolve any "default" auth types from the settings table
     resolve_default_auth(dynamo, settings_table_name, organization_id, &mut manifest).await?;
 
+    // 3b. Resolve CSV S3 keys from org_id / company_id / filename
+    resolve_csv_s3_keys(organization_id, customer_company_id, &mut manifest);
+
     // 4. Build actions from manifest via Factory
     let actions: Vec<_> = manifest
         .actions
@@ -107,4 +110,27 @@ async fn resolve_default_auth(
     }
 
     Ok(())
+}
+
+/// Inject the resolved S3 key (`{org_id}/{company_id}/{filename}`) into every
+/// `CsvHrisConnector` action in the manifest.
+///
+/// This must run **before** the factory builds the actions so that
+/// `download_from_s3` can find the correct S3 object at runtime.
+fn resolve_csv_s3_keys(
+    organization_id: &str,
+    customer_company_id: &str,
+    manifest: &mut Manifest,
+) {
+    for action in &mut manifest.actions {
+        if let ActionConfigPayload::CsvHrisConnector(ref mut cfg) = action.config {
+            cfg.resolve_s3_key(organization_id, customer_company_id);
+            tracing::info!(
+                action_id = %action.id,
+                filename = %cfg.filename,
+                s3_key = ?cfg.resolved_s3_key,
+                "Resolved CSV S3 key"
+            );
+        }
+    }
 }

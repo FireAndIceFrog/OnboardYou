@@ -14,6 +14,7 @@ use axum::{
 };
 use tower_http::cors::{Any, CorsLayer};
 use controllers::{create_config, get_config, list_configs, update_config, validate_config};
+use controllers::{csv_columns, csv_presigned_upload};
 use controllers::{get_settings, upsert_settings};
 use controllers::login;
 use models::{AppState, ConfigRequest, ErrorResponse, LoginRequest, LoginResponse, OrgSettings, PipelineConfig, SettingsRequest};
@@ -21,6 +22,7 @@ use tracing_subscriber::{fmt, EnvFilter};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
+use engine::csv_upload_engine::{CsvColumnsResponse, PresignedUploadResponse};
 use engine::validation_engine::{StepValidation, ValidationResult};
 use onboard_you::{ActionConfig, ActionConfigPayload, ActionType, Manifest};
 
@@ -40,6 +42,8 @@ use onboard_you::{ActionConfig, ActionConfigPayload, ActionType, Manifest};
         controllers::config_controller::create_config,
         controllers::config_controller::update_config,
         controllers::config_controller::validate_config,
+        controllers::csv_upload_controller::csv_presigned_upload,
+        controllers::csv_upload_controller::csv_columns,
         controllers::settings_controller::get_settings,
         controllers::settings_controller::upsert_settings,
     ),
@@ -57,11 +61,14 @@ use onboard_you::{ActionConfig, ActionConfigPayload, ActionType, Manifest};
         ErrorResponse,
         OrgSettings,
         SettingsRequest,
+        PresignedUploadResponse,
+        CsvColumnsResponse,
     )),
     tags(
         (name = "Authentication", description = "Login and token management"),
         (name = "Configuration", description = "Pipeline configuration CRUD operations"),
         (name = "Validation", description = "Dry-run pipeline validation"),
+        (name = "CSV Upload", description = "CSV file upload and column discovery"),
         (name = "Settings", description = "Organization settings management"),
     ),
     security(
@@ -130,6 +137,14 @@ fn router(state: AppState) -> Router {
         .route(
             "/config/{customer_company_id}/validate",
             post(validate_config),
+        )
+        .route(
+            "/config/{customer_company_id}/csv-upload",
+            post(csv_presigned_upload),
+        )
+        .route(
+            "/config/{customer_company_id}/csv-columns",
+            get(csv_columns),
         )
         .route("/settings", get(get_settings).put(upsert_settings))
         .with_state(state)

@@ -97,7 +97,7 @@ mod tests {
         let config = ActionConfig {
             id: "ingest".into(),
             action_type: ActionType::CsvHrisConnector,
-            config: ActionConfigPayload::CsvHrisConnector(serde_json::from_value(serde_json::json!({ "csv_path": "/tmp/test.csv" })).unwrap()),
+            config: ActionConfigPayload::CsvHrisConnector(serde_json::from_value(serde_json::json!({ "filename": "data.csv", "columns": ["a", "b"] })).unwrap()),
         };
         let action = ActionFactory::create(&config).expect("should create csv connector");
         assert_eq!(action.id(), "csv_hris_connector");

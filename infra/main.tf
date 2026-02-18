@@ -83,6 +83,17 @@ module "demo_user" {
 }
 
 # ══════════════════════════════════════════════════════════════
+# CSV Upload Bucket (S3)
+# ══════════════════════════════════════════════════════════════
+
+module "csv_upload_bucket" {
+  source         = "./modules/csv-upload-bucket"
+  project_prefix = "onboardyou"
+  environment    = var.environment
+  env_postfix    = var.env_postfix
+}
+
+# ══════════════════════════════════════════════════════════════
 # Lambdas
 # ══════════════════════════════════════════════════════════════
 
@@ -102,6 +113,7 @@ module "etl_trigger" {
   environment_variables = {
     CONFIG_TABLE_NAME    = module.pipeline_configs_table.name
     SETTINGS_TABLE_NAME  = module.org_settings_table.name
+    CSV_UPLOAD_BUCKET    = module.csv_upload_bucket.bucket_name
     RUST_LOG             = "info"
   }
 
@@ -109,6 +121,10 @@ module "etl_trigger" {
     {
       actions   = ["dynamodb:GetItem", "dynamodb:Query"]
       resources = [module.pipeline_configs_table.arn, module.org_settings_table.arn]
+    },
+    {
+      actions   = ["s3:GetObject"]
+      resources = ["${module.csv_upload_bucket.bucket_arn}/*"]
     },
   ]
 }
@@ -153,6 +169,7 @@ module "config_api" {
     ETL_LAMBDA_ARN                        = module.etl_trigger.arn
     SCHEDULER_ROLE_ARN                    = aws_iam_role.scheduler_execution.arn
     COGNITO_CLIENT_ID                     = module.cognito.client_id
+    CSV_UPLOAD_BUCKET                     = module.csv_upload_bucket.bucket_name
     AWS_LAMBDA_HTTP_IGNORE_STAGE_IN_PATH  = "true"
     RUST_LOG                              = "info"
   }
@@ -173,6 +190,10 @@ module "config_api" {
     {
       actions   = ["cognito-idp:InitiateAuth"]
       resources = ["*"]
+    },
+    {
+      actions   = ["s3:PutObject", "s3:GetObject"]
+      resources = ["${module.csv_upload_bucket.bucket_arn}/*"]
     },
   ]
 }
