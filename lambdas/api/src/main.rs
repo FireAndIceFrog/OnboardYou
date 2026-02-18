@@ -13,7 +13,7 @@ use axum::{
     Router,
 };
 use tower_http::cors::{Any, CorsLayer};
-use controllers::{create_config, get_config, list_configs, update_config, validate_config};
+use controllers::{create_config, delete_config, get_config, list_configs, update_config, validate_config};
 use controllers::{csv_columns, csv_presigned_upload};
 use controllers::{get_settings, upsert_settings};
 use controllers::login;
@@ -41,6 +41,7 @@ use onboard_you::{ActionConfig, ActionConfigPayload, ActionType, Manifest};
         controllers::config_controller::get_config,
         controllers::config_controller::create_config,
         controllers::config_controller::update_config,
+        controllers::config_controller::delete_config,
         controllers::config_controller::validate_config,
         controllers::csv_upload_controller::csv_presigned_upload,
         controllers::csv_upload_controller::csv_columns,
@@ -132,7 +133,10 @@ fn router(state: AppState) -> Router {
         .route("/config", get(list_configs))
         .route(
             "/config/{customer_company_id}",
-            get(get_config).post(create_config).put(update_config),
+            get(get_config)
+                .post(create_config)
+                .put(update_config)
+                .delete(delete_config),
         )
         .route(
             "/config/{customer_company_id}/validate",

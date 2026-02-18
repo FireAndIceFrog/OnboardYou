@@ -1,6 +1,7 @@
 export {
   fetchConfigDetails,
   saveConfigThunk,
+  deleteConfigThunk,
   validateConfigThunk,
   setNodes,
   setEdges,

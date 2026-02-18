@@ -8,6 +8,7 @@ export interface ConfigDetailsState {
   selectedNode: Node | null;
   isLoading: boolean;
   isSaving: boolean;
+  isDeleting: boolean;
   isValidating: boolean;
   error: string | null;
   chatOpen: boolean;

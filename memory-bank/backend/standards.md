@@ -470,12 +470,13 @@ cargo test -p onboard_you -- --nocapture
 ### 5.1 Config API (`lambdas/api/`)
 
 - Uses **Axum** with `lambda_http` adapter.
-- Routes are: `GET /config/{org_id}`, `POST /config`, `PUT /config/{org_id}`.
+- Routes are: `GET /config`, `GET /config/{id}`, `POST /config/{id}`, `PUT /config/{id}`, `DELETE /config/{id}`, `POST /config/{id}/validate`.
 - Request/response models use `#[serde(rename_all = "camelCase")]`.
 - Business logic lives in `engine/config_engine.rs`, **not** in route handlers.
 - Repository layer wraps AWS SDK calls (`config_repository.rs`, `schedule_repository.rs`).
 - Error responses use `ApiError` enum → HTTP status codes via `IntoResponse`.
 - `AppState` is constructed once at startup from env vars and shared via Axum state.
+- **DELETE** returns `204 No Content`. The engine deletes from DynamoDB first, then best-effort deletes the EventBridge schedule (warns on failure since the schedule may not exist).
 
 ### 5.2 ETL Trigger (`lambdas/etl-trigger/`)
 

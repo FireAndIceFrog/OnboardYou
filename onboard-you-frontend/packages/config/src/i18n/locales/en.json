@@ -46,6 +46,10 @@
     "saving": "Saving…",
     "saveSuccess": "Configuration saved successfully",
     "createSuccess": "Configuration created successfully",
+    "delete": "Delete",
+    "deleting": "Deleting…",
+    "deleteSuccess": "Configuration deleted successfully",
+    "deleteConfirm": "Are you sure you want to delete this configuration? This action cannot be undone.",
     "noConnectionData": "No connection data found. Please start from the connection setup.",
     "addStep": "Add Step",
     "form": {

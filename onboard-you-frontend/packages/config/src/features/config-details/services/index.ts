@@ -1,4 +1,4 @@
-export { fetchConfig, saveConfig } from './configDetailsService';
+export { fetchConfig, saveConfig, deleteConfig } from './configDetailsService';
 export { convertToFlow } from './pipelineLayoutService';
 export {
   validateCsvFile,

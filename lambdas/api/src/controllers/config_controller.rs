@@ -135,6 +135,32 @@ pub async fn update_config(
     Ok((StatusCode::OK, Json(saved)))
 }
 
+/// DELETE /config/{customerCompanyId}
+///
+/// Delete a pipeline configuration and its associated EventBridge schedule.
+/// The organization is resolved from the caller's JWT claims.
+#[utoipa::path(
+    delete,
+    path = "/config/{customer_company_id}",
+    tag = "Configuration",
+    params(
+        ("customer_company_id" = String, Path, description = "Unique identifier for the customer company"),
+    ),
+    responses(
+        (status = 204, description = "Configuration deleted successfully"),
+        (status = 401, description = "Unauthorized — missing or invalid token", body = ErrorResponse),
+        (status = 500, description = "Internal server error", body = ErrorResponse),
+    )
+)]
+pub async fn delete_config(
+    State(state): State<AppState>,
+    claims: Claims,
+    Path(customer_company_id): Path<String>,
+) -> Result<impl IntoResponse, ApiError> {
+    engine::config_engine::delete(&state, &claims.organization_id, &customer_company_id).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 /// POST /config/{customerCompanyId}/validate
 ///
 /// Dry-run column propagation: parses the pipeline manifest, builds every

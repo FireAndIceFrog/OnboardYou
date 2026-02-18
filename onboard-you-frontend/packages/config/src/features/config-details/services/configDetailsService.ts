@@ -2,6 +2,7 @@ import {
   getConfig as getConfigApi,
   createConfig as createConfigApi,
   updateConfig as updateConfigApi,
+  deleteConfig as deleteConfigApi,
   validateConfig as validateConfigApi,
 } from '@/generated/api';
 import type { PipelineConfig, ValidationResult, ConfigRequest } from '@/generated/api';
@@ -38,6 +39,15 @@ export async function saveConfig(
     throwOnError: true,
   });
   return data;
+}
+
+export async function deleteConfig(
+  customerCompanyId: string,
+): Promise<void> {
+  await deleteConfigApi({
+    path: { customer_company_id: customerCompanyId },
+    throwOnError: true,
+  });
 }
 
 export async function validateConfig(

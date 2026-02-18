@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateConfigData, CreateConfigErrors, CreateConfigResponses, CsvColumnsData, CsvColumnsErrors, CsvColumnsResponses, CsvPresignedUploadData, CsvPresignedUploadErrors, CsvPresignedUploadResponses, GetConfigData, GetConfigErrors, GetConfigResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, ListConfigsData, ListConfigsErrors, ListConfigsResponses, LoginData, LoginErrors, LoginResponses, UpdateConfigData, UpdateConfigErrors, UpdateConfigResponses, UpsertSettingsData, UpsertSettingsErrors, UpsertSettingsResponses, ValidateConfigData, ValidateConfigErrors, ValidateConfigResponses } from './types.gen';
+import type { CreateConfigData, CreateConfigErrors, CreateConfigResponses, CsvColumnsData, CsvColumnsErrors, CsvColumnsResponses, CsvPresignedUploadData, CsvPresignedUploadErrors, CsvPresignedUploadResponses, DeleteConfigData, DeleteConfigErrors, DeleteConfigResponses, GetConfigData, GetConfigErrors, GetConfigResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, ListConfigsData, ListConfigsErrors, ListConfigsResponses, LoginData, LoginErrors, LoginResponses, UpdateConfigData, UpdateConfigErrors, UpdateConfigResponses, UpsertSettingsData, UpsertSettingsErrors, UpsertSettingsResponses, ValidateConfigData, ValidateConfigErrors, ValidateConfigResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -44,6 +44,18 @@ export const login = <ThrowOnError extends boolean = false>(options: Options<Log
 export const listConfigs = <ThrowOnError extends boolean = false>(options?: Options<ListConfigsData, ThrowOnError>) => (options?.client ?? client).get<ListConfigsResponses, ListConfigsErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/config',
+    ...options
+});
+
+/**
+ * DELETE /config/{customerCompanyId}
+ *
+ * Delete a pipeline configuration and its associated EventBridge schedule.
+ * The organization is resolved from the caller's JWT claims.
+ */
+export const deleteConfig = <ThrowOnError extends boolean = false>(options: Options<DeleteConfigData, ThrowOnError>) => (options.client ?? client).delete<DeleteConfigResponses, DeleteConfigErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/config/{customer_company_id}',
     ...options
 });
 

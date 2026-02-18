@@ -69,7 +69,6 @@ pub async fn upsert(state: &AppState, config: &PipelineConfig) -> Result<(), Api
 }
 
 /// Delete a pipeline schedule.
-#[allow(dead_code)]
 pub async fn delete(state: &AppState, organization_id: &str, customer_company_id: &str) -> Result<(), ApiError> {
     let name = schedule_name(organization_id, customer_company_id);
 

@@ -257,6 +257,16 @@ export const configHandlers = [
     return HttpResponse.json(updated);
   }),
 
+  // DELETE /config/:customerCompanyId — delete config
+  http.delete(`${API_BASE}/config/:customerCompanyId`, ({ params }) => {
+    const idx = MOCK_CONFIGS.findIndex((c) => c.customerCompanyId === params.customerCompanyId);
+    if (idx === -1) {
+      return HttpResponse.json({ error: 'Config not found' }, { status: 404 });
+    }
+    MOCK_CONFIGS.splice(idx, 1);
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   // POST /config/:customerCompanyId/validate — dry-run validation
   http.post(`${API_BASE}/config/:customerCompanyId/validate`, async ({ request }) => {
     const body = (await request.json()) as PipelineConfig;

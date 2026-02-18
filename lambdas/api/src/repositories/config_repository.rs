@@ -56,6 +56,30 @@ pub async fn get(
     Ok(Some(config))
 }
 
+/// Delete a PipelineConfig by organizationId (PK) + customerCompanyId (SK).
+pub async fn delete(
+    state: &AppState,
+    organization_id: &str,
+    customer_company_id: &str,
+) -> Result<(), ApiError> {
+    state
+        .dynamo
+        .delete_item()
+        .table_name(&state.table_name)
+        .key("organizationId", AttributeValue::S(organization_id.to_string()))
+        .key("customerCompanyId", AttributeValue::S(customer_company_id.to_string()))
+        .send()
+        .await
+        .map_err(|e| ApiError::Repository(format!("delete_item failed: {e}")))?;
+
+    tracing::info!(
+        organization_id = %organization_id,
+        customer_company_id = %customer_company_id,
+        "Config deleted"
+    );
+    Ok(())
+}
+
 /// List all PipelineConfigs for an organization (Query on PK).
 pub async fn list(
     state: &AppState,

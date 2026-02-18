@@ -53,6 +53,33 @@ pub async fn upsert(
     Ok(config)
 }
 
+/// Delete a pipeline config and its associated schedule.
+pub async fn delete(
+    state: &AppState,
+    organization_id: &str,
+    customer_company_id: &str,
+) -> Result<(), ApiError> {
+    config_repository::delete(state, organization_id, customer_company_id).await?;
+
+    // Best-effort schedule cleanup — don't fail the delete if it's missing
+    if let Err(e) = schedule_repository::delete(state, organization_id, customer_company_id).await {
+        tracing::warn!(
+            organization_id = %organization_id,
+            customer_company_id = %customer_company_id,
+            error = ?e,
+            "Failed to delete schedule (may not exist)"
+        );
+    }
+
+    tracing::info!(
+        organization_id = %organization_id,
+        customer_company_id = %customer_company_id,
+        "Config and schedule deleted"
+    );
+
+    Ok(())
+}
+
 fn validate(config: &PipelineConfig) -> Result<(), ApiError> {
     if config.cron.is_empty() {
         return Err(ApiError::Validation("cron field is required".into()));

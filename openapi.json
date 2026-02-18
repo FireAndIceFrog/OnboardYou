@@ -322,6 +322,50 @@
             }
           }
         }
+      },
+      "delete": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "DELETE /config/{customerCompanyId}",
+        "description": "Delete a pipeline configuration and its associated EventBridge schedule.\nThe organization is resolved from the caller's JWT claims.",
+        "operationId": "delete_config",
+        "parameters": [
+          {
+            "name": "customer_company_id",
+            "in": "path",
+            "description": "Unique identifier for the customer company",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Configuration deleted successfully"
+          },
+          "401": {
+            "description": "Unauthorized — missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/config/{customer_company_id}/csv-columns": {

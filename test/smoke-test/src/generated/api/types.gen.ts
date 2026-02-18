@@ -904,6 +904,40 @@ export type ListConfigsResponses = {
 
 export type ListConfigsResponse = ListConfigsResponses[keyof ListConfigsResponses];
 
+export type DeleteConfigData = {
+    body?: never;
+    path: {
+        /**
+         * Unique identifier for the customer company
+         */
+        customer_company_id: string;
+    };
+    query?: never;
+    url: '/config/{customer_company_id}';
+};
+
+export type DeleteConfigErrors = {
+    /**
+     * Unauthorized — missing or invalid token
+     */
+    401: ErrorResponse;
+    /**
+     * Internal server error
+     */
+    500: ErrorResponse;
+};
+
+export type DeleteConfigError = DeleteConfigErrors[keyof DeleteConfigErrors];
+
+export type DeleteConfigResponses = {
+    /**
+     * Configuration deleted successfully
+     */
+    204: void;
+};
+
+export type DeleteConfigResponse = DeleteConfigResponses[keyof DeleteConfigResponses];
+
 export type GetConfigData = {
     body?: never;
     path: {

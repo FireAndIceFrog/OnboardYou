@@ -17,7 +17,7 @@ import type { PipelineConfig, ActionConfig, ActionConfigPayload, ValidationResul
 import { actionCategory, businessLabel } from '@/shared/domain/types';
 import type { ConfigDetailsState, ConnectionForm } from '../domain/types';
 import { buildResponseGroup } from '../domain/types';
-import { fetchConfig, createConfig as createConfigService, saveConfig as saveConfigService, validateConfig as validateConfigService } from '../services/configDetailsService';
+import { fetchConfig, createConfig as createConfigService, saveConfig as saveConfigService, deleteConfig as deleteConfigService, validateConfig as validateConfigService } from '../services/configDetailsService';
 import { convertToFlow } from '../services/pipelineLayoutService';
 
 /* ── Layout constants ──────────────────────────────────────── */
@@ -41,6 +41,7 @@ const initialState: ConfigDetailsState = {
   selectedNode: null,
   isLoading: false,
   isSaving: false,
+  isDeleting: false,
   isValidating: false,
   error: null,
   chatOpen: false,
@@ -108,6 +109,23 @@ export const createConfigThunk = createAsyncThunk<
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to create configuration';
+      return rejectWithValue(message);
+    }
+  },
+);
+
+export const deleteConfigThunk = createAsyncThunk<
+  void,
+  { customerCompanyId: string },
+  { extra: ThunkExtra }
+>(
+  'configDetails/deleteConfig',
+  async ({ customerCompanyId }, { rejectWithValue }) => {
+    try {
+      await deleteConfigService(customerCompanyId);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to delete configuration';
       return rejectWithValue(message);
     }
   },
@@ -376,6 +394,17 @@ const configDetailsSlice = createSlice({
         state.isSaving = false;
         state.error = (action.payload as string) ?? 'Failed to create configuration';
       })
+      .addCase(deleteConfigThunk.pending, (state) => {
+        state.isDeleting = true;
+        state.error = null;
+      })
+      .addCase(deleteConfigThunk.fulfilled, () => {
+        return initialState;
+      })
+      .addCase(deleteConfigThunk.rejected, (state, action) => {
+        state.isDeleting = false;
+        state.error = (action.payload as string) ?? 'Failed to delete configuration';
+      })
       .addCase(validateConfigThunk.pending, (state) => {
         state.isValidating = true;
       })
@@ -420,6 +449,7 @@ export const selectIsChatOpen = (state: RootState) => state.configDetails.chatOp
 export const selectAddStepPanelOpen = (state: RootState) => state.configDetails.addStepPanelOpen;
 export const selectConfigDetailsLoading = (state: RootState) => state.configDetails.isLoading;
 export const selectConfigDetailsSaving = (state: RootState) => state.configDetails.isSaving;
+export const selectConfigDetailsDeleting = (state: RootState) => state.configDetails.isDeleting;
 export const selectConfigDetailsError = (state: RootState) => state.configDetails.error;
 export const selectValidationResult = (state: RootState) => state.configDetails.validationResult;
 export const selectIsValidating = (state: RootState) => state.configDetails.isValidating;

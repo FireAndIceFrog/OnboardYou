@@ -24,6 +24,7 @@ import {
   initNewConfig,
   saveConfigThunk,
   createConfigThunk,
+  deleteConfigThunk,
   validateConfigThunk,
   onNodesChange as onNodesChangeAction,
   onEdgesChange as onEdgesChangeAction,
@@ -41,6 +42,7 @@ import {
   selectAddStepPanelOpen,
   selectConfigDetailsLoading,
   selectConfigDetailsSaving,
+  selectConfigDetailsDeleting,
   selectConfigDetailsError,
 } from '../state/configDetailsSlice';
 import { selectLastFlowAction } from '@/features/chat/state/chatSlice';
@@ -76,6 +78,7 @@ function ConfigDetailsContent({
   const selectedNode = useAppSelector(selectSelectedNode);
   const isLoading = useAppSelector(selectConfigDetailsLoading);
   const isSaving = useAppSelector(selectConfigDetailsSaving);
+  const isDeleting = useAppSelector(selectConfigDetailsDeleting);
   const error = useAppSelector(selectConfigDetailsError);
   const chatOpen = useAppSelector(selectIsChatOpen);
   const addStepOpen = useAppSelector(selectAddStepPanelOpen);
@@ -190,6 +193,20 @@ function ConfigDetailsContent({
     }
   }, [config, isNewConfig, customerCompanyId, dispatch, navigate, showNotification, t]);
 
+  const handleDelete = useCallback(async () => {
+    if (isNewConfig) return;
+    const confirmed = window.confirm(t('configDetails.deleteConfirm'));
+    if (!confirmed) return;
+
+    try {
+      await dispatch(deleteConfigThunk({ customerCompanyId })).unwrap();
+      showNotification(t('configDetails.deleteSuccess'), 'success');
+      navigate('/config', { replace: true });
+    } catch {
+      // Error is already set in Redux state by the rejected thunk
+    }
+  }, [isNewConfig, customerCompanyId, dispatch, navigate, showNotification, t]);
+
   const memoizedNodeTypes = useMemo(() => nodeTypes, []);
 
   const defaultEdgeOptions = useMemo(
@@ -257,6 +274,11 @@ function ConfigDetailsContent({
           <Button variant="primary" size="sm" onClick={handleSave} disabled={isSaving}>
             {isSaving ? t('configDetails.saving') : t('configDetails.save')}
           </Button>
+          {!isNewConfig && (
+            <Button variant="danger" size="sm" onClick={handleDelete} disabled={isDeleting}>
+              {isDeleting ? t('configDetails.deleting') : t('configDetails.delete')}
+            </Button>
+          )}
         </div>
       </header>
 
