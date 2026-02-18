@@ -79,8 +79,15 @@ impl ActionFactory {
                 Ok(Arc::new(action))
             }
             (ActionType::ApiDispatcher, ActionConfigPayload::ApiDispatcher(cfg)) => {
-                let action = ApiDispatcher::from_action_config(&cfg)?;
-                Ok(Arc::new(action))
+                if cfg.is_default() {
+                    // Default is a meta-type resolved at runtime by the ETL trigger.
+                    // For validation / column calculation we only need an unconfigured
+                    // dispatcher — calculate_columns() is a pass-through for egress.
+                    Ok(Arc::new(ApiDispatcher::new()))
+                } else {
+                    let action = ApiDispatcher::from_action_config(&cfg)?;
+                    Ok(Arc::new(action))
+                }
             }
             (t, _) => Err(Error::ConfigurationError(format!("Mismatched payload for action type {t:?}"))),
         }
@@ -190,5 +197,18 @@ mod tests {
         assert!(json.contains("\"api_dispatcher\""));
         let back: ActionConfig = serde_json::from_str(&json).unwrap();
         assert_eq!(back.action_type, ActionType::ApiDispatcher);
+    }
+
+    #[test]
+    fn test_factory_creates_api_dispatcher_default() {
+        let config = ActionConfig {
+            id: "egress".into(),
+            action_type: ActionType::ApiDispatcher,
+            config: ActionConfigPayload::ApiDispatcher(serde_json::from_value(serde_json::json!({
+                "auth_type": "default"
+            })).unwrap()),
+        };
+        let action = ActionFactory::create(&config).expect("Default should create an unconfigured dispatcher");
+        assert_eq!(action.id(), "api_dispatcher");
     }
 }

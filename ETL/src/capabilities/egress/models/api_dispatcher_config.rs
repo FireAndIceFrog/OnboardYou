@@ -25,14 +25,24 @@ use super::{AuthType, BearerRepoConfig, OAuth2RepoConfig, OAuthRepoConfig};
 use serde::de::Deserializer;
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+use std::borrow::Cow;
+use utoipa::openapi::schema::{Object, OneOfBuilder};
+use utoipa::openapi::{ObjectBuilder, RefOr, Schema};
+use utoipa::{PartialSchema, ToSchema};
 
 /// Fully-typed API dispatcher configuration.
 ///
 /// The `Default` variant is a meta-type: the ETL trigger resolves it to
 /// the organisation's stored settings **before** pipeline construction.
 /// If it reaches `ApiEngine` unresolved, construction fails.
-#[derive(Clone, Debug, ToSchema)]
+///
+/// **Wire format** uses `auth_type` as discriminator (custom Serialize/Deserialize):
+///
+/// - Bearer:  `{ "auth_type": "bearer",  "destination_url": "…", "token": "…", … }`
+/// - OAuth:   `{ "auth_type": "oauth",   "destination_url": "…", … }`
+/// - OAuth2:  `{ "auth_type": "oauth2",  "destination_url": "…", "client_id": "…", … }`
+/// - Default: `{ "auth_type": "default" }`
+#[derive(Clone, Debug)]
 pub enum ApiDispatcherConfig {
     /// No auth / static bearer token / custom API key.
     Bearer(BearerRepoConfig),
@@ -132,6 +142,112 @@ impl<'de> Deserialize<'de> for ApiDispatcherConfig {
             }
             AuthType::Default => Ok(Self::Default),
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Manual ToSchema — matches the custom Serialize/Deserialize wire format.
+//
+// Each variant is an object with `auth_type` as a required discriminator
+// plus the inner config fields (allOf with the concrete config ref).
+// The `Default` variant is just `{ "auth_type": "default" }`.
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Manual PartialSchema + ToSchema — matches the custom Serialize/Deserialize wire format.
+//
+// Each variant is an object with `auth_type` as a required discriminator
+// plus the inner config fields (allOf with the concrete config ref).
+// The `Default` variant is just `{ "auth_type": "default" }`.
+// ---------------------------------------------------------------------------
+
+impl PartialSchema for ApiDispatcherConfig {
+    fn schema() -> RefOr<Schema> {
+        let auth_type_prop = |value: &str| -> Object {
+            ObjectBuilder::new()
+                .property(
+                    "auth_type",
+                    ObjectBuilder::new()
+                        .schema_type(utoipa::openapi::schema::SchemaType::new(
+                            utoipa::openapi::schema::Type::String,
+                        ))
+                        .enum_values(Some([value])),
+                )
+                .required("auth_type")
+                .build()
+        };
+
+        let default_variant = Schema::Object(
+            ObjectBuilder::new()
+                .property(
+                    "auth_type",
+                    ObjectBuilder::new()
+                        .schema_type(utoipa::openapi::schema::SchemaType::new(
+                            utoipa::openapi::schema::Type::String,
+                        ))
+                        .enum_values(Some(["default"])),
+                )
+                .required("auth_type")
+                .description(Some(
+                    "Placeholder — resolved to a concrete type at runtime.",
+                ))
+                .build(),
+        );
+
+        let bearer_variant = Schema::AllOf(
+            utoipa::openapi::schema::AllOfBuilder::new()
+                .item(Schema::Object(auth_type_prop("bearer")))
+                .item(RefOr::Ref(utoipa::openapi::Ref::from_schema_name(
+                    "BearerRepoConfig",
+                )))
+                .description(Some("No auth / static bearer token / custom API key."))
+                .build(),
+        );
+
+        let oauth_variant = Schema::AllOf(
+            utoipa::openapi::schema::AllOfBuilder::new()
+                .item(Schema::Object(auth_type_prop("oauth")))
+                .item(RefOr::Ref(utoipa::openapi::Ref::from_schema_name(
+                    "OAuthRepoConfig",
+                )))
+                .description(Some("OAuth 1.0a signed requests."))
+                .build(),
+        );
+
+        let oauth2_variant = Schema::AllOf(
+            utoipa::openapi::schema::AllOfBuilder::new()
+                .item(Schema::Object(auth_type_prop("oauth2")))
+                .item(RefOr::Ref(utoipa::openapi::Ref::from_schema_name(
+                    "OAuth2RepoConfig",
+                )))
+                .description(Some(
+                    "OAuth2 client credentials or authorization code flow.",
+                ))
+                .build(),
+        );
+
+        let schema = OneOfBuilder::new()
+            .item(bearer_variant)
+            .item(oauth_variant)
+            .item(oauth2_variant)
+            .item(default_variant)
+            .description(Some(
+                "Fully-typed API dispatcher configuration.\n\n\
+                 Uses `auth_type` as the discriminator field. The `Default` variant \
+                 is a meta-type resolved to the organisation's stored settings at runtime.",
+            ))
+            .discriminator(Some(
+                utoipa::openapi::schema::Discriminator::new("auth_type"),
+            ))
+            .build();
+
+        RefOr::T(Schema::OneOf(schema))
+    }
+}
+
+impl ToSchema for ApiDispatcherConfig {
+    fn name() -> Cow<'static, str> {
+        Cow::Borrowed("ApiDispatcherConfig")
     }
 }
 

@@ -781,53 +781,91 @@
       "ApiDispatcherConfig": {
         "oneOf": [
           {
-            "type": "object",
-            "description": "No auth / static bearer token / custom API key.",
-            "required": [
-              "Bearer"
-            ],
-            "properties": {
-              "Bearer": {
-                "$ref": "#/components/schemas/BearerRepoConfig",
-                "description": "No auth / static bearer token / custom API key."
+            "allOf": [
+              {
+                "type": "object",
+                "required": [
+                  "auth_type"
+                ],
+                "properties": {
+                  "auth_type": {
+                    "type": "string",
+                    "enum": [
+                      "bearer"
+                    ]
+                  }
+                }
+              },
+              {
+                "$ref": "#/components/schemas/BearerRepoConfig"
               }
-            }
+            ],
+            "description": "No auth / static bearer token / custom API key."
+          },
+          {
+            "allOf": [
+              {
+                "type": "object",
+                "required": [
+                  "auth_type"
+                ],
+                "properties": {
+                  "auth_type": {
+                    "type": "string",
+                    "enum": [
+                      "oauth"
+                    ]
+                  }
+                }
+              },
+              {
+                "$ref": "#/components/schemas/OAuthRepoConfig"
+              }
+            ],
+            "description": "OAuth 1.0a signed requests."
+          },
+          {
+            "allOf": [
+              {
+                "type": "object",
+                "required": [
+                  "auth_type"
+                ],
+                "properties": {
+                  "auth_type": {
+                    "type": "string",
+                    "enum": [
+                      "oauth2"
+                    ]
+                  }
+                }
+              },
+              {
+                "$ref": "#/components/schemas/OAuth2RepoConfig"
+              }
+            ],
+            "description": "OAuth2 client credentials or authorization code flow."
           },
           {
             "type": "object",
-            "description": "OAuth 1.0a signed requests.",
-            "required": [
-              "OAuth"
-            ],
-            "properties": {
-              "OAuth": {
-                "$ref": "#/components/schemas/OAuthRepoConfig",
-                "description": "OAuth 1.0a signed requests."
-              }
-            }
-          },
-          {
-            "type": "object",
-            "description": "OAuth2 client credentials or authorization code flow.",
-            "required": [
-              "OAuth2"
-            ],
-            "properties": {
-              "OAuth2": {
-                "$ref": "#/components/schemas/OAuth2RepoConfig",
-                "description": "OAuth2 client credentials or authorization code flow."
-              }
-            }
-          },
-          {
-            "type": "string",
             "description": "Placeholder — resolved to a concrete type at runtime.",
-            "enum": [
-              "Default"
-            ]
+            "required": [
+              "auth_type"
+            ],
+            "properties": {
+              "auth_type": {
+                "type": "string",
+                "enum": [
+                  "default"
+                ]
+              }
+            }
           }
         ],
-        "description": "Fully-typed API dispatcher configuration.\n\nThe `Default` variant is a meta-type: the ETL trigger resolves it to\nthe organisation's stored settings **before** pipeline construction.\nIf it reaches `ApiEngine` unresolved, construction fails."
+        "description": "Fully-typed API dispatcher configuration.\n\nUses `auth_type` as the discriminator field. The `Default` variant is a meta-type resolved to the organisation's stored settings at runtime.",
+        "discriminator": {
+          "propertyName": "auth_type"
+        }
       },
       "BearerPlacement": {
         "type": "string",

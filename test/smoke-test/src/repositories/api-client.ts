@@ -84,12 +84,11 @@ export class ApiClient {
   }
 
   /** DELETE request to a relative path. */
-  async delete<T>(path: string): Promise<{ status: number; body: T }> {
+  async delete(path: string): Promise<{ status: number }> {
     const res = await fetch(`${this.baseUrl}${path}`, {
       method: 'DELETE',
       headers: this.headers(),
     });
-    const body = await res.json() as T;
-    return { status: res.status, body };
+    return { status: res.status };
   }
 }

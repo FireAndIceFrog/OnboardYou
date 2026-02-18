@@ -24,7 +24,11 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use engine::csv_upload_engine::{CsvColumnsResponse, PresignedUploadResponse};
 use engine::validation_engine::{StepValidation, ValidationResult};
-use onboard_you::{ActionConfig, ActionConfigPayload, ActionType, Manifest};
+use onboard_you::{
+    ActionConfig, ActionConfigPayload, ActionType, ApiDispatcherConfig,
+    BearerPlacement, BearerRepoConfig, Manifest, OAuth2GrantType,
+    OAuth2RepoConfig, OAuthRepoConfig,
+};
 
 /// OpenAPI documentation for the OnboardYou Config API.
 #[derive(OpenApi)]
@@ -57,6 +61,12 @@ use onboard_you::{ActionConfig, ActionConfigPayload, ActionType, Manifest};
         ActionConfig,
         ActionConfigPayload,
         ActionType,
+        ApiDispatcherConfig,
+        BearerRepoConfig,
+        BearerPlacement,
+        OAuthRepoConfig,
+        OAuth2RepoConfig,
+        OAuth2GrantType,
         ValidationResult,
         StepValidation,
         ErrorResponse,

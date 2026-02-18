@@ -111,6 +111,7 @@ OnboardYou/
 - **All business logic lives in `capabilities/`**. Orchestration never contains domain logic.
 - **Actions are decoupled from each other.** One action must never import or depend on another action. They communicate exclusively through the shared `RosterContext`.
 - **The factory is the single wiring point.** Every new action must be registered in `orchestration/factory.rs` with a string key matching its `action_type`.
+- **`ApiDispatcherConfig::Default`** is a meta-type resolved by the ETL trigger at runtime. The factory creates `ApiDispatcher::new()` (no engine) for Default — safe because `calculate_columns()` is a pass-through for egress. The validation endpoint uses this path to propagate columns without requiring real auth config.
 
 ### 2.2 The Fold Pattern
 
@@ -325,10 +326,15 @@ let df = df! {
 
 ### 3.7 Serde Conventions
 
+- All public DTOs use `#[serde(rename_all = "snake_case")]` (Rust) or `camelCase` (API request/response models).
+- Use `#[serde(default)]` for optional fields where a zero-value fallback is acceptable.
+- Custom `Serialize`/`Deserialize` impls (e.g., `ApiDispatcherConfig`) **must** have a matching manual `PartialSchema` + `ToSchema` impl — the `#[derive(ToSchema)]` will not reflect the custom wire format.
+- `ApiDispatcherConfig` uses `auth_type` as a flattened discriminator: `{ "auth_type": "bearer", ... }`. The utoipa schema is a `oneOf` with `allOf` variants referencing `BearerRepoConfig`, `OAuthRepoConfig`, `OAuth2RepoConfig`, or a bare `{ "auth_type": "default" }` object.
+
 - **Config structs** derive `Serialize`, `Deserialize`, and `ToSchema` so they can be used as `ActionConfigPayload` variants and appear in the OpenAPI spec.
 - **`ActionConfig`** uses a custom `Deserialize` impl that reads `action_type` first, then deserializes the `config` JSON blob into the matching `ActionConfigPayload` variant. This is the single dispatch point for typed config deserialization.
 - **`ActionConfigPayload`** is a `#[serde(untagged)]` enum with `Serialize` and `ToSchema` — deserialization is handled by the parent `ActionConfig`'s custom impl. utoipa generates a `oneOf` schema listing all 13 config variants.
-- **`ApiDispatcherConfig`** has custom `Serialize`/`Deserialize` impls that flatten inner config fields + inject/read `auth_type` as a discriminator. Derives `ToSchema` (externally-tagged enum schema).
+- **`ApiDispatcherConfig`** has custom `Serialize`/`Deserialize` impls that flatten inner config fields + inject/read `auth_type` as a discriminator. Uses manual `PartialSchema` + `ToSchema` impls (not `#[derive(ToSchema)]`).
 - **All nested types** (e.g. `BearerPlacement`, `OAuth2GrantType`, `CountryOutputFormat`, `MaskStrategy`, `ColumnMask`, `WorkdayResponseGroup`) also derive `ToSchema`.
 - **Lambda API models** use `#[serde(rename_all = "camelCase")]` for JSON APIs.
 - **Internal manifest types** use `snake_case` (Rust default serde mapping).
@@ -614,10 +620,10 @@ These items are pending implementation. When picking up work, check this list:
 | `DataValidator` / `validator.rs` | Not yet created | Mentioned in brief — in-stream regex/type validation |
 | `RenameColumn` + `DropColumn` factory registration | ✅ Done | Wired in `factory.rs` with typed configs |
 | API Gateway auth | ✅ Done | Cognito USER_PASSWORD_AUTH + TOKEN authorizer (JWT) |
-| Smoke tests | ✅ Done | 9 tests (auth 2, config 5, settings 2) in `test/smoke-test/` |
+| Smoke tests | ✅ Done | 17 tests (auth 2, config 5, settings 2, delete 4, default-auth 4) in `test/smoke-test/` |
 | Demo user provisioning | ✅ Done | `infra/modules/demo-user/` — rotates password every deploy |
 | Typed `ActionConfigPayload` | ✅ Done | All action configs are concrete typed structs; no `serde_json::Value` in pipeline |
-| ToSchema for OpenAPI | ✅ Done | All 13 config types + 7 nested types derive `ToSchema`; `ActionConfigPayload` is `oneOf` in the OpenAPI spec; `ApiDispatcherConfig` uses externally-tagged enum schema |
+| ToSchema for OpenAPI | ✅ Done | All 13 config types + 7 nested types derive `ToSchema`; `ActionConfigPayload` is `oneOf` in the OpenAPI spec; `ApiDispatcherConfig` uses manual `PartialSchema`+`ToSchema` impls (flattened `auth_type` discriminator) |
 | CSV S3 upload | ✅ Done | S3 bucket + presigned upload route + column discovery route; CSV config stores `filename` only |
 | CI/CD pipeline | Not yet created | GitHub Actions for test + build + deploy |
 

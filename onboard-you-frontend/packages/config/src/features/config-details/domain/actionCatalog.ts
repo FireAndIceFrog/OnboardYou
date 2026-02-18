@@ -104,7 +104,7 @@ export const ACTION_CATALOG: ActionCatalogEntry[] = [
     icon: '🚀',
     description: 'Send the processed data to an external API endpoint.',
     category: 'egress',
-    defaultConfig: 'Default',
+    defaultConfig: { auth_type: 'default' },
   },
 ];
 

@@ -63,26 +63,17 @@ export type ActionType = 'csv_hris_connector' | 'workday_hris_connector' | 'scd_
 /**
  * Fully-typed API dispatcher configuration.
  *
- * The `Default` variant is a meta-type: the ETL trigger resolves it to
- * the organisation's stored settings **before** pipeline construction.
- * If it reaches `ApiEngine` unresolved, construction fails.
+ * Uses `auth_type` as the discriminator field. The `Default` variant is a meta-type resolved to the organisation's stored settings at runtime.
  */
-export type ApiDispatcherConfig = {
-    /**
-     * No auth / static bearer token / custom API key.
-     */
-    Bearer: BearerRepoConfig;
-} | {
-    /**
-     * OAuth 1.0a signed requests.
-     */
-    OAuth: OAuthRepoConfig;
-} | {
-    /**
-     * OAuth2 client credentials or authorization code flow.
-     */
-    OAuth2: OAuth2RepoConfig;
-} | 'Default';
+export type ApiDispatcherConfig = ({
+    auth_type: 'bearer';
+} & BearerRepoConfig) | ({
+    auth_type: 'oauth';
+} & OAuthRepoConfig) | ({
+    auth_type: 'oauth2';
+} & OAuth2RepoConfig) | {
+    auth_type: 'default';
+};
 
 /**
  * How the credential is attached to outbound requests.
