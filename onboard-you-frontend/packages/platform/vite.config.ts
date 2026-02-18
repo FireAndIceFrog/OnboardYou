@@ -31,6 +31,8 @@ export default defineConfig(({ mode }) => {
         'react-redux': { singleton: true },
         'react-i18next': { singleton: true },
         i18next: { singleton: true },
+        '@chakra-ui/react': { singleton: true },
+        '@emotion/react': { singleton: true },
       },
     }),
   ],

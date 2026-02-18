@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Box, Flex, Heading, Text, chakra } from '@chakra-ui/react';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { sendMessage, clearChat, selectChatMessages, selectIsTyping } from '../state/chatSlice';
 import { selectConfig } from '@/features/config-details/state/configDetailsSlice';
 import { ChatMessageComponent } from './ChatMessage';
 import { ChatInput } from './ChatInput';
-import styles from './ChatWindow.module.scss';
+
+const StyledButton = chakra('button');
 
 interface ChatWindowProps {
   onClose: () => void;
@@ -40,7 +42,6 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
     dispatch(clearChat());
   }, [dispatch]);
 
-  // Auto-scroll to bottom on new messages or typing state change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
@@ -48,87 +49,103 @@ export function ChatWindow({ onClose }: ChatWindowProps) {
   const hasMessages = messages.length > 0;
 
   return (
-    <aside className={styles.chatWindow} aria-label={t('chat.title')}>
+    <Flex as="aside" direction="column" h="100%" aria-label={t('chat.title')}>
       {/* Header */}
-      <div className={styles.chatHeader}>
-        <div className={styles.chatHeaderLeft}>
-          <span className={styles.chatHeaderIcon}>🤖</span>
-          <div>
-            <h3 className={styles.chatTitle}>{t('chat.title')}</h3>
-            <span className={styles.chatSubtitle}>
+      <Flex align="center" justify="space-between" px="4" py="3" borderBottom="1px solid" borderColor="gray.200">
+        <Flex align="center" gap="3">
+          <Text fontSize="xl">🤖</Text>
+          <Box>
+            <Heading size="sm">{t('chat.title')}</Heading>
+            <Text fontSize="xs" color="gray.500">
               {pipelineConfig ? pipelineConfig.name : t('chat.noSystemSelected')}
-            </span>
-          </div>
-        </div>
-        <div className={styles.chatHeaderActions}>
+            </Text>
+          </Box>
+        </Flex>
+        <Flex gap="1">
           {hasMessages && (
-            <button
+            <StyledButton
               type="button"
-              className={styles.iconBtn}
+              p="1.5"
+              borderRadius="md"
+              bg="transparent"
+              cursor="pointer"
+              _hover={{ bg: 'gray.100' }}
               onClick={handleClear}
               aria-label={t('chat.clearChat')}
               title={t('chat.clearChat')}
             >
               🗑
-            </button>
+            </StyledButton>
           )}
-          <button
+          <StyledButton
             type="button"
-            className={styles.iconBtn}
+            p="1.5"
+            borderRadius="md"
+            bg="transparent"
+            cursor="pointer"
+            _hover={{ bg: 'gray.100' }}
             onClick={onClose}
             aria-label={t('chat.closeChat')}
             title={t('chat.closeChat')}
           >
             ✕
-          </button>
-        </div>
-      </div>
+          </StyledButton>
+        </Flex>
+      </Flex>
 
       {/* Messages */}
-      <div className={styles.chatMessages} role="log" aria-live="polite">
+      <Box flex="1" overflowY="auto" px="4" py="4" role="log" aria-live="polite">
         {!hasMessages ? (
-          <div className={styles.chatWelcome}>
-            <span className={styles.welcomeIcon}>💬</span>
-            <h4 className={styles.welcomeTitle}>{t('chat.welcome.title')}</h4>
-            <p className={styles.welcomeText}>
-              {t('chat.welcome.text')}
-            </p>
-            <div className={styles.suggestions} role="group" aria-label="Suggested prompts">
+          <Flex direction="column" align="center" justify="center" h="100%" textAlign="center" gap="3" px="4">
+            <Text fontSize="3xl">💬</Text>
+            <Heading size="sm">{t('chat.welcome.title')}</Heading>
+            <Text fontSize="sm" color="gray.500">{t('chat.welcome.text')}</Text>
+            <Flex wrap="wrap" gap="2" justify="center" mt="2" role="group" aria-label="Suggested prompts">
               {SUGGESTION_KEYS.map((key) => (
-                <button
+                <StyledButton
                   key={key}
                   type="button"
-                  className={styles.suggestionChip}
+                  px="3"
+                  py="1.5"
+                  borderRadius="full"
+                  border="1px solid"
+                  borderColor="gray.200"
+                  bg="white"
+                  fontSize="xs"
+                  color="gray.600"
+                  cursor="pointer"
+                  transition="all 0.15s"
+                  _hover={{ borderColor: 'blue.300', bg: 'blue.50', color: 'blue.600' }}
                   onClick={() => handleSend(t(key))}
                 >
                   {t(key)}
-                </button>
+                </StyledButton>
               ))}
-            </div>
-          </div>
+            </Flex>
+          </Flex>
         ) : (
           messages.map((msg) => <ChatMessageComponent key={msg.id} message={msg} />)
         )}
 
         {/* Typing indicator */}
         {isTyping && (
-          <div className={styles.chatMessage}>
-            <div className={styles.messageAvatar}>🤖</div>
-            <div className={`${styles.messageBubble} ${styles.messageBubbleAssistant}`}>
-              <div className={styles.typingIndicator}>
-                <span />
-                <span />
-                <span />
-              </div>
-            </div>
-          </div>
+          <Flex gap="3" mb="3">
+            <Text fontSize="lg">🤖</Text>
+            <Box bg="gray.100" borderRadius="lg" borderTopLeftRadius="sm" px="4" py="3">
+              <Flex gap="1" align="center">
+                <Box w="2" h="2" borderRadius="full" bg="gray.400" css={{ animation: 'pulse 1.4s ease-in-out infinite', animationDelay: '0s' }} />
+                <Box w="2" h="2" borderRadius="full" bg="gray.400" css={{ animation: 'pulse 1.4s ease-in-out infinite', animationDelay: '0.2s' }} />
+                <Box w="2" h="2" borderRadius="full" bg="gray.400" css={{ animation: 'pulse 1.4s ease-in-out infinite', animationDelay: '0.4s' }} />
+              </Flex>
+            </Box>
+          </Flex>
         )}
 
         <div ref={messagesEndRef} />
-      </div>
+      </Box>
 
       {/* Input */}
       <ChatInput onSend={handleSend} disabled={isTyping || !pipelineConfig} />
-    </aside>
+    </Flex>
   );
 }

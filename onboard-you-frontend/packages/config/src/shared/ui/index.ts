@@ -1,7 +1,3 @@
-export { Button } from './Button';
-export type { ButtonProps, ButtonVariant, ButtonSize } from './Button';
-export { Spinner } from './Spinner';
-export type { SpinnerProps, SpinnerSize } from './Spinner';
-export { Badge } from './Badge';
-export type { BadgeProps, BadgeVariant } from './Badge';
+// Re-export Chakra primitives — no custom wrappers needed
+export { Button, Spinner, Badge } from '@chakra-ui/react';
 export { ErrorBoundary } from './ErrorBoundary';

@@ -1,17 +1,12 @@
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@/shared/ui/Button';
+import { Box, Flex, Heading, Text, Input, Button, chakra } from '@chakra-ui/react';
 import { HR_SYSTEMS, RESPONSE_GROUP_OPTIONS } from '../domain/types';
 import { useConnectionForm } from '../state/useConnectionForm';
 import { FieldError } from './FieldError';
-import styles from './ConnectionDetailsPage.module.scss';
 
-/** Return the combined className for an input, adding the invalid class when an error exists. */
-function inputClass(error?: string) {
-  return error
-    ? `${styles.formInput} ${styles.formInputInvalid}`
-    : styles.formInput;
-}
+const Label = chakra('label');
+const StyledButton = chakra('button');
 
 export function ConnectionDetailsPage() {
   const {
@@ -31,267 +26,217 @@ export function ConnectionDetailsPage() {
   const { t } = useTranslation();
   const csvInputRef = useRef<HTMLInputElement>(null);
 
+  const inputProps = {
+    fontSize: 'sm' as const,
+    borderColor: 'gray.200' as const,
+    bg: 'white' as const,
+    _focus: { borderColor: 'blue.500', boxShadow: '0 0 0 1px var(--chakra-colors-blue-500)' },
+  };
+
+  const invalidInputProps = {
+    ...inputProps,
+    borderColor: 'red.400' as const,
+    _focus: { borderColor: 'red.500', boxShadow: '0 0 0 1px var(--chakra-colors-red-500)' },
+  };
+
+  function getInputProps(errorKey?: string) {
+    return errorKey ? invalidInputProps : inputProps;
+  }
+
   return (
-    <div className={styles.wizardPage}>
+    <Box maxW="680px" mx="auto" py="8" px="6">
       {/* Step indicator */}
-      <nav className={styles.stepIndicator} aria-label="Configuration steps">
-        <div className={styles.step} aria-current="step">
-          <span className={`${styles.stepCircle} ${styles.stepCircleActive}`}>1</span>
-          <span className={`${styles.stepLabel} ${styles.stepLabelActive}`}>{t('configDetails.steps.connectionDetails')}</span>
-        </div>
-        <div className={styles.stepConnector} />
-        <div className={styles.step}>
-          <span className={styles.stepCircle}>2</span>
-          <span className={styles.stepLabel}>{t('configDetails.steps.flowCustomization')}</span>
-        </div>
-      </nav>
+      <Flex as="nav" align="center" justify="center" gap="3" mb="8" aria-label="Configuration steps">
+        <Flex align="center" gap="2" aria-current="step">
+          <Flex align="center" justify="center" w="7" h="7" borderRadius="full" bg="blue.500" color="white" fontSize="sm" fontWeight="600">1</Flex>
+          <Text fontSize="sm" fontWeight="600" color="blue.600">{t('configDetails.steps.connectionDetails')}</Text>
+        </Flex>
+        <Box w="12" h="0.5" bg="gray.200" borderRadius="full" />
+        <Flex align="center" gap="2">
+          <Flex align="center" justify="center" w="7" h="7" borderRadius="full" bg="gray.200" color="gray.500" fontSize="sm" fontWeight="600">2</Flex>
+          <Text fontSize="sm" color="gray.500">{t('configDetails.steps.flowCustomization')}</Text>
+        </Flex>
+      </Flex>
 
       {/* Form card */}
-      <form className={styles.card} onSubmit={(e) => e.preventDefault()}>
-        <h2 className={styles.cardTitle}>{t('configDetails.connection.title')}</h2>
-        <p className={styles.cardSubtitle}>
-          {t('configDetails.connection.subtitle')}
-        </p>
+      <Box as="form" bg="white" borderRadius="lg" border="1px solid" borderColor="gray.200" p="6" shadow="sm" onSubmit={(e: React.FormEvent) => e.preventDefault()}>
+        <Heading size="lg" mb="1">{t('configDetails.connection.title')}</Heading>
+        <Text fontSize="sm" color="gray.500" mb="6">{t('configDetails.connection.subtitle')}</Text>
 
         {/* System selector */}
-        <div className={styles.formGroup}>
-          <label className={styles.formLabel}>{t('configDetails.connection.hrSystem')}</label>
-          <div className={`${styles.systemGrid} ${errors.system ? styles.systemGridInvalid : ''}`}>
+        <Box mb="5">
+          <Text fontSize="sm" fontWeight="600" mb="2">{t('configDetails.connection.hrSystem')}</Text>
+          <Box display="grid" gridTemplateColumns="repeat(auto-fill, minmax(140px, 1fr))" gap="3" border={errors.system ? '2px solid' : 'none'} borderColor="red.300" borderRadius="lg" p={errors.system ? '2' : '0'}>
             {HR_SYSTEMS.map((sys) => (
-              <button
+              <StyledButton
                 key={sys.id}
                 type="button"
-                className={`${styles.systemCard} ${form.system === sys.id ? styles.systemCardSelected : ''}`}
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+                gap="2"
+                p="4"
+                borderRadius="lg"
+                border="2px solid"
+                borderColor={form.system === sys.id ? 'blue.500' : 'gray.200'}
+                bg={form.system === sys.id ? 'blue.50' : 'white'}
+                cursor="pointer"
+                transition="all 0.15s"
+                _hover={{ borderColor: 'blue.300' }}
                 onClick={() => handleSystemSelect(sys.id)}
               >
-                <span className={styles.systemIcon}>{sys.icon}</span>
-                <span className={styles.systemName}>{sys.name}</span>
-              </button>
+                <Text fontSize="2xl">{sys.icon}</Text>
+                <Text fontSize="sm" fontWeight="500">{sys.name}</Text>
+              </StyledButton>
             ))}
-          </div>
+          </Box>
           <FieldError id="system-error" error={errors.system} />
-        </div>
+        </Box>
 
-        {/* Display name (always shown once a system is picked) */}
+        {/* Display name */}
         {form.system && (
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel} htmlFor="conn-display-name">{t('configDetails.connection.displayName')}</label>
-            <input
-              id="conn-display-name"
-              className={styles.formInput}
-              type="text"
-              placeholder={t('configDetails.connection.displayNamePlaceholder')}
-              value={form.displayName}
-              onChange={handleChange('displayName')}
-            />
-            <span className={styles.formHint}>{t('configDetails.connection.displayNameHint')}</span>
-          </div>
+          <Box mb="5">
+            <Label htmlFor="conn-display-name" fontSize="sm" fontWeight="600" display="block" mb="1">{t('configDetails.connection.displayName')}</Label>
+            <Input id="conn-display-name" type="text" placeholder={t('configDetails.connection.displayNamePlaceholder')} value={form.displayName} onChange={handleChange('displayName')} {...inputProps} />
+            <Text fontSize="xs" color="gray.400" mt="1">{t('configDetails.connection.displayNameHint')}</Text>
+          </Box>
         )}
 
-        {/* ── Workday-specific fields (WS-Security) ──────── */}
+        {/* Workday-specific fields */}
         {form.system === 'workday' && (
           <>
-            <fieldset>
-            <legend className={styles.sectionHeader}>
-              <span className={styles.sectionIcon}>🔐</span>
-              <span>{t('configDetails.connection.workday.credentialsTitle')}</span>
-            </legend>
+            <Box as="fieldset" border="none" p="0" m="0" mb="5">
+              <Flex as="legend" align="center" gap="2" fontSize="sm" fontWeight="700" color="gray.700" mb="4" pb="2" borderBottom="1px solid" borderColor="gray.100">
+                <Text>🔐</Text>
+                <Text>{t('configDetails.connection.workday.credentialsTitle')}</Text>
+              </Flex>
 
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel} htmlFor="conn-tenant-url">{t('configDetails.connection.workday.tenantUrl')}</label>
-              <input
-                id="conn-tenant-url"
-                className={inputClass(errors['workday.tenantUrl'])}
-                type="url"
-                placeholder={t('configDetails.connection.workday.tenantUrlPlaceholder')}
-                value={form.workday.tenantUrl}
-                onChange={handleWorkdayChange('tenantUrl')}
-                onBlur={() => validateField('workday.tenantUrl')}
-                aria-invalid={!!errors['workday.tenantUrl']}
-                aria-describedby={errors['workday.tenantUrl'] ? 'conn-tenant-url-error' : undefined}
-              />
-              <FieldError id="conn-tenant-url-error" error={errors['workday.tenantUrl']} />
-              <span className={styles.formHint}>
-                {t('configDetails.connection.workday.tenantUrlHint')}
-              </span>
-            </div>
+              <Box mb="4">
+                <Label htmlFor="conn-tenant-url" fontSize="sm" fontWeight="600" display="block" mb="1">{t('configDetails.connection.workday.tenantUrl')}</Label>
+                <Input id="conn-tenant-url" type="url" placeholder={t('configDetails.connection.workday.tenantUrlPlaceholder')} value={form.workday.tenantUrl} onChange={handleWorkdayChange('tenantUrl')} onBlur={() => validateField('workday.tenantUrl')} aria-invalid={!!errors['workday.tenantUrl']} aria-describedby={errors['workday.tenantUrl'] ? 'conn-tenant-url-error' : undefined} {...getInputProps(errors['workday.tenantUrl'])} />
+                <FieldError id="conn-tenant-url-error" error={errors['workday.tenantUrl']} />
+                <Text fontSize="xs" color="gray.400" mt="1">{t('configDetails.connection.workday.tenantUrlHint')}</Text>
+              </Box>
 
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel} htmlFor="conn-tenant-id">{t('configDetails.connection.workday.tenantId')}</label>
-              <input
-                id="conn-tenant-id"
-                className={inputClass(errors['workday.tenantId'])}
-                type="text"
-                placeholder={t('configDetails.connection.workday.tenantIdPlaceholder')}
-                value={form.workday.tenantId}
-                onChange={handleWorkdayChange('tenantId')}
-                onBlur={() => validateField('workday.tenantId')}
-                aria-invalid={!!errors['workday.tenantId']}
-                aria-describedby={errors['workday.tenantId'] ? 'conn-tenant-id-error' : undefined}
-              />
-              <FieldError id="conn-tenant-id-error" error={errors['workday.tenantId']} />
-            </div>
+              <Box mb="4">
+                <Label htmlFor="conn-tenant-id" fontSize="sm" fontWeight="600" display="block" mb="1">{t('configDetails.connection.workday.tenantId')}</Label>
+                <Input id="conn-tenant-id" type="text" placeholder={t('configDetails.connection.workday.tenantIdPlaceholder')} value={form.workday.tenantId} onChange={handleWorkdayChange('tenantId')} onBlur={() => validateField('workday.tenantId')} aria-invalid={!!errors['workday.tenantId']} aria-describedby={errors['workday.tenantId'] ? 'conn-tenant-id-error' : undefined} {...getInputProps(errors['workday.tenantId'])} />
+                <FieldError id="conn-tenant-id-error" error={errors['workday.tenantId']} />
+              </Box>
 
-            <div className={styles.formRow}>
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel} htmlFor="conn-username">{t('configDetails.connection.workday.username')}</label>
-                <input
-                  id="conn-username"
-                  className={inputClass(errors['workday.username'])}
-                  type="text"
-                  placeholder={t('configDetails.connection.workday.usernamePlaceholder')}
-                  value={form.workday.username}
-                  onChange={handleWorkdayChange('username')}
-                  onBlur={() => validateField('workday.username')}
-                  aria-invalid={!!errors['workday.username']}
-                  aria-describedby={errors['workday.username'] ? 'conn-username-error' : undefined}
-                />
-                <FieldError id="conn-username-error" error={errors['workday.username']} />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel} htmlFor="conn-password">{t('configDetails.connection.workday.password')}</label>
-                <input
-                  id="conn-password"
-                  className={inputClass(errors['workday.password'])}
-                  type="password"
-                  placeholder={t('configDetails.connection.workday.passwordPlaceholder')}
-                  value={form.workday.password}
-                  onChange={handleWorkdayChange('password')}
-                  onBlur={() => validateField('workday.password')}
-                  aria-invalid={!!errors['workday.password']}
-                  aria-describedby={errors['workday.password'] ? 'conn-password-error' : undefined}
-                />
-                <FieldError id="conn-password-error" error={errors['workday.password']} />
-              </div>
-            </div>
+              <Flex gap="4" mb="4">
+                <Box flex="1">
+                  <Label htmlFor="conn-username" fontSize="sm" fontWeight="600" display="block" mb="1">{t('configDetails.connection.workday.username')}</Label>
+                  <Input id="conn-username" type="text" placeholder={t('configDetails.connection.workday.usernamePlaceholder')} value={form.workday.username} onChange={handleWorkdayChange('username')} onBlur={() => validateField('workday.username')} aria-invalid={!!errors['workday.username']} aria-describedby={errors['workday.username'] ? 'conn-username-error' : undefined} {...getInputProps(errors['workday.username'])} />
+                  <FieldError id="conn-username-error" error={errors['workday.username']} />
+                </Box>
+                <Box flex="1">
+                  <Label htmlFor="conn-password" fontSize="sm" fontWeight="600" display="block" mb="1">{t('configDetails.connection.workday.password')}</Label>
+                  <Input id="conn-password" type="password" placeholder={t('configDetails.connection.workday.passwordPlaceholder')} value={form.workday.password} onChange={handleWorkdayChange('password')} onBlur={() => validateField('workday.password')} aria-invalid={!!errors['workday.password']} aria-describedby={errors['workday.password'] ? 'conn-password-error' : undefined} {...getInputProps(errors['workday.password'])} />
+                  <FieldError id="conn-password-error" error={errors['workday.password']} />
+                </Box>
+              </Flex>
+            </Box>
 
-            </fieldset>
+            <Box as="fieldset" border="none" p="0" m="0" mb="5">
+              <Flex as="legend" align="center" gap="2" fontSize="sm" fontWeight="700" color="gray.700" mb="4" pb="2" borderBottom="1px solid" borderColor="gray.100">
+                <Text>⚙️</Text>
+                <Text>{t('configDetails.connection.workday.queryOptionsTitle')}</Text>
+              </Flex>
 
-            <fieldset>
-            <legend className={styles.sectionHeader}>
-              <span className={styles.sectionIcon}>⚙️</span>
-              <span>{t('configDetails.connection.workday.queryOptionsTitle')}</span>
-            </legend>
+              <Box mb="4">
+                <Label htmlFor="conn-worker-count" fontSize="sm" fontWeight="600" display="block" mb="1">{t('configDetails.connection.workday.workerCountLimit')}</Label>
+                <Input id="conn-worker-count" type="number" min={1} max={999} value={form.workday.workerCountLimit} onChange={handleWorkdayChange('workerCountLimit')} {...inputProps} />
+                <Text fontSize="xs" color="gray.400" mt="1">{t('configDetails.connection.workday.workerCountLimitHint')}</Text>
+              </Box>
 
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel} htmlFor="conn-worker-count">{t('configDetails.connection.workday.workerCountLimit')}</label>
-              <input
-                id="conn-worker-count"
-                className={styles.formInput}
-                type="number"
-                min={1}
-                max={999}
-                value={form.workday.workerCountLimit}
-                onChange={handleWorkdayChange('workerCountLimit')}
-              />
-              <span className={styles.formHint}>
-                {t('configDetails.connection.workday.workerCountLimitHint')}
-              </span>
-            </div>
-
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel}>{t('configDetails.connection.workday.responseGroups')}</label>
-              <div className={`${styles.chipGroup} ${errors['workday.responseGroup'] ? styles.chipGroupInvalid : ''}`}>
-                {RESPONSE_GROUP_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    className={`${styles.chip} ${activeGroups.has(opt.value) ? styles.chipActive : ''}`}
-                    aria-pressed={activeGroups.has(opt.value)}
-                    onClick={() => handleResponseGroupToggle(opt.value)}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-              <FieldError id="response-group-error" error={errors['workday.responseGroup']} />
-              <span className={styles.formHint}>
-                {t('configDetails.connection.workday.responseGroupsHint')}
-              </span>
-            </div>
-            </fieldset>
+              <Box mb="4">
+                <Text fontSize="sm" fontWeight="600" mb="2">{t('configDetails.connection.workday.responseGroups')}</Text>
+                <Flex wrap="wrap" gap="2" border={errors['workday.responseGroup'] ? '2px solid' : 'none'} borderColor="red.300" borderRadius="lg" p={errors['workday.responseGroup'] ? '2' : '0'}>
+                  {RESPONSE_GROUP_OPTIONS.map((opt) => (
+                    <StyledButton
+                      key={opt.value}
+                      type="button"
+                      px="3"
+                      py="1.5"
+                      borderRadius="full"
+                      border="1px solid"
+                      borderColor={activeGroups.has(opt.value) ? 'blue.400' : 'gray.200'}
+                      bg={activeGroups.has(opt.value) ? 'blue.50' : 'white'}
+                      color={activeGroups.has(opt.value) ? 'blue.700' : 'gray.600'}
+                      fontSize="sm"
+                      cursor="pointer"
+                      transition="all 0.15s"
+                      _hover={{ borderColor: 'blue.300' }}
+                      aria-pressed={activeGroups.has(opt.value)}
+                      onClick={() => handleResponseGroupToggle(opt.value)}
+                    >
+                      {opt.label}
+                    </StyledButton>
+                  ))}
+                </Flex>
+                <FieldError id="response-group-error" error={errors['workday.responseGroup']} />
+                <Text fontSize="xs" color="gray.400" mt="1">{t('configDetails.connection.workday.responseGroupsHint')}</Text>
+              </Box>
+            </Box>
           </>
         )}
 
-        {/* ── CSV-specific fields ────────────────────────── */}
+        {/* CSV-specific fields */}
         {form.system === 'csv' && (
-          <>
-            <fieldset>
-            <legend className={styles.sectionHeader}>
-              <span className={styles.sectionIcon}>📁</span>
-              <span>{t('configDetails.connection.csv.uploadTitle')}</span>
-            </legend>
+          <Box as="fieldset" border="none" p="0" m="0" mb="5">
+            <Flex as="legend" align="center" gap="2" fontSize="sm" fontWeight="700" color="gray.700" mb="4" pb="2" borderBottom="1px solid" borderColor="gray.100">
+              <Text>📁</Text>
+              <Text>{t('configDetails.connection.csv.uploadTitle')}</Text>
+            </Flex>
 
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel} htmlFor="conn-csv-file">{t('configDetails.connection.csv.uploadLabel')}</label>
-
-              {/* Hidden native file input */}
+            <Box mb="4">
+              <Label htmlFor="conn-csv-file" fontSize="sm" fontWeight="600" display="block" mb="2">{t('configDetails.connection.csv.uploadLabel')}</Label>
               <input
                 id="conn-csv-file"
                 ref={csvInputRef}
                 type="file"
                 accept=".csv"
-                className={styles.srOnly}
+                style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) handleCsvFileSelect(file);
                 }}
               />
-
-              {/* Custom upload area */}
-              <div className={styles.uploadArea}>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  type="button"
-                  disabled={form.csv.uploadStatus === 'uploading' || form.csv.uploadStatus === 'discovering'}
-                  onClick={() => csvInputRef.current?.click()}
-                >
-                  {form.csv.uploadStatus === 'uploading' || form.csv.uploadStatus === 'discovering'
-                    ? t('configDetails.connection.csv.uploading')
-                    : t('configDetails.connection.csv.chooseFile')}
+              <Flex align="center" gap="3">
+                <Button variant="outline" size="sm" type="button" disabled={form.csv.uploadStatus === 'uploading' || form.csv.uploadStatus === 'discovering'} onClick={() => csvInputRef.current?.click()}>
+                  {form.csv.uploadStatus === 'uploading' || form.csv.uploadStatus === 'discovering' ? t('configDetails.connection.csv.uploading') : t('configDetails.connection.csv.chooseFile')}
                 </Button>
-                {form.csv.filename && (
-                  <span className={styles.uploadFilename}>{form.csv.filename}</span>
-                )}
-              </div>
-
+                {form.csv.filename && <Text fontSize="sm" color="gray.600">{form.csv.filename}</Text>}
+              </Flex>
               <FieldError id="csv-file-error" error={errors['csv.filename']} />
-              <span className={styles.formHint}>
-                {t('configDetails.connection.csv.uploadHint')}
-              </span>
-            </div>
+              <Text fontSize="xs" color="gray.400" mt="1">{t('configDetails.connection.csv.uploadHint')}</Text>
+            </Box>
 
-            {/* Discovered columns */}
             {form.csv.columns.length > 0 && (
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>{t('configDetails.connection.csv.discoveredColumns')}</label>
-                <div className={styles.chipGroup}>
+              <Box mb="4">
+                <Text fontSize="sm" fontWeight="600" mb="2">{t('configDetails.connection.csv.discoveredColumns')}</Text>
+                <Flex wrap="wrap" gap="2">
                   {form.csv.columns.map((col) => (
-                    <span key={col} className={`${styles.chip} ${styles.chipActive}`}>
-                      {col}
-                    </span>
+                    <Box key={col} px="2.5" py="1" borderRadius="full" bg="blue.50" border="1px solid" borderColor="blue.200" fontSize="xs" color="blue.700">{col}</Box>
                   ))}
-                </div>
-                <span className={styles.formHint}>
-                  {t('configDetails.connection.csv.columnsHint', { count: form.csv.columns.length })}
-                </span>
-              </div>
+                </Flex>
+                <Text fontSize="xs" color="gray.400" mt="1">{t('configDetails.connection.csv.columnsHint', { count: form.csv.columns.length })}</Text>
+              </Box>
             )}
-            </fieldset>
-          </>
+          </Box>
         )}
-      </form>
+      </Box>
 
       {/* Actions */}
-      <div className={styles.actions}>
-        <Button variant="secondary" size="md" onClick={handleBack}>
+      <Flex justify="space-between" mt="6">
+        <Button variant="outline" size="md" onClick={handleBack}>
           {t('configDetails.connection.backButton')}
         </Button>
-        <Button variant="primary" size="md" disabled={!isValid} onClick={handleNext}>
+        <Button colorPalette="blue" size="md" disabled={!isValid} onClick={handleNext}>
           {t('configDetails.connection.nextButton')}
         </Button>
-      </div>
-    </div>
+      </Flex>
+    </Box>
   );
 }

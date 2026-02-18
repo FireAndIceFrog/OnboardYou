@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
+import { Box, Flex, Text, Code } from '@chakra-ui/react';
 import type { ChatMessage } from '@/shared/domain/types';
-import styles from './ChatWindow.module.scss';
 
 interface ChatMessageProps {
   message: ChatMessage;
@@ -17,39 +17,34 @@ function formatTimestamp(iso: string): string {
  */
 function renderContent(content: string): (string | ReactElement)[] {
   const parts: (string | ReactElement)[] = [];
-  // Split by bold and code patterns
   const regex = /(\*\*(.+?)\*\*|`(.+?)`)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
   let key = 0;
 
   while ((match = regex.exec(content)) !== null) {
-    // Push text before the match
     if (match.index > lastIndex) {
       parts.push(...splitNewlines(content.slice(lastIndex, match.index), key));
       key += 10;
     }
 
     if (match[2]) {
-      // Bold text
       parts.push(
-        <strong key={`b-${key++}`} className={styles.boldText}>
+        <Text as="strong" key={`b-${key++}`} fontWeight="600">
           {match[2]}
-        </strong>,
+        </Text>,
       );
     } else if (match[3]) {
-      // Inline code
       parts.push(
-        <code key={`c-${key++}`} className={styles.inlineCode}>
+        <Code key={`c-${key++}`} fontSize="xs" px="1" py="0.5" borderRadius="sm">
           {match[3]}
-        </code>,
+        </Code>,
       );
     }
 
     lastIndex = match.index + match[0].length;
   }
 
-  // Remaining text
   if (lastIndex < content.length) {
     parts.push(...splitNewlines(content.slice(lastIndex), key));
   }
@@ -77,26 +72,31 @@ export function ChatMessageComponent({ message }: ChatMessageProps) {
   const isUser = message.role === 'user';
 
   return (
-    <div
-      className={`${styles.chatMessage} ${isUser ? styles.chatMessageUser : ''}`}
-    >
-      <div className={styles.messageAvatar}>
-        {isUser ? '👤' : '🤖'}
-      </div>
-      <div>
-        <div
-          className={`${styles.messageBubble} ${
-            isUser ? styles.messageBubbleUser : styles.messageBubbleAssistant
-          }`}
+    <Flex gap="3" mb="3" direction={isUser ? 'row-reverse' : 'row'}>
+      <Text fontSize="lg" flexShrink={0}>{isUser ? '👤' : '🤖'}</Text>
+      <Box>
+        <Box
+          px="3"
+          py="2"
+          borderRadius="lg"
+          borderTopRightRadius={isUser ? 'sm' : undefined}
+          borderTopLeftRadius={!isUser ? 'sm' : undefined}
+          bg={isUser ? 'blue.500' : 'gray.100'}
+          color={isUser ? 'white' : 'gray.800'}
+          fontSize="sm"
+          lineHeight="tall"
         >
           {renderContent(message.content)}
-        </div>
-        <div
-          className={`${styles.messageTime} ${isUser ? styles.messageTimeUser : ''}`}
+        </Box>
+        <Text
+          fontSize="xs"
+          color="gray.400"
+          mt="1"
+          textAlign={isUser ? 'right' : 'left'}
         >
           {formatTimestamp(message.timestamp)}
-        </div>
-      </div>
-    </div>
+        </Text>
+      </Box>
+    </Flex>
   );
 }

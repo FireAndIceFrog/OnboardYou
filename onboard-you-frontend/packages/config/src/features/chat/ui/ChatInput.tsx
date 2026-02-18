@@ -1,6 +1,9 @@
 import { useState, useRef, useCallback, type KeyboardEvent, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import styles from './ChatInput.module.scss';
+import { Box, Flex, chakra } from '@chakra-ui/react';
+
+const StyledTextarea = chakra('textarea');
+const StyledButton = chakra('button');
 
 interface ChatInputProps {
   onSend: (content: string) => void;
@@ -16,7 +19,7 @@ export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = 'auto';
-    el.style.height = `${Math.min(el.scrollHeight, 96)}px`; // ~4 lines max
+    el.style.height = `${Math.min(el.scrollHeight, 96)}px`;
   }, []);
 
   const handleChange = useCallback(
@@ -32,7 +35,6 @@ export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
     if (!trimmed || disabled) return;
     onSend(trimmed);
     setValue('');
-    // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
@@ -49,28 +51,51 @@ export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
   );
 
   return (
-    <div className={styles.chatInputArea}>
+    <Flex align="flex-end" gap="2" px="4" py="3" borderTop="1px solid" borderColor="gray.200">
       <label htmlFor="chat-message-input" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' as const }}>{t('chat.input.placeholder')}</label>
-      <textarea
+      <StyledTextarea
         ref={textareaRef}
         id="chat-message-input"
-        className={styles.chatTextarea}
         value={value}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         placeholder={t('chat.input.placeholder')}
         disabled={disabled}
         rows={1}
+        flex="1"
+        border="1px solid"
+        borderColor="gray.200"
+        borderRadius="lg"
+        px="3"
+        py="2"
+        fontSize="sm"
+        resize="none"
+        _focus={{ borderColor: 'blue.500', outline: 'none', boxShadow: '0 0 0 1px var(--chakra-colors-blue-500)' }}
+        _disabled={{ opacity: 0.5, cursor: 'not-allowed' }}
       />
-      <button
+      <StyledButton
         type="button"
-        className={styles.sendButton}
         onClick={handleSend}
         disabled={disabled || !value.trim()}
+        w="9"
+        h="9"
+        borderRadius="lg"
+        bg="blue.500"
+        color="white"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        fontSize="md"
+        fontWeight="600"
+        cursor="pointer"
+        flexShrink={0}
+        transition="background 0.15s"
+        _hover={{ bg: 'blue.600' }}
+        _disabled={{ opacity: 0.4, cursor: 'not-allowed' }}
         aria-label={t('chat.input.send')}
       >
         →
-      </button>
-    </div>
+      </StyledButton>
+    </Flex>
   );
 }

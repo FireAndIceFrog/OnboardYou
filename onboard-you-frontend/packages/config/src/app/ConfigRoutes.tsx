@@ -6,8 +6,7 @@ import { ErrorBoundary } from '@/shared/ui';
 import { ConfigListScreen } from '@/features/config-list/ui';
 import { ConfigDetailsPage, ConnectionDetailsPage } from '@/features/config-details/ui';
 
-// Global styles — imported here so they load when consumed via Module Federation
-import '@/styles/config.scss';
+// React Flow stylesheet — needed when consumed via Module Federation
 import '@xyflow/react/dist/style.css';
 
 export function ConfigRoutes() {

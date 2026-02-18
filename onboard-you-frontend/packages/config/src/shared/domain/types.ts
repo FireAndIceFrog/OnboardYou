@@ -136,9 +136,10 @@ export function deriveStatus(config: PipelineConfig): SystemStatus {
   return 'healthy';
 }
 
-import type { BadgeVariant } from '../ui/Badge';
+/** Maps to Chakra colorPalette values via VARIANT_MAP in ConfigListItem */
+type StatusVariant = 'active' | 'info' | 'paused' | 'error';
 
-export const STATUS_DISPLAY: Record<SystemStatus, { label: string; variant: BadgeVariant }> = {
+export const STATUS_DISPLAY: Record<SystemStatus, { label: string; variant: StatusVariant }> = {
   healthy: { label: 'Healthy', variant: 'active' },
   syncing: { label: 'Syncing', variant: 'info' },
   paused: { label: 'Paused', variant: 'paused' },

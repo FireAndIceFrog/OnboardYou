@@ -1,12 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { Box, Flex, Heading, Text, Input, Spinner } from '@chakra-ui/react';
+import { Button } from '@chakra-ui/react';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { fetchConfigs, setSearchQuery, selectConfigList, selectFilteredConfigs } from '../state/configListSlice';
 import { ConfigListItem } from './ConfigListItem';
-import { Button } from '@/shared/ui/Button';
-import { Spinner } from '@/shared/ui/Spinner';
-import styles from './ConfigListScreen.module.scss';
 
 function ConfigListScreenInner() {
   const { t } = useTranslation();
@@ -20,63 +19,76 @@ function ConfigListScreenInner() {
   }, [dispatch]);
 
   return (
-    <div className={styles.configListScreen}>
-        <div role="tabpanel" id="tabpanel-portfolio">
-          <div className={styles.listHeader}>
-            <h1 className={styles.title}>{t('configList.title')}</h1>
-            <Button variant="primary" size="md" leftIcon={<span>＋</span>} onClick={() => navigate('new')}>
-              {t('configList.newConnection')}
-            </Button>
-          </div>
+    <Box maxW="1200px" mx="auto" py="8" px="6">
+      <Box role="tabpanel" id="tabpanel-portfolio">
+        {/* Header */}
+        <Flex justify="space-between" align="center" mb="6">
+          <Heading size="2xl">{t('configList.title')}</Heading>
+          <Button colorPalette="blue" size="md" onClick={() => navigate('new')}>
+            ＋ {t('configList.newConnection')}
+          </Button>
+        </Flex>
 
-          <div className={styles.searchBar}>
-            <label htmlFor="config-search" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' as const }}>{t('configList.search.placeholder')}</label>
-            <span className={styles.searchIcon} aria-hidden="true">🔍</span>
-            <input
-              id="config-search"
-              type="text"
-              className={styles.searchInput}
-              placeholder={t('configList.search.placeholder')}
-              value={state.searchQuery}
-              onChange={(e) => dispatch(setSearchQuery(e.target.value))}
-            />
-          </div>
+        {/* Search */}
+        <Box position="relative" mb="6">
+          <label htmlFor="config-search" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' as const }}>{t('configList.search.placeholder')}</label>
+          <Box position="absolute" left="3" top="50%" transform="translateY(-50%)" zIndex="1" aria-hidden="true">🔍</Box>
+          <Input
+            id="config-search"
+            type="text"
+            placeholder={t('configList.search.placeholder')}
+            value={state.searchQuery}
+            onChange={(e) => dispatch(setSearchQuery(e.target.value))}
+            pl="10"
+            bg="white"
+            borderColor="gray.200"
+            _focus={{ borderColor: 'blue.500', boxShadow: '0 0 0 1px var(--chakra-colors-blue-500)' }}
+          />
+        </Box>
 
-          {state.isLoading && (
-            <div className={styles.loadingState}>
-              <Spinner size="lg" />
-              <p>{t('configList.loading')}</p>
-            </div>
-          )}
+        {/* Loading */}
+        {state.isLoading && (
+          <Flex direction="column" align="center" gap="3" py="12">
+            <Spinner size="lg" />
+            <Text color="gray.500">{t('configList.loading')}</Text>
+          </Flex>
+        )}
 
-          {state.error && !state.isLoading && (
-            <div className={styles.errorState}>
-              <span className={styles.errorIcon}>⚠️</span>
-              <p>{state.error}</p>
-            </div>
-          )}
+        {/* Error */}
+        {state.error && !state.isLoading && (
+          <Flex direction="column" align="center" gap="2" py="12">
+            <Text fontSize="2xl">⚠️</Text>
+            <Text color="red.500">{state.error}</Text>
+          </Flex>
+        )}
 
-          {!state.isLoading && !state.error && filteredConfigs.length === 0 && (
-            <div className={styles.emptyState}>
-              <span className={styles.emptyIcon}>🔗</span>
-              <h3 className={styles.emptyTitle}>{t('configList.empty.title')}</h3>
-              <p className={styles.emptyDesc}>
-                {state.searchQuery
-                  ? t('configList.empty.noResults')
-                  : t('configList.empty.noData')}
-              </p>
-            </div>
-          )}
+        {/* Empty */}
+        {!state.isLoading && !state.error && filteredConfigs.length === 0 && (
+          <Flex direction="column" align="center" gap="3" py="16">
+            <Text fontSize="3xl">🔗</Text>
+            <Heading size="md" color="gray.700">{t('configList.empty.title')}</Heading>
+            <Text color="gray.500" fontSize="sm">
+              {state.searchQuery
+                ? t('configList.empty.noResults')
+                : t('configList.empty.noData')}
+            </Text>
+          </Flex>
+        )}
 
-          {!state.isLoading && !state.error && filteredConfigs.length > 0 && (
-            <div className={styles.configGrid}>
-              {filteredConfigs.map((config) => (
-                <ConfigListItem key={config.customerCompanyId} config={config} />
-              ))}
-            </div>
-          )}
-        </div>
-    </div>
+        {/* Grid */}
+        {!state.isLoading && !state.error && filteredConfigs.length > 0 && (
+          <Box
+            display="grid"
+            gridTemplateColumns={{ base: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }}
+            gap="5"
+          >
+            {filteredConfigs.map((config) => (
+              <ConfigListItem key={config.customerCompanyId} config={config} />
+            ))}
+          </Box>
+        )}
+      </Box>
+    </Box>
   );
 }
 

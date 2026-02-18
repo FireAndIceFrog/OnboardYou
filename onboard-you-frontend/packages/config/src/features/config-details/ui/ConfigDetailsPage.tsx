@@ -13,10 +13,10 @@ import {
   type Node,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { Box, Flex, Heading, Text, Button, Spinner, Badge } from '@chakra-ui/react';
 
 import { useAppDispatch, useAppSelector } from '@/store';
 import { useGlobal } from '@/shared/hooks';
-import { Button, Spinner, Badge } from '@/shared/ui';
 import { humanFrequency } from '@/shared/domain/types';
 import type { ConnectionForm } from '../domain/types';
 import {
@@ -50,7 +50,6 @@ import { ActionEditPanel } from './ActionEditPanel';
 import { AddStepPanel } from './AddStepPanel';
 import { IngestionNode, TransformationNode, EgressNode } from './nodes';
 import { ChatWindow } from '@/features/chat/ui';
-import styles from './ConfigDetailsPage.module.scss';
 
 const nodeTypes = {
   ingestion: IngestionNode,
@@ -107,7 +106,7 @@ function ConfigDetailsContent({
     clearTimeout(validateTimerRef.current);
     validateTimerRef.current = setTimeout(() => {
       dispatch(validateConfigThunk({ customerCompanyId, data: config }));
-    }, 400);                 // debounce 400 ms so rapid edits don't spam the API
+    }, 400);
     return () => clearTimeout(validateTimerRef.current);
   }, [dispatch, customerCompanyId, config, pipelineActions]);
 
@@ -167,7 +166,6 @@ function ConfigDetailsContent({
 
     try {
       if (isNewConfig) {
-        // Derive a customerCompanyId from the display name
         const newId = config.name
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, '-')
@@ -179,7 +177,6 @@ function ConfigDetailsContent({
         ).unwrap();
 
         showNotification(t('configDetails.createSuccess'), 'success');
-        // Navigate to the real config URL so subsequent saves use PUT
         navigate(`/config/${result.customerCompanyId}`, { replace: true });
       } else {
         await dispatch(
@@ -219,73 +216,73 @@ function ConfigDetailsContent({
 
   if (isLoading) {
     return (
-      <div className={styles.loadingState}>
+      <Flex align="center" justify="center" h="100%" gap="3" color="gray.500">
         <Spinner size="lg" />
-        <span>{t('configDetails.loading')}</span>
-      </div>
+        <Text>{t('configDetails.loading')}</Text>
+      </Flex>
     );
   }
 
   if (error) {
     return (
-      <div className={styles.errorState}>
-        <span className={styles.errorIcon}>⚠️</span>
-        <p>{error}</p>
-        <Button variant="secondary" onClick={handleBack}>
+      <Flex direction="column" align="center" justify="center" h="100%" gap="3" color="gray.500">
+        <Text fontSize="2xl">⚠️</Text>
+        <Text>{error}</Text>
+        <Button variant="outline" onClick={handleBack}>
           {t('configDetails.backToConfigurations')}
         </Button>
-      </div>
+      </Flex>
     );
   }
 
   if (!config) return null;
 
   return (
-    <div className={styles.detailsPage}>
+    <Flex direction="column" h="100vh" bg="gray.50">
       {/* Step indicator bar */}
-      <nav className={styles.stepBar} aria-label="Configuration steps">
-        <div className={styles.stepItem}>
-          <span className={styles.stepDot} data-completed="">✓</span>
-          <span className={styles.stepText}>{t('configDetails.steps.connectionDetails')}</span>
-        </div>
-        <div className={styles.stepLine} data-active="" />
-        <div className={styles.stepItem} aria-current="step">
-          <span className={styles.stepDot} data-active="">2</span>
-          <span className={styles.stepTextActive}>{t('configDetails.steps.flowCustomization')}</span>
-        </div>
-      </nav>
+      <Flex as="nav" align="center" justify="center" gap="3" py="3" px="6" bg="white" borderBottom="1px solid" borderColor="gray.200" aria-label="Configuration steps">
+        <Flex align="center" gap="2">
+          <Flex align="center" justify="center" w="7" h="7" borderRadius="full" bg="green.500" color="white" fontSize="sm" fontWeight="600">✓</Flex>
+          <Text fontSize="sm" color="gray.600">{t('configDetails.steps.connectionDetails')}</Text>
+        </Flex>
+        <Box w="12" h="0.5" bg="blue.400" borderRadius="full" />
+        <Flex align="center" gap="2" aria-current="step">
+          <Flex align="center" justify="center" w="7" h="7" borderRadius="full" bg="blue.500" color="white" fontSize="sm" fontWeight="600">2</Flex>
+          <Text fontSize="sm" fontWeight="600" color="blue.600">{t('configDetails.steps.flowCustomization')}</Text>
+        </Flex>
+      </Flex>
 
       {/* Header */}
-      <header className={styles.detailHeader}>
-        <div className={styles.headerLeft}>
-          <button type="button" className={styles.backBtn} onClick={handleBack}>
+      <Flex as="header" align="center" justify="space-between" px="6" py="3" bg="white" borderBottom="1px solid" borderColor="gray.200">
+        <Flex align="center" gap="3">
+          <Button variant="ghost" size="sm" onClick={handleBack}>
             {t('configDetails.back')}
-          </button>
-          <h1 className={styles.configName}>{config.name}</h1>
-          <Badge variant="info">{humanFrequency(config.cron)}</Badge>
-        </div>
-        <div className={styles.headerRight}>
-          <button type="button" className={styles.addStepBtn} onClick={handleToggleAddStep}>
+          </Button>
+          <Heading size="md" fontWeight="600">{config.name}</Heading>
+          <Badge colorPalette="blue">{humanFrequency(config.cron)}</Badge>
+        </Flex>
+        <Flex align="center" gap="2">
+          <Button variant="ghost" size="sm" onClick={handleToggleAddStep}>
             ➕ {t('configDetails.addStep')}
-          </button>
-          <button type="button" className={styles.chatToggle} onClick={handleToggleChat}>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleToggleChat}>
             💬 {chatOpen ? t('configDetails.closeChat') : t('configDetails.openChat')}
-          </button>
-          <Button variant="primary" size="sm" onClick={handleSave} disabled={isSaving}>
+          </Button>
+          <Button colorPalette="blue" size="sm" onClick={handleSave} disabled={isSaving}>
             {isSaving ? t('configDetails.saving') : t('configDetails.save')}
           </Button>
           {!isNewConfig && (
-            <Button variant="danger" size="sm" onClick={handleDelete} disabled={isDeleting}>
+            <Button colorPalette="red" variant="outline" size="sm" onClick={handleDelete} disabled={isDeleting}>
               {isDeleting ? t('configDetails.deleting') : t('configDetails.delete')}
             </Button>
           )}
-        </div>
-      </header>
+        </Flex>
+      </Flex>
 
       {/* Body */}
-      <div className={styles.body}>
+      <Flex flex="1" overflow="hidden">
         {/* Canvas */}
-        <div className={styles.canvasArea} role="application" aria-label="Pipeline flow editor">
+        <Box flex="1" position="relative" role="application" aria-label="Pipeline flow editor">
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -299,29 +296,30 @@ function ConfigDetailsContent({
             fitViewOptions={{ padding: 0.2 }}
             proOptions={{ hideAttribution: true }}
           >
-            <MiniMap
-              nodeStrokeWidth={3}
-              zoomable
-              pannable
-            />
+            <MiniMap nodeStrokeWidth={3} zoomable pannable />
             <Controls />
             <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
           </ReactFlow>
 
           {selectedNode && <ActionEditPanel />}
           {addStepOpen && <AddStepPanel onClose={handleCloseAddStep} />}
-        </div>
+        </Box>
 
         {/* Chat Panel */}
-        <aside
-          className={`${styles.chatPanel} ${!chatOpen ? styles.chatPanelHidden : ''}`}
+        <Box
+          as="aside"
+          w={chatOpen ? '380px' : '0px'}
+          overflow="hidden"
+          transition="width 0.2s ease"
+          borderLeft={chatOpen ? '1px solid' : 'none'}
+          borderColor="gray.200"
+          bg="white"
+          flexShrink={0}
         >
-          {chatOpen && (
-            <ChatWindow onClose={handleToggleChat} />
-          )}
-        </aside>
-      </div>
-    </div>
+          {chatOpen && <ChatWindow onClose={handleToggleChat} />}
+        </Box>
+      </Flex>
+    </Flex>
   );
 }
 
@@ -334,22 +332,21 @@ export function ConfigDetailsPage() {
   const connectionForm = (location.state as { connection?: ConnectionForm } | null)
     ?.connection;
 
-  // If navigating to /new without connection form data, redirect back
   if (isNewConfig && !connectionForm) {
     return (
-      <div className={styles.errorState}>
-        <span className={styles.errorIcon}>⚠️</span>
-        <p>{t('configDetails.noConnectionData')}</p>
-      </div>
+      <Flex direction="column" align="center" justify="center" h="100%" gap="3" color="gray.500">
+        <Text fontSize="2xl">⚠️</Text>
+        <Text>{t('configDetails.noConnectionData')}</Text>
+      </Flex>
     );
   }
 
   if (!customerCompanyId) {
     return (
-      <div className={styles.errorState}>
-        <span className={styles.errorIcon}>⚠️</span>
-        <p>{t('configDetails.noConfigId')}</p>
-      </div>
+      <Flex direction="column" align="center" justify="center" h="100%" gap="3" color="gray.500">
+        <Text fontSize="2xl">⚠️</Text>
+        <Text>{t('configDetails.noConfigId')}</Text>
+      </Flex>
     );
   }
 

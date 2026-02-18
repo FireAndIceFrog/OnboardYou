@@ -1,4 +1,4 @@
-import styles from './FieldError.module.scss';
+import { Text } from '@chakra-ui/react';
 
 interface FieldErrorProps {
   id: string;
@@ -9,8 +9,8 @@ export function FieldError({ id, error }: FieldErrorProps) {
   if (!error) return null;
 
   return (
-    <span id={id} className={styles.fieldError} role="alert">
+    <Text id={id} fontSize="xs" color="red.500" mt="1" role="alert">
       {error}
-    </span>
+    </Text>
   );
 }

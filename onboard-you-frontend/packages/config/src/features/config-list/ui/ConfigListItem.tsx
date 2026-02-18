@@ -1,8 +1,7 @@
 import { useNavigate } from 'react-router-dom';
+import { Box, Flex, Heading, Text, Badge } from '@chakra-ui/react';
 import type { PipelineConfig } from '@/shared/domain/types';
 import { humanFrequency, deriveStatus, STATUS_DISPLAY } from '@/shared/domain/types';
-import { Badge } from '@/shared/ui/Badge';
-import styles from './ConfigListItem.module.scss';
 
 interface ConfigListItemProps {
   config: PipelineConfig;
@@ -38,6 +37,14 @@ function fullDate(dateStr: string): string {
   });
 }
 
+const VARIANT_MAP: Record<string, 'green' | 'gray' | 'yellow' | 'red' | 'blue'> = {
+  active: 'green',
+  draft: 'gray',
+  paused: 'yellow',
+  error: 'red',
+  info: 'blue',
+};
+
 export function ConfigListItem({ config }: ConfigListItemProps) {
   const navigate = useNavigate();
   const status = deriveStatus(config);
@@ -45,8 +52,15 @@ export function ConfigListItem({ config }: ConfigListItemProps) {
   const frequency = humanFrequency(config.cron);
 
   return (
-    <div
-      className={styles.configItem}
+    <Box
+      bg="white"
+      borderRadius="lg"
+      border="1px solid"
+      borderColor="gray.200"
+      p="5"
+      cursor="pointer"
+      transition="all 0.15s ease"
+      _hover={{ borderColor: 'blue.300', shadow: 'md' }}
       onClick={() => navigate(config.customerCompanyId)}
       role="link"
       tabIndex={0}
@@ -57,25 +71,26 @@ export function ConfigListItem({ config }: ConfigListItemProps) {
         }
       }}
     >
-      <h3 className={styles.configItemName}>{config.name}</h3>
-      <p className={styles.configItemDesc}>{config.customerCompanyId}</p>
+      <Heading size="sm" mb="1" truncate>{config.name}</Heading>
+      <Text fontSize="xs" color="gray.500" mb="4" truncate>{config.customerCompanyId}</Text>
 
-      <div className={styles.configItemMeta}>
-        <div className={styles.metaLeft}>
-          <span className={styles.frequencyTag} title={`Cron: ${config.cron}`}>
-            🔄 {frequency}
-          </span>
-        </div>
-        <div className={styles.metaRight}>
-          <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
-          <span
-            className={styles.updatedAt}
+      <Flex justify="space-between" align="center">
+        <Text fontSize="xs" color="gray.500" title={`Cron: ${config.cron}`}>
+          🔄 {frequency}
+        </Text>
+        <Flex align="center" gap="2">
+          <Badge colorPalette={VARIANT_MAP[statusInfo.variant] ?? 'gray'} size="sm">
+            {statusInfo.label}
+          </Badge>
+          <Text
+            fontSize="xs"
+            color="gray.400"
             title={`Last edited: ${fullDate(config.lastEdited ?? '')}`}
           >
             {relativeTime(config.lastEdited ?? '')}
-          </span>
-        </div>
-      </div>
-    </div>
+          </Text>
+        </Flex>
+      </Flex>
+    </Box>
   );
 }

@@ -109,12 +109,14 @@ The **platform** package uses **Chakra UI v3** (`@chakra-ui/react`) as the compo
 
 ## Key decisions
 - **No dark mode** — we ship light-only to keep things simple and maintainable.
-- **No custom shared UI primitives** — use Chakra's built-in `Button`, `Badge`, `Spinner`, `Card`, `Input`, `Field`, `NativeSelect`, `Menu`, etc. directly. The old `shared/ui/Button`, `Badge`, `Card`, `Spinner` directories have been deleted.
-- **ErrorBoundary** remains a custom class component in `shared/ui/ErrorBoundary/` since Chakra doesn't provide one.
-- The **config** package has **not** been migrated yet and still uses SCSS + its own shared components.
+- **No custom shared UI primitives** — use Chakra's built-in `Button`, `Badge`, `Spinner`, `Card`, `Input`, `Field`, `NativeSelect`, `Menu`, etc. directly. The old `shared/ui/Button`, `Badge`, `Card`, `Spinner` directories have been deleted in both platform and config packages.
+- **ErrorBoundary** remains a custom class component in `shared/ui/ErrorBoundary/` since Chakra doesn't provide one. Uses Chakra `Box`, `Heading`, `Text`, `Button` for rendering.
+- Both **platform** and **config** packages are fully migrated — zero SCSS, all Chakra style props.
 
 ## Theme
-Defined in `src/theme/index.ts` using `createSystem(defaultConfig, config)`. The custom config only overrides fonts (Inter/JetBrains Mono) and adds global CSS for the React Flow SVG fix. All colors, spacing, radii, shadows use Chakra defaults.
+Defined in `platform/src/theme/index.ts` using `createSystem(defaultConfig, config)`. The custom config only overrides fonts (Inter/JetBrains Mono) and adds global CSS for the React Flow SVG fix. All colors, spacing, radii, shadows use Chakra defaults.
+
+The **config** package re-exports the platform theme via `config/src/theme/index.ts` → `export { system } from '@platform/theme'`. The `@platform` alias is configured in both `vite.config.ts` (resolve alias → `../platform/src`) and `tsconfig.json` (paths → `../platform/src/*`). Both `@chakra-ui/react` and `@emotion/react` are shared singletons in Module Federation to avoid duplicate React context issues.
 
 ## How to style components
 - Use Chakra **style props** directly on components: `<Box p={4} bg="bg.subtle" borderRadius="lg">`.
@@ -122,6 +124,7 @@ Defined in `src/theme/index.ts` using `createSystem(defaultConfig, config)`. The
 - Use **color palettes** for variants: `colorPalette="blue"`, `colorPalette="red"`, `colorPalette="green"`.
 - Use **responsive objects** for breakpoints: `columns={{ base: 1, md: 2, lg: 4 }}`.
 - **Never** create `.module.scss` or `.css` files — use Chakra style props only.
+- **Polymorphic type workaround**: Chakra v3's `Box as="button"` / `Text as="label"` etc. don't carry native element types. Use `chakra()` factory instead: `const StyledButton = chakra('button')`, `const Label = chakra('label')`, `const StyledSelect = chakra('select')`, `const StyledTextarea = chakra('textarea')`. These give full native element typing with Chakra style props.
 
 ## Component mapping (old → new)
 | Old (SCSS)                 | New (Chakra v3)                                      |

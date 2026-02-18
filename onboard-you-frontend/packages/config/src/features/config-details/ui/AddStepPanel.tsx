@@ -1,10 +1,10 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Box, Flex, Heading, Text } from '@chakra-ui/react';
 import { useAppDispatch } from '@/store';
 import type { ActionConfig } from '@/generated/api';
 import { ACTION_CATALOG, type ActionCatalogEntry } from '../domain/actionCatalog';
 import { addFlowAction, setAddStepPanelOpen } from '../state/configDetailsSlice';
-import styles from './AddStepPanel.module.scss';
 
 const LOGIC_STEPS = ACTION_CATALOG.filter((a) => a.category === 'logic');
 const EGRESS_STEPS = ACTION_CATALOG.filter((a) => a.category === 'egress');
@@ -31,67 +31,119 @@ export function AddStepPanel({ onClose }: AddStepPanelProps) {
   );
 
   return (
-    <aside className={styles.panel} aria-label={t('flow.addStep.title')}>
-      <div className={styles.header}>
-        <h3 className={styles.title}>{t('flow.addStep.title')}</h3>
-        <button type="button" className={styles.closeBtn} onClick={onClose} aria-label={t('common.close')}>
+    <Box
+      as="aside"
+      position="absolute"
+      top="4"
+      right="4"
+      w="320px"
+      bg="white"
+      borderRadius="lg"
+      border="1px solid"
+      borderColor="gray.200"
+      shadow="lg"
+      zIndex="10"
+      overflow="hidden"
+      aria-label={t('flow.addStep.title')}
+    >
+      {/* Header */}
+      <Flex align="center" justify="space-between" px="4" py="3" borderBottom="1px solid" borderColor="gray.100" bg="gray.50">
+        <Heading size="sm">{t('flow.addStep.title')}</Heading>
+        <Box
+          as="button"
+          onClick={onClose}
+          aria-label={t('common.close')}
+          cursor="pointer"
+          fontSize="lg"
+          color="gray.400"
+          _hover={{ color: 'gray.600' }}
+          bg="transparent"
+          border="none"
+          p="0"
+        >
           ✕
-        </button>
-      </div>
+        </Box>
+      </Flex>
 
-      <p className={styles.subtitle}>{t('flow.addStep.subtitle')}</p>
+      <Text fontSize="sm" color="gray.500" px="4" pt="3">
+        {t('flow.addStep.subtitle')}
+      </Text>
 
-      <div className={styles.body}>
+      <Box p="4" display="flex" flexDirection="column" gap="5" overflowY="auto" maxH="420px">
         {/* Logic / Transform */}
-        <section>
-          <h4 className={styles.sectionLabel}>
-            <span className={styles.sectionIcon}>⚙️</span>
-            {t('flow.addStep.sections.transform')}
-          </h4>
-          <ul className={styles.catalog} role="list">
+        <Box as="section">
+          <Flex align="center" gap="2" mb="2">
+            <Text>⚙️</Text>
+            <Heading size="xs" textTransform="uppercase" letterSpacing="wide" color="gray.600">
+              {t('flow.addStep.sections.transform')}
+            </Heading>
+          </Flex>
+          <Flex as="ul" direction="column" gap="1" role="list" listStyleType="none">
             {LOGIC_STEPS.map((entry) => (
-              <li key={entry.actionType}>
-                <button
-                  type="button"
-                  className={styles.catalogItem}
+              <Box as="li" key={entry.actionType}>
+                <Flex
+                  as="button"
+                  align="flex-start"
+                  gap="3"
+                  w="full"
+                  p="2.5"
+                  borderRadius="md"
+                  cursor="pointer"
+                  bg="transparent"
+                  border="none"
+                  _hover={{ bg: 'gray.50' }}
+                  transition="background 0.15s"
                   onClick={() => handleAdd(entry)}
+                  textAlign="left"
                 >
-                  <span className={styles.itemIcon}>{entry.icon}</span>
-                  <div className={styles.itemText}>
-                    <span className={styles.itemLabel}>{entry.label}</span>
-                    <span className={styles.itemDesc}>{entry.description}</span>
-                  </div>
-                </button>
-              </li>
+                  <Text fontSize="lg" mt="0.5">{entry.icon}</Text>
+                  <Box>
+                    <Text fontSize="sm" fontWeight="500">{entry.label}</Text>
+                    <Text fontSize="xs" color="gray.500" lineHeight="1.4">{entry.description}</Text>
+                  </Box>
+                </Flex>
+              </Box>
             ))}
-          </ul>
-        </section>
+          </Flex>
+        </Box>
 
         {/* Egress / Destinations */}
-        <section>
-          <h4 className={styles.sectionLabel}>
-            <span className={styles.sectionIcon}>📤</span>
-            {t('flow.addStep.sections.destination')}
-          </h4>
-          <ul className={styles.catalog} role="list">
+        <Box as="section">
+          <Flex align="center" gap="2" mb="2">
+            <Text>📤</Text>
+            <Heading size="xs" textTransform="uppercase" letterSpacing="wide" color="gray.600">
+              {t('flow.addStep.sections.destination')}
+            </Heading>
+          </Flex>
+          <Flex as="ul" direction="column" gap="1" role="list" listStyleType="none">
             {EGRESS_STEPS.map((entry) => (
-              <li key={entry.actionType}>
-                <button
-                  type="button"
-                  className={styles.catalogItem}
+              <Box as="li" key={entry.actionType}>
+                <Flex
+                  as="button"
+                  align="flex-start"
+                  gap="3"
+                  w="full"
+                  p="2.5"
+                  borderRadius="md"
+                  cursor="pointer"
+                  bg="transparent"
+                  border="none"
+                  _hover={{ bg: 'gray.50' }}
+                  transition="background 0.15s"
                   onClick={() => handleAdd(entry)}
+                  textAlign="left"
                 >
-                  <span className={styles.itemIcon}>{entry.icon}</span>
-                  <div className={styles.itemText}>
-                    <span className={styles.itemLabel}>{entry.label}</span>
-                    <span className={styles.itemDesc}>{entry.description}</span>
-                  </div>
-                </button>
-              </li>
+                  <Text fontSize="lg" mt="0.5">{entry.icon}</Text>
+                  <Box>
+                    <Text fontSize="sm" fontWeight="500">{entry.label}</Text>
+                    <Text fontSize="xs" color="gray.500" lineHeight="1.4">{entry.description}</Text>
+                  </Box>
+                </Flex>
+              </Box>
             ))}
-          </ul>
-        </section>
-      </div>
-    </aside>
+          </Flex>
+        </Box>
+      </Box>
+    </Box>
   );
 }

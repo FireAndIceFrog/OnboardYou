@@ -1,5 +1,6 @@
 import { useCallback, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Box, Flex, Text, Heading, Input, chakra } from '@chakra-ui/react';
 import { useAppDispatch, useAppSelector } from '@/store';
 import type { RootState } from '@/store';
 import type { ActionConfigPayload, ActionType } from '@/generated/api';
@@ -13,7 +14,9 @@ import {
   removeFlowAction,
   updateFlowActionConfig,
 } from '../state/configDetailsSlice';
-import styles from './ActionEditPanel.module.scss';
+
+const StyledSelect = chakra('select');
+const StyledButton = chakra('button');
 
 /* ── Category icons ────────────────────────────────────────── */
 const CATEGORY_ICONS: Record<string, string> = {
@@ -24,12 +27,10 @@ const CATEGORY_ICONS: Record<string, string> = {
 
 /* ── helpers ───────────────────────────────────────────────── */
 
-/** Get a nested value from an object by a dotted key */
 function getField(config: Record<string, unknown>, key: string): unknown {
   return config[key];
 }
 
-/** Set a top-level field and return the new config */
 function setField(
   config: Record<string, unknown>,
   key: string,
@@ -37,6 +38,19 @@ function setField(
 ): Record<string, unknown> {
   return { ...config, [key]: value };
 }
+
+/* ── Shared input styles ───────────────────────────────────── */
+const inputStyles = {
+  fontSize: 'sm',
+  borderColor: 'gray.200',
+  bg: 'white',
+  _focus: { borderColor: 'blue.500', boxShadow: '0 0 0 1px var(--chakra-colors-blue-500)' },
+} as const;
+
+const selectStyles = {
+  ...inputStyles,
+  cursor: 'pointer',
+} as const;
 
 /* ── Sub-components ────────────────────────────────────────── */
 
@@ -47,7 +61,6 @@ interface FieldProps {
   availableColumns: string[];
 }
 
-/** Render a single field based on its schema type */
 function FieldEditor({ schema, value, onChange, availableColumns }: FieldProps) {
   const handleText = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => onChange(schema.key, e.target.value),
@@ -71,66 +84,52 @@ function FieldEditor({ schema, value, onChange, availableColumns }: FieldProps) 
         : typeof value === 'object' && value !== null
           ? JSON.stringify(value, null, 2)
           : String(value ?? '—');
-      return <div className={styles.readonlyValue}>{display}</div>;
+      return <Text fontSize="sm" color="gray.600" whiteSpace="pre-wrap">{display}</Text>;
     }
 
     case 'text':
       return (
-        <input
+        <Input
           type="text"
-          className={styles.textInput}
           value={String(value ?? '')}
           onChange={handleText}
           placeholder={schema.placeholder}
+          {...inputStyles}
         />
       );
 
     case 'number':
       return (
-        <input
+        <Input
           type="number"
-          className={styles.textInput}
           value={value === undefined || value === null ? '' : String(value)}
           onChange={handleNumber}
           placeholder={schema.placeholder}
+          {...inputStyles}
         />
       );
 
     case 'select':
       return (
-        <select
-          className={styles.selectInput}
-          value={String(value ?? '')}
-          onChange={handleSelect}
-        >
+        <StyledSelect w="full" p="2" borderRadius="md" border="1px solid" {...selectStyles} value={String(value ?? '')} onChange={handleSelect}>
           {schema.options?.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
-        </select>
+        </StyledSelect>
       );
 
-    /* ── Single column select ──────────────────────────────── */
     case 'column-select':
       return (
-        <select
-          className={styles.selectInput}
-          value={String(value ?? '')}
-          onChange={(e) => onChange(schema.key, e.target.value)}
-        >
+        <StyledSelect w="full" p="2" borderRadius="md" border="1px solid" {...selectStyles} value={String(value ?? '')} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onChange(schema.key, e.target.value)}>
           <option value="">— Select a column —</option>
           {availableColumns.map((col) => (
             <option key={col} value={col}>{col}</option>
           ))}
-        </select>
+        </StyledSelect>
       );
 
-    /* ── Multi column select (checkbox list) ───────────────── */
     case 'column-multi': {
-      const selected = new Set<string>(
-        Array.isArray(value) ? (value as string[]) : [],
-      );
+      const selected = new Set<string>(Array.isArray(value) ? (value as string[]) : []);
       const toggle = (col: string) => {
         const next = new Set(selected);
         if (next.has(col)) next.delete(col);
@@ -138,36 +137,29 @@ function FieldEditor({ schema, value, onChange, availableColumns }: FieldProps) 
         onChange(schema.key, [...next]);
       };
       return (
-        <div className={styles.columnMulti}>
+        <Flex wrap="wrap" gap="2">
           {availableColumns.length === 0 && (
-            <span className={styles.columnMultiEmpty}>
-              No columns available yet — save or validate first
-            </span>
+            <Text fontSize="xs" color="gray.400">No columns available yet — save or validate first</Text>
           )}
           {availableColumns.map((col) => (
-            <label key={col} className={styles.columnChip}>
-              <input
-                type="checkbox"
-                checked={selected.has(col)}
-                onChange={() => toggle(col)}
-              />
-              <span>{col}</span>
-            </label>
+            <Box as="label" key={col} display="flex" alignItems="center" gap="1.5" px="2.5" py="1" borderRadius="full" border="1px solid" borderColor={selected.has(col) ? 'blue.400' : 'gray.200'} bg={selected.has(col) ? 'blue.50' : 'white'} cursor="pointer" fontSize="xs" transition="all 0.15s" _hover={{ borderColor: 'blue.300' }}>
+              <input type="checkbox" checked={selected.has(col)} onChange={() => toggle(col)} style={{ display: 'none' }} />
+              <Text>{col}</Text>
+            </Box>
           ))}
-        </div>
+        </Flex>
       );
     }
 
-    /* ── Legacy columns (comma-separated, kept as fallback) ── */
     case 'columns': {
       const arr = Array.isArray(value) ? (value as string[]) : [];
       return (
-        <input
+        <Input
           type="text"
-          className={styles.textInput}
           value={arr.join(', ')}
           onChange={(e) => onChange(schema.key, e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
           placeholder={schema.placeholder}
+          {...inputStyles}
         />
       );
     }
@@ -176,11 +168,12 @@ function FieldEditor({ schema, value, onChange, availableColumns }: FieldProps) 
       return <MappingEditor value={value} onChange={(v) => onChange(schema.key, v)} availableColumns={availableColumns} />;
 
     default:
-      return <div className={styles.readonlyValue}>{String(value ?? '—')}</div>;
+      return <Text fontSize="sm" color="gray.600">{String(value ?? '—')}</Text>;
   }
 }
 
-/** Key-value editor for rename_column mapping */
+/* ── Mapping Editor ────────────────────────────────────────── */
+
 function MappingEditor({
   value,
   onChange,
@@ -228,52 +221,57 @@ function MappingEditor({
   }, [mapping, onChange]);
 
   return (
-    <div className={styles.mappingEditor}>
+    <Box>
       {entries.length > 0 && (
-        <div className={styles.mappingHeader}>
-          <span>{t('flow.edit.mappingFrom', 'Current Name')}</span>
-          <span>{t('flow.edit.mappingTo', 'New Name')}</span>
-          <span />
-        </div>
+        <Flex gap="2" mb="2" px="1">
+          <Text flex="1" fontSize="xs" fontWeight="600" color="gray.500">{t('flow.edit.mappingFrom', 'Current Name')}</Text>
+          <Box w="4" />
+          <Text flex="1" fontSize="xs" fontWeight="600" color="gray.500">{t('flow.edit.mappingTo', 'New Name')}</Text>
+          <Box w="6" />
+        </Flex>
       )}
       {entries.map(([key, val], idx) => (
-        <div key={idx} className={styles.mappingRow}>
-          <select
-            className={styles.selectInput}
-            value={key}
-            onChange={(e) => handleKeyChange(key, e.target.value)}
-          >
+        <Flex key={idx} align="center" gap="2" mb="2">
+          <StyledSelect flex="1" p="2" borderRadius="md" border="1px solid" {...selectStyles} value={key} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleKeyChange(key, e.target.value)}>
             <option value="">— Column —</option>
             {availableColumns.map((col) => (
               <option key={col} value={col}>{col}</option>
             ))}
-            {/* Keep the current value visible even if not in available columns */}
             {key && !availableColumns.includes(key) && (
               <option value={key}>{key}</option>
             )}
-          </select>
-          <span className={styles.mappingArrow}>→</span>
-          <input
-            type="text"
-            className={styles.textInput}
-            value={val}
-            onChange={(e) => handleValueChange(key, e.target.value)}
-            placeholder="new_name"
-          />
-          <button
-            type="button"
-            className={styles.removeRowBtn}
+          </StyledSelect>
+          <Text color="gray.400">→</Text>
+          <Input flex="1" type="text" value={val} onChange={(e) => handleValueChange(key, e.target.value)} placeholder="new_name" {...inputStyles} />
+          <StyledButton
+            bg="transparent"
+            border="none"
+            cursor="pointer"
+            color="gray.400"
+            _hover={{ color: 'red.500' }}
+            fontSize="sm"
+            p="1"
             onClick={() => handleRemoveRow(key)}
             aria-label={t('flow.edit.removeMapping', 'Remove')}
           >
             ✕
-          </button>
-        </div>
+          </StyledButton>
+        </Flex>
       ))}
-      <button type="button" className={styles.addRowBtn} onClick={handleAddRow}>
+      <StyledButton
+        bg="transparent"
+        border="none"
+        cursor="pointer"
+        color="blue.500"
+        fontSize="sm"
+        fontWeight="500"
+        _hover={{ color: 'blue.600' }}
+        p="0"
+        onClick={handleAddRow}
+      >
         + {t('flow.edit.addMapping', 'Add mapping')}
-      </button>
-    </div>
+      </StyledButton>
+    </Box>
   );
 }
 
@@ -300,9 +298,7 @@ function PiiMaskingEditor({
   availableColumns: string[];
 }) {
   const { t } = useTranslation();
-  const columns: PiiColumn[] = Array.isArray(value)
-    ? (value as PiiColumn[])
-    : [];
+  const columns: PiiColumn[] = Array.isArray(value) ? (value as PiiColumn[]) : [];
 
   const getStrategyLabel = (strat: unknown): string => {
     if (typeof strat === 'string') return strat;
@@ -349,20 +345,12 @@ function PiiMaskingEditor({
   };
 
   return (
-    <div className={styles.piiEditor}>
-      <label className={styles.fieldLabel}>
-        {t('flow.edit.piiColumns', 'Sensitive Columns')}
-      </label>
-      <p className={styles.fieldHint}>
-        {t('flow.edit.piiHint', 'Choose which columns to mask and how')}
-      </p>
+    <Box>
+      <Text fontSize="sm" fontWeight="600" mb="1">{t('flow.edit.piiColumns', 'Sensitive Columns')}</Text>
+      <Text fontSize="xs" color="gray.500" mb="3">{t('flow.edit.piiHint', 'Choose which columns to mask and how')}</Text>
       {columns.map((col, idx) => (
-        <div key={idx} className={styles.piiRow}>
-          <select
-            className={styles.selectInput}
-            value={col.name}
-            onChange={(e) => handleNameChange(idx, e.target.value)}
-          >
+        <Flex key={idx} align="center" gap="2" mb="2">
+          <StyledSelect flex="1" p="2" borderRadius="md" border="1px solid" {...selectStyles} value={col.name} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleNameChange(idx, e.target.value)}>
             <option value="">— Column —</option>
             {availableColumns.map((c) => (
               <option key={c} value={c}>{c}</option>
@@ -370,32 +358,21 @@ function PiiMaskingEditor({
             {col.name && !availableColumns.includes(col.name) && (
               <option value={col.name}>{col.name}</option>
             )}
-          </select>
-          <select
-            className={styles.selectInput}
-            value={getStrategyLabel(col.strategy)}
-            onChange={(e) => handleStratChange(idx, e.target.value)}
-          >
+          </StyledSelect>
+          <StyledSelect flex="1" p="2" borderRadius="md" border="1px solid" {...selectStyles} value={getStrategyLabel(col.strategy)} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleStratChange(idx, e.target.value)}>
             {PII_STRATEGIES.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
+              <option key={s.value} value={s.value}>{s.label}</option>
             ))}
-          </select>
-          <button
-            type="button"
-            className={styles.removeRowBtn}
-            onClick={() => handleRemove(idx)}
-            aria-label="Remove"
-          >
+          </StyledSelect>
+          <StyledButton bg="transparent" border="none" cursor="pointer" color="gray.400" _hover={{ color: 'red.500' }} fontSize="sm" p="1" onClick={() => handleRemove(idx)} aria-label="Remove">
             ✕
-          </button>
-        </div>
+          </StyledButton>
+        </Flex>
       ))}
-      <button type="button" className={styles.addRowBtn} onClick={handleAdd}>
+      <StyledButton bg="transparent" border="none" cursor="pointer" color="blue.500" fontSize="sm" fontWeight="500" _hover={{ color: 'blue.600' }} p="0" onClick={handleAdd}>
         + {t('flow.edit.addColumn', 'Add column')}
-      </button>
-    </div>
+      </StyledButton>
+    </Box>
   );
 }
 
@@ -415,18 +392,14 @@ function WorkdayResponseGroupEditor({
   };
 
   return (
-    <div className={styles.columnMulti}>
+    <Flex wrap="wrap" gap="2">
       {RESPONSE_GROUP_OPTIONS.map((opt) => (
-        <label key={opt.value} className={styles.columnChip}>
-          <input
-            type="checkbox"
-            checked={!!group[opt.value]}
-            onChange={() => toggle(opt.value)}
-          />
-          <span>{opt.label}</span>
-        </label>
+        <Box as="label" key={opt.value} display="flex" alignItems="center" gap="1.5" px="2.5" py="1" borderRadius="full" border="1px solid" borderColor={group[opt.value] ? 'blue.400' : 'gray.200'} bg={group[opt.value] ? 'blue.50' : 'white'} cursor="pointer" fontSize="xs" transition="all 0.15s" _hover={{ borderColor: 'blue.300' }}>
+          <input type="checkbox" checked={!!group[opt.value]} onChange={() => toggle(opt.value)} style={{ display: 'none' }} />
+          <Text>{opt.label}</Text>
+        </Box>
       ))}
-    </div>
+    </Flex>
   );
 }
 
@@ -450,7 +423,6 @@ export function ActionEditPanel() {
   const config = nodeData?.config as ActionConfigPayload | undefined;
   const label = (nodeData?.label as string) ?? businessLabel(actionType);
 
-  // Derive available columns from validation result (columns_after of preceding step)
   const availableColumns = useAppSelector(
     (state: RootState) => selectAvailableColumnsForAction(state, actionId ?? ''),
   );
@@ -470,13 +442,10 @@ export function ActionEditPanel() {
   const handleFieldChange = useCallback(
     (key: string, value: unknown) => {
       if (!actionId || !config) return;
-
-      // config can be a string (api_dispatcher 'Default') — coerce to object
       const configObj =
         typeof config === 'object' && config !== null
           ? (config as Record<string, unknown>)
           : {};
-
       const updated = setField(configObj, key, value);
       dispatch(updateFlowActionConfig({ actionId, config: updated as ActionConfigPayload }));
     },
@@ -501,39 +470,58 @@ export function ActionEditPanel() {
       : null;
 
   return (
-    <div className={styles.panel}>
+    <Box
+      position="absolute"
+      top="4"
+      right="4"
+      w="380px"
+      bg="white"
+      borderRadius="lg"
+      border="1px solid"
+      borderColor="gray.200"
+      shadow="xl"
+      zIndex="10"
+      display="flex"
+      flexDirection="column"
+      maxH="calc(100vh - 200px)"
+    >
       {/* Header */}
-      <div className={styles.panelHeader}>
-        <div className={styles.headerInfo}>
-          <span className={styles.headerIcon}>{CATEGORY_ICONS[category] ?? '🔧'}</span>
-          <div>
-            <h3 className={styles.headerTitle}>{label}</h3>
-            <span className={styles.headerCategory}>
+      <Flex align="center" justify="space-between" px="4" py="3" borderBottom="1px solid" borderColor="gray.100" bg="gray.50" borderTopRadius="lg">
+        <Flex align="center" gap="2">
+          <Text fontSize="lg">{CATEGORY_ICONS[category] ?? '🔧'}</Text>
+          <Box>
+            <Heading size="sm">{label}</Heading>
+            <Text fontSize="xs" color="gray.500">
               {t(`configDetails.form.categoryLabels.${category}`, category)}
-            </span>
-          </div>
-        </div>
-        <button
-          type="button"
-          className={styles.closeBtn}
+            </Text>
+          </Box>
+        </Flex>
+        <StyledButton
           onClick={handleClose}
           aria-label={t('common.close', 'Close')}
+          cursor="pointer"
+          fontSize="lg"
+          color="gray.400"
+          _hover={{ color: 'gray.600' }}
+          bg="transparent"
+          border="none"
+          p="0"
         >
           ✕
-        </button>
-      </div>
+        </StyledButton>
+      </Flex>
 
       {/* Description */}
       {catalogEntry?.description && (
-        <div className={styles.description}>{catalogEntry.description}</div>
+        <Text fontSize="sm" color="gray.600" px="4" py="2" borderBottom="1px solid" borderColor="gray.50" bg="blue.50">
+          {catalogEntry.description}
+        </Text>
       )}
 
       {/* Fields */}
-      <div className={styles.panelBody}>
-        {/* Standard field-schema based fields */}
+      <Box flex="1" overflowY="auto" p="4" display="flex" flexDirection="column" gap="4">
         {fieldSchemas.length > 0 && configObj ? (
           fieldSchemas.map((schema) => {
-            // PII masking gets its own editor
             if (actionType === 'pii_masking' && schema.key === 'columns') {
               return (
                 <PiiMaskingEditor
@@ -545,74 +533,77 @@ export function ActionEditPanel() {
               );
             }
 
-            // Workday response group gets toggle checkboxes
             if (actionType === 'workday_hris_connector' && schema.key === 'response_group') {
               return (
-                <div key={schema.key} className={styles.fieldGroup}>
-                  <label className={styles.fieldLabel}>{schema.label}</label>
-                  {schema.hint && (
-                    <p className={styles.fieldHint}>{schema.hint}</p>
-                  )}
+                <Box key={schema.key}>
+                  <Text fontSize="sm" fontWeight="600" mb="1">{schema.label}</Text>
+                  {schema.hint && <Text fontSize="xs" color="gray.500" mb="2">{schema.hint}</Text>}
                   <WorkdayResponseGroupEditor
                     value={getField(configObj, 'response_group')}
                     onChange={handleFieldChange}
                   />
-                </div>
+                </Box>
               );
             }
 
             return (
-              <div key={schema.key} className={styles.fieldGroup}>
-                <label className={styles.fieldLabel}>{schema.label}</label>
-                {schema.hint && (
-                  <p className={styles.fieldHint}>{schema.hint}</p>
-                )}
+              <Box key={schema.key}>
+                <Text fontSize="sm" fontWeight="600" mb="1">{schema.label}</Text>
+                {schema.hint && <Text fontSize="xs" color="gray.500" mb="2">{schema.hint}</Text>}
                 <FieldEditor
                   schema={schema}
                   value={getField(configObj, schema.key)}
                   onChange={handleFieldChange}
                   availableColumns={availableColumns}
                 />
-              </div>
+              </Box>
             );
           })
         ) : configObj ? (
-          /* Fallback: render config keys as readonly if no schema defined */
           Object.entries(configObj).map(([key, value]) => (
-            <div key={key} className={styles.fieldGroup}>
-              <label className={styles.fieldLabel}>{key}</label>
-              <div className={styles.readonlyValue}>
+            <Box key={key}>
+              <Text fontSize="sm" fontWeight="600" mb="1">{key}</Text>
+              <Text fontSize="sm" color="gray.600" whiteSpace="pre-wrap">
                 {typeof value === 'string' || typeof value === 'number'
                   ? String(value)
                   : JSON.stringify(value, null, 2)}
-              </div>
-            </div>
+              </Text>
+            </Box>
           ))
         ) : (
-          /* String config (e.g. api_dispatcher 'Default') */
-          <div className={styles.fieldGroup}>
-            <label className={styles.fieldLabel}>
+          <Box>
+            <Text fontSize="sm" fontWeight="600" mb="1">
               {t('flow.edit.configuration', 'Configuration')}
-            </label>
-            <div className={styles.readonlyValue}>{String(config ?? '—')}</div>
-          </div>
+            </Text>
+            <Text fontSize="sm" color="gray.600">{String(config ?? '—')}</Text>
+          </Box>
         )}
-      </div>
+      </Box>
 
-      {/* Footer with remove button */}
+      {/* Footer */}
       {!isIngestion && (
-        <div className={styles.panelFooter}>
-          <button
-            type="button"
-            className={`${styles.removeBtn} ${confirmRemove ? styles.removeBtnConfirm : ''}`}
+        <Box px="4" py="3" borderTop="1px solid" borderColor="gray.100">
+          <StyledButton
+            w="full"
+            py="2"
+            borderRadius="md"
+            border="1px solid"
+            borderColor={confirmRemove ? 'red.300' : 'gray.200'}
+            bg={confirmRemove ? 'red.50' : 'white'}
+            color={confirmRemove ? 'red.600' : 'gray.600'}
+            cursor="pointer"
+            fontSize="sm"
+            fontWeight="500"
+            transition="all 0.15s"
+            _hover={{ borderColor: 'red.300', bg: 'red.50', color: 'red.600' }}
             onClick={handleRemove}
           >
             {confirmRemove
               ? t('flow.edit.confirmRemove', '⚠️ Click again to confirm removal')
               : t('flow.edit.removeStep', '🗑️ Remove this step')}
-          </button>
-        </div>
+          </StyledButton>
+        </Box>
       )}
-    </div>
+    </Box>
   );
 }
