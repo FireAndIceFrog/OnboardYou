@@ -5,6 +5,7 @@ import type { RootState } from '@/store';
 import type { ActionConfigPayload, ActionType } from '@/generated/api';
 import { businessLabel, actionCategory } from '@/shared/domain/types';
 import { ACTION_FIELD_SCHEMAS, ACTION_CATALOG, type FieldSchema } from '../domain/actionCatalog';
+import { RESPONSE_GROUP_OPTIONS } from '../domain/types';
 import {
   selectSelectedNode,
   selectAvailableColumnsForAction,
@@ -398,6 +399,37 @@ function PiiMaskingEditor({
   );
 }
 
+/* ── Workday Response Group toggle editor ──────────────────── */
+
+function WorkdayResponseGroupEditor({
+  value,
+  onChange,
+}: {
+  value: unknown;
+  onChange: (key: string, v: unknown) => void;
+}) {
+  const group = (typeof value === 'object' && value !== null ? value : {}) as Record<string, boolean>;
+
+  const toggle = (field: string) => {
+    onChange('response_group', { ...group, [field]: !group[field] });
+  };
+
+  return (
+    <div className={styles.columnMulti}>
+      {RESPONSE_GROUP_OPTIONS.map((opt) => (
+        <label key={opt.value} className={styles.columnChip}>
+          <input
+            type="checkbox"
+            checked={!!group[opt.value]}
+            onChange={() => toggle(opt.value)}
+          />
+          <span>{opt.label}</span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
 /* ── Main panel ────────────────────────────────────────────── */
 
 export function ActionEditPanel() {
@@ -510,6 +542,22 @@ export function ActionEditPanel() {
                   onChange={handleFieldChange}
                   availableColumns={availableColumns}
                 />
+              );
+            }
+
+            // Workday response group gets toggle checkboxes
+            if (actionType === 'workday_hris_connector' && schema.key === 'response_group') {
+              return (
+                <div key={schema.key} className={styles.fieldGroup}>
+                  <label className={styles.fieldLabel}>{schema.label}</label>
+                  {schema.hint && (
+                    <p className={styles.fieldHint}>{schema.hint}</p>
+                  )}
+                  <WorkdayResponseGroupEditor
+                    value={getField(configObj, 'response_group')}
+                    onChange={handleFieldChange}
+                  />
+                </div>
               );
             }
 

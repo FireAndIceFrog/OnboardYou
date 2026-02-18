@@ -131,10 +131,12 @@ export const ACTION_FIELD_SCHEMAS: Partial<Record<ActionType, FieldSchema[]>> = 
     { key: 'columns', label: 'Detected Columns', type: 'readonly', hint: 'Auto-discovered from the CSV header' },
   ],
   workday_hris_connector: [
-    { key: 'tenant_url', label: 'Tenant URL', type: 'readonly', hint: 'Set during connection setup' },
-    { key: 'tenant_id', label: 'Tenant ID', type: 'readonly' },
-    { key: 'username', label: 'Username', type: 'readonly' },
+    { key: 'tenant_url', label: 'Tenant URL', type: 'text', hint: 'Workday tenant base URL', placeholder: 'https://wd3-impl-services1.workday.com' },
+    { key: 'tenant_id', label: 'Tenant ID', type: 'text', hint: 'Workday tenant identifier', placeholder: 'acme_corp' },
+    { key: 'username', label: 'Username', type: 'text', hint: 'Integration System User (ISU)', placeholder: 'ISU_Onboarding' },
+    { key: 'password', label: 'Password', type: 'text', hint: 'ISU password (prefix env: to read from env var)', placeholder: 'env:WORKDAY_PASSWORD' },
     { key: 'worker_count_limit', label: 'Worker Count Limit', type: 'number', hint: 'Max workers per page' },
+    { key: 'response_group', label: 'Response Groups', type: 'readonly', hint: 'Data sections to include in the Workday response' },
   ],
   identity_deduplicator: [
     { key: 'columns', label: 'Match Columns', type: 'column-multi', hint: 'Columns used to identify duplicates (e.g. email, national_id)' },
