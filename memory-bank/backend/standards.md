@@ -353,6 +353,18 @@ let df = df! {
 - Example: the `SoapClient` trait in `orchestration/clients/` with a production `ReqwestSoapClient` and a `MockSoapClient` for tests.
 - Actions that call external services must accept the client as a constructor parameter or use the trait-based approach established in `WorkdayHrisConnector`.
 
+**API Lambda repositories** follow the same trait-based DI pattern:
+
+| Trait | Production Impl | Location |
+|---|---|---|
+| `ConfigRepo` | `DynamoConfigRepo` | `repositories/config_repository.rs` |
+| `ScheduleRepo` | `EventBridgeScheduleRepo` | `repositories/schedule_repository.rs` |
+
+- Traits use `#[async_trait]` and are `Send + Sync`.
+- `AppState` holds `Arc<dyn ConfigRepo>` and `Arc<dyn ScheduleRepo>` — engine functions call `state.config_repo.get()` etc.
+- Unit tests inject `InMemoryConfigRepo` (HashMap-backed) and `NoOpScheduleRepo` — no AWS calls needed.
+- Other repos (settings, cognito, S3) still use raw AWS SDK clients on `AppState` — refactor to traits when testing is needed.
+
 ### 3.11 Code Quality Rules
 
 - `cargo build` must succeed with **zero warnings** before any commit.
@@ -424,7 +436,20 @@ mod tests {
 }
 ```
 
-### 4.5 Integration Test Pattern
+### 4.5 API Lambda Unit Tests
+
+The config engine has unit tests in `lambdas/api/src/engine/config_engine.rs` using in-memory fakes:
+
+- **`InMemoryConfigRepo`** — `RwLock<HashMap<(String, String), PipelineConfig>>`, implements `ConfigRepo`.
+- **`NoOpScheduleRepo`** — all methods return `Ok(())`.
+- **`test_state()`** helper builds an `AppState` with the fakes + dummy AWS clients (never called).
+- Tests cover: upsert stamps server fields, upsert rejects empty cron, get returns upserted config, get returns NotFound, list filters by org, delete removes config.
+
+```bash
+cargo test -p api
+```
+
+### 4.6 Integration Test Pattern
 
 Integration tests in `ETL/tests/` should:
 1. Use `common/mock_data.rs` helpers to build test data and manifests
@@ -447,7 +472,7 @@ fn test_e2e_csv_to_scd() {
 }
 ```
 
-### 4.6 Running Tests
+### 4.7 Running Tests
 
 ```bash
 # All tests (unit + integration)
@@ -456,11 +481,17 @@ cargo test --workspace
 # ETL crate only
 cargo test -p onboard_you
 
+# API Lambda unit tests
+cargo test -p api
+
 # Specific test
 cargo test -p onboard_you test_factory_creates_csv_connector
 
 # With output (for debugging)
 cargo test -p onboard_you -- --nocapture
+
+# Smoke tests (requires deployment)
+make smoke-test
 ```
 
 ---

@@ -1,85 +1,111 @@
-//! Schedule repository — EventBridge Scheduler management.
+//! Schedule repository — trait + EventBridge Scheduler implementation.
 //!
 //! Creates or updates a per-organization schedule that invokes the ETL Lambda
 //! on the cron defined in the pipeline config.
 
+use async_trait::async_trait;
 use aws_sdk_scheduler::types::{FlexibleTimeWindow, FlexibleTimeWindowMode, Target};
 
-use crate::models::{ApiError, AppState, PipelineConfig};
+use crate::models::{ApiError, PipelineConfig};
+
+/// Abstract schedule management for pipeline configs.
+#[async_trait]
+pub trait ScheduleRepo: Send + Sync {
+    async fn upsert(&self, config: &PipelineConfig) -> Result<(), ApiError>;
+    async fn delete(
+        &self,
+        organization_id: &str,
+        customer_company_id: &str,
+    ) -> Result<(), ApiError>;
+}
+
+/// EventBridge Scheduler backed implementation.
+pub struct EventBridgeScheduleRepo {
+    pub scheduler: aws_sdk_scheduler::Client,
+    pub etl_lambda_arn: String,
+    pub scheduler_role_arn: String,
+}
 
 /// Schedule name convention: onboardyou-{organizationId}-{customerCompanyId}
 fn schedule_name(organization_id: &str, customer_company_id: &str) -> String {
     format!("onboardyou-{organization_id}-{customer_company_id}")
 }
 
-/// Create or update an EventBridge Scheduler schedule for a given pipeline config.
-pub async fn upsert(state: &AppState, config: &PipelineConfig) -> Result<(), ApiError> {
-    let name = schedule_name(&config.organization_id, &config.customer_company_id);
+#[async_trait]
+impl ScheduleRepo for EventBridgeScheduleRepo {
+    async fn upsert(&self, config: &PipelineConfig) -> Result<(), ApiError> {
+        let name = schedule_name(&config.organization_id, &config.customer_company_id);
 
-    let input_payload = serde_json::json!({
-        "organizationId": config.organization_id,
-        "customerCompanyId": config.customer_company_id
-    })
-    .to_string();
+        let input_payload = serde_json::json!({
+            "organizationId": config.organization_id,
+            "customerCompanyId": config.customer_company_id
+        })
+        .to_string();
 
-    let target = Target::builder()
-        .arn(&state.etl_lambda_arn)
-        .role_arn(&state.scheduler_role_arn)
-        .input(input_payload)
-        .build()
-        .map_err(|e| ApiError::Repository(format!("Failed to build Target: {e}")))?;
+        let target = Target::builder()
+            .arn(&self.etl_lambda_arn)
+            .role_arn(&self.scheduler_role_arn)
+            .input(input_payload)
+            .build()
+            .map_err(|e| ApiError::Repository(format!("Failed to build Target: {e}")))?;
 
-    let flex_window = FlexibleTimeWindow::builder()
-        .mode(FlexibleTimeWindowMode::Off)
-        .build()
-        .map_err(|e| ApiError::Repository(format!("Failed to build FlexibleTimeWindow: {e}")))?;
+        let flex_window = FlexibleTimeWindow::builder()
+            .mode(FlexibleTimeWindowMode::Off)
+            .build()
+            .map_err(|e| {
+                ApiError::Repository(format!("Failed to build FlexibleTimeWindow: {e}"))
+            })?;
 
-    // Try update first; fall back to create if the schedule doesn't exist yet
-    let update_result = state
-        .scheduler
-        .update_schedule()
-        .name(&name)
-        .schedule_expression(&config.cron)
-        .target(target.clone())
-        .flexible_time_window(flex_window.clone())
-        .send()
-        .await;
+        // Try update first; fall back to create if the schedule doesn't exist yet
+        let update_result = self
+            .scheduler
+            .update_schedule()
+            .name(&name)
+            .schedule_expression(&config.cron)
+            .target(target.clone())
+            .flexible_time_window(flex_window.clone())
+            .send()
+            .await;
 
-    match update_result {
-        Ok(_) => {
-            tracing::info!(schedule = %name, cron = %config.cron, "Schedule updated");
+        match update_result {
+            Ok(_) => {
+                tracing::info!(schedule = %name, cron = %config.cron, "Schedule updated");
+            }
+            Err(_) => {
+                self.scheduler
+                    .create_schedule()
+                    .name(&name)
+                    .schedule_expression(&config.cron)
+                    .target(target)
+                    .flexible_time_window(flex_window)
+                    .send()
+                    .await
+                    .map_err(|e| {
+                        ApiError::Repository(format!("Failed to create schedule: {e}"))
+                    })?;
+
+                tracing::info!(schedule = %name, cron = %config.cron, "Schedule created");
+            }
         }
-        Err(_) => {
-            state
-                .scheduler
-                .create_schedule()
-                .name(&name)
-                .schedule_expression(&config.cron)
-                .target(target)
-                .flexible_time_window(flex_window)
-                .send()
-                .await
-                .map_err(|e| ApiError::Repository(format!("Failed to create schedule: {e}")))?;
 
-            tracing::info!(schedule = %name, cron = %config.cron, "Schedule created");
-        }
+        Ok(())
     }
 
-    Ok(())
-}
+    async fn delete(
+        &self,
+        organization_id: &str,
+        customer_company_id: &str,
+    ) -> Result<(), ApiError> {
+        let name = schedule_name(organization_id, customer_company_id);
 
-/// Delete a pipeline schedule.
-pub async fn delete(state: &AppState, organization_id: &str, customer_company_id: &str) -> Result<(), ApiError> {
-    let name = schedule_name(organization_id, customer_company_id);
+        self.scheduler
+            .delete_schedule()
+            .name(&name)
+            .send()
+            .await
+            .map_err(|e| ApiError::Repository(format!("Failed to delete schedule: {e}")))?;
 
-    state
-        .scheduler
-        .delete_schedule()
-        .name(&name)
-        .send()
-        .await
-        .map_err(|e| ApiError::Repository(format!("Failed to delete schedule: {e}")))?;
-
-    tracing::info!(schedule = %name, "Schedule deleted");
-    Ok(())
+        tracing::info!(schedule = %name, "Schedule deleted");
+        Ok(())
+    }
 }

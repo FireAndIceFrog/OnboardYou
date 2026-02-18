@@ -16,6 +16,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 lambda_runtime = "0.10"
 lambda_http = "0.10"
+async-trait = "0.1"
 aws-config = "1"
 aws-sdk-cognitoidentityprovider = "1"
 aws-sdk-dynamodb = "1"

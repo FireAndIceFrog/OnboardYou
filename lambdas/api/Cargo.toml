@@ -17,6 +17,7 @@ tokio = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 axum = { workspace = true }
+async-trait = { workspace = true }
 lambda_http = { workspace = true }
 aws-config = { workspace = true }
 aws-sdk-cognitoidentityprovider = { workspace = true }
