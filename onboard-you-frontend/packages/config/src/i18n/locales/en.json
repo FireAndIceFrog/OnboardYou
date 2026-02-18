@@ -43,6 +43,11 @@
     "openChat": "Open Chat",
     "closeChat": "Close Chat",
     "save": "Save",
+    "saving": "Saving…",
+    "saveSuccess": "Configuration saved successfully",
+    "createSuccess": "Configuration created successfully",
+    "noConnectionData": "No connection data found. Please start from the connection setup.",
+    "addStep": "Add Step",
     "form": {
       "stepType": "Step Type",
       "category": "Category",
@@ -130,5 +135,27 @@
     "back": "Back",
     "save": "Save",
     "close": "Close"
+  },
+  "flow": {
+    "addStep": {
+      "title": "Add a Step",
+      "subtitle": "Choose a transformation or destination to add to your flow.",
+      "sections": {
+        "transform": "Transform & Clean",
+        "destination": "Destinations"
+      }
+    },
+    "edit": {
+      "configuration": "Configuration",
+      "removeStep": "🗑️ Remove this step",
+      "confirmRemove": "⚠️ Click again to confirm removal",
+      "addMapping": "Add mapping",
+      "removeMapping": "Remove",
+      "mappingFrom": "Current Name",
+      "mappingTo": "New Name",
+      "piiColumns": "Sensitive Columns",
+      "piiHint": "Choose which columns to mask and how",
+      "addColumn": "Add column"
+    }
   }
 }

@@ -13,7 +13,7 @@ import {
   type EdgeChange,
 } from '@xyflow/react';
 import type { RootState, ThunkExtra } from '@/store';
-import type { PipelineConfig, ActionConfig, ValidationResult, ActionType, WorkdayConfig, CsvHrisConnectorConfig } from '@/generated/api';
+import type { PipelineConfig, ActionConfig, ActionConfigPayload, ValidationResult, ActionType, WorkdayConfig, CsvHrisConnectorConfig } from '@/generated/api';
 import { actionCategory, businessLabel } from '@/shared/domain/types';
 import type { ConfigDetailsState, ConnectionForm } from '../domain/types';
 import { buildResponseGroup } from '../domain/types';
@@ -41,8 +41,11 @@ const initialState: ConfigDetailsState = {
   selectedNode: null,
   isLoading: false,
   isSaving: false,
+  isValidating: false,
   error: null,
   chatOpen: false,
+  addStepPanelOpen: false,
+  validationResult: null,
 };
 
 /* ── Async thunks ──────────────────────────────────────────── */
@@ -169,11 +172,17 @@ const configDetailsSlice = createSlice({
       const category = actionCategory(actionCfg.action_type);
       const idx = state.nodes.length;
 
+      // Keep pipeline config in sync so the action is included in save/validate
+      if (state.config) {
+        state.config.pipeline.actions.push(actionCfg);
+      }
+
       const newNode: Node = {
         id: actionCfg.id,
         type: category,
         position: { x: START_X + idx * NODE_GAP_X, y: START_Y },
         data: {
+          actionId: actionCfg.id,
           label: businessLabel(actionCfg.action_type),
           actionType: actionCfg.action_type,
           category,
@@ -195,6 +204,79 @@ const configDetailsSlice = createSlice({
       }
 
       state.nodes.push(newNode as typeof state.nodes[number]);
+    },
+    toggleAddStepPanel(state) {
+      state.addStepPanelOpen = !state.addStepPanelOpen;
+    },
+    setAddStepPanelOpen(state, action: PayloadAction<boolean>) {
+      state.addStepPanelOpen = action.payload;
+    },
+    removeFlowAction(state, action: PayloadAction<string>) {
+      const actionId = action.payload;
+
+      // Remove from pipeline config
+      if (state.config) {
+        state.config.pipeline.actions = state.config.pipeline.actions.filter(
+          (a) => a.id !== actionId,
+        );
+      }
+
+      // Remove the node
+      state.nodes = state.nodes.filter((n) => n.id !== actionId) as typeof state.nodes;
+
+      // Remove connected edges
+      state.edges = state.edges.filter(
+        (e) => e.source !== actionId && e.target !== actionId,
+      ) as typeof state.edges;
+
+      // Re-link the chain: if node B was between A and C, connect A→C
+      const plainNodes = current(state).nodes;
+      const newEdges: typeof state.edges = [];
+      for (let i = 1; i < plainNodes.length; i++) {
+        const prev = plainNodes[i - 1];
+        const curr = plainNodes[i];
+        const cat = (curr.data as Record<string, unknown>).category as string;
+        const edgeColor = CATEGORY_STYLES[cat] ?? CATEGORY_STYLES.logic;
+        newEdges.push({
+          id: `edge-${prev.id}-${curr.id}`,
+          source: prev.id,
+          target: curr.id,
+          type: 'default',
+          animated: true,
+          style: { stroke: edgeColor.stroke, strokeWidth: 2 },
+        } as typeof state.edges[number]);
+      }
+      state.edges = newEdges;
+
+      // Deselect if the removed node was selected
+      if (state.selectedNode?.id === actionId) {
+        state.selectedNode = null;
+      }
+    },
+    updateFlowActionConfig(
+      state,
+      action: PayloadAction<{ actionId: string; config: ActionConfigPayload }>,
+    ) {
+      const { actionId, config: newConfig } = action.payload;
+
+      // Update the pipeline config
+      if (state.config) {
+        const pipelineAction = state.config.pipeline.actions.find((a) => a.id === actionId);
+        if (pipelineAction) {
+          pipelineAction.config = newConfig;
+        }
+      }
+
+      // Update the node's data.config
+      const node = state.nodes.find((n) => n.id === actionId);
+      if (node) {
+        (node.data as Record<string, unknown>).config = newConfig;
+      }
+
+      // Update selectedNode if it matches
+      if (state.selectedNode?.id === actionId) {
+        (state.selectedNode.data as Record<string, unknown>).config = newConfig;
+      }
     },
     resetConfigDetails() {
       return initialState;
@@ -294,8 +376,17 @@ const configDetailsSlice = createSlice({
         state.isSaving = false;
         state.error = (action.payload as string) ?? 'Failed to create configuration';
       })
-      .addCase(validateConfigThunk.rejected, (state, action) => {
-        state.error = (action.payload as string) ?? 'Validation failed';
+      .addCase(validateConfigThunk.pending, (state) => {
+        state.isValidating = true;
+      })
+      .addCase(validateConfigThunk.fulfilled, (state, action) => {
+        state.isValidating = false;
+        state.validationResult = action.payload;
+      })
+      .addCase(validateConfigThunk.rejected, (state) => {
+        state.isValidating = false;
+        // Don't set state.error — validation failure is non-blocking.
+        // The user can still retry via the Validate button.
       });
   },
 });
@@ -310,6 +401,10 @@ export const {
   toggleChat,
   setChatOpen,
   addFlowAction,
+  removeFlowAction,
+  updateFlowActionConfig,
+  toggleAddStepPanel,
+  setAddStepPanelOpen,
   resetConfigDetails,
   initNewConfig,
 } = configDetailsSlice.actions;
@@ -322,8 +417,33 @@ export const selectNodes = (state: RootState) => state.configDetails.nodes;
 export const selectEdges = (state: RootState) => state.configDetails.edges;
 export const selectSelectedNode = (state: RootState) => state.configDetails.selectedNode;
 export const selectIsChatOpen = (state: RootState) => state.configDetails.chatOpen;
+export const selectAddStepPanelOpen = (state: RootState) => state.configDetails.addStepPanelOpen;
 export const selectConfigDetailsLoading = (state: RootState) => state.configDetails.isLoading;
 export const selectConfigDetailsSaving = (state: RootState) => state.configDetails.isSaving;
 export const selectConfigDetailsError = (state: RootState) => state.configDetails.error;
+export const selectValidationResult = (state: RootState) => state.configDetails.validationResult;
+export const selectIsValidating = (state: RootState) => state.configDetails.isValidating;
+
+/**
+ * Returns the columns available as input to a given action.
+ * That is the `columns_after` of the *preceding* step in the pipeline.
+ * For the very first step (ingestion), returns an empty array (columns are sourced by the connector itself).
+ */
+export const selectAvailableColumnsForAction = (state: RootState, actionId: string): string[] => {
+  const vr = state.configDetails.validationResult;
+  if (!vr?.steps?.length) return [];
+
+  const idx = vr.steps.findIndex((s) => s.action_id === actionId);
+
+  // First step (ingestion) — columns are sourced by the connector itself
+  if (idx === 0) return [];
+
+  // Found in validation result — return preceding step's output columns
+  if (idx > 0) return vr.steps[idx - 1].columns_after;
+
+  // Not found (e.g. newly added step not yet re-validated) —
+  // fall back to final_columns (output of the last validated step)
+  return vr.final_columns ?? [];
+};
 
 export default configDetailsSlice.reducer;

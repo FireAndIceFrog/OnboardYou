@@ -24,23 +24,28 @@ import {
   initNewConfig,
   saveConfigThunk,
   createConfigThunk,
+  validateConfigThunk,
   onNodesChange as onNodesChangeAction,
   onEdgesChange as onEdgesChangeAction,
   selectNode as selectNodeAction,
   deselectNode,
   toggleChat,
+  toggleAddStepPanel,
+  setAddStepPanelOpen,
   addFlowAction,
   selectConfig,
   selectNodes,
   selectEdges,
   selectSelectedNode,
   selectIsChatOpen,
+  selectAddStepPanelOpen,
   selectConfigDetailsLoading,
   selectConfigDetailsSaving,
   selectConfigDetailsError,
 } from '../state/configDetailsSlice';
 import { selectLastFlowAction } from '@/features/chat/state/chatSlice';
-import { ConfigDetailsForm } from './ConfigDetailsForm';
+import { ActionEditPanel } from './ActionEditPanel';
+import { AddStepPanel } from './AddStepPanel';
 import { IngestionNode, TransformationNode, EgressNode } from './nodes';
 import { ChatWindow } from '@/features/chat/ui';
 import styles from './ConfigDetailsPage.module.scss';
@@ -73,6 +78,7 @@ function ConfigDetailsContent({
   const isSaving = useAppSelector(selectConfigDetailsSaving);
   const error = useAppSelector(selectConfigDetailsError);
   const chatOpen = useAppSelector(selectIsChatOpen);
+  const addStepOpen = useAppSelector(selectAddStepPanelOpen);
   const lastFlowAction = useAppSelector(selectLastFlowAction);
 
   // ── Fetch existing config or initialise a blank one ───────
@@ -88,6 +94,19 @@ function ConfigDetailsContent({
   useEffect(() => {
     if (error) showNotification(error, 'error');
   }, [error, showNotification]);
+
+  // ── Auto-validate to get per-step column snapshots ────────
+  const validateTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const pipelineActions = config?.pipeline?.actions;
+
+  useEffect(() => {
+    if (!config || !pipelineActions?.length) return;
+    clearTimeout(validateTimerRef.current);
+    validateTimerRef.current = setTimeout(() => {
+      dispatch(validateConfigThunk({ customerCompanyId, data: config }));
+    }, 400);                 // debounce 400 ms so rapid edits don't spam the API
+    return () => clearTimeout(validateTimerRef.current);
+  }, [dispatch, customerCompanyId, config, pipelineActions]);
 
   // ── Real-time flow updates from chat ──────────────────────
   const processedActionsRef = useRef(new Set<string>());
@@ -126,6 +145,14 @@ function ConfigDetailsContent({
 
   const handleToggleChat = useCallback(() => {
     dispatch(toggleChat());
+  }, [dispatch]);
+
+  const handleToggleAddStep = useCallback(() => {
+    dispatch(toggleAddStepPanel());
+  }, [dispatch]);
+
+  const handleCloseAddStep = useCallback(() => {
+    dispatch(setAddStepPanelOpen(false));
   }, [dispatch]);
 
   const handleBack = useCallback(() => {
@@ -221,6 +248,9 @@ function ConfigDetailsContent({
           <Badge variant="info">{humanFrequency(config.cron)}</Badge>
         </div>
         <div className={styles.headerRight}>
+          <button type="button" className={styles.addStepBtn} onClick={handleToggleAddStep}>
+            ➕ {t('configDetails.addStep')}
+          </button>
           <button type="button" className={styles.chatToggle} onClick={handleToggleChat}>
             💬 {chatOpen ? t('configDetails.closeChat') : t('configDetails.openChat')}
           </button>
@@ -256,7 +286,8 @@ function ConfigDetailsContent({
             <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
           </ReactFlow>
 
-          {selectedNode && <ConfigDetailsForm />}
+          {selectedNode && <ActionEditPanel />}
+          {addStepOpen && <AddStepPanel onClose={handleCloseAddStep} />}
         </div>
 
         {/* Chat Panel */}

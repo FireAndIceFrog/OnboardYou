@@ -54,6 +54,21 @@ The CSV connector no longer stores a file path. Instead it uses a presigned S3 u
 5. **Config construction**: `configDetailsSlice.ts` builds `CsvHrisConnectorConfig` as `{ filename, columns }` (matching the generated type). No `csv_path` anywhere.
 6. **Mocks**: MSW handlers for `POST */csv-upload` (returns mock presigned URL) and `GET */csv-columns` (returns mock columns). Note: the actual S3 PUT will 404 in mock mode since MSW can't intercept cross-origin S3 requests — this is expected and doesn't block the column discovery mock.
 
+### Flow Editor UX (Add / Edit / Remove actions)
+The flow customisation page now has a proper user-friendly UI for non-technical users (e.g. HR staff):
+
+1. **Action catalog**: `actionCatalog.ts` defines `ACTION_CATALOG` (11 addable action types with labels, icons, descriptions, categories, default configs) and `ACTION_FIELD_SCHEMAS` (field-level definitions for all 13 action types, specifying field key, label, type, hint, placeholder, and options).
+2. **Field types**: `text`, `number`, `select`, `column-select` (single column dropdown), `column-multi` (multi-column checkbox chips), `mapping` (key-value pair editor), `readonly`. Legacy `columns` (comma-separated text) is kept as fallback but all schemas now use the typed variants.
+3. **AddStepPanel**: Slide-out panel on the right (triggered by "➕ Add Step" button in header). Shows available actions grouped by category (Transform & Clean / Destinations). Clicking an entry dispatches `addFlowAction` with the default config.
+4. **ActionEditPanel**: Replaces the old `ConfigDetailsForm` (which showed raw JSON). Renders friendly form inputs per action type using the field schemas. Special sub-editors for PII masking (column + strategy dropdown) and rename_column (key-value mapping rows). Ingestion steps are read-only. Non-ingestion steps show a 2-click "Remove this step" button.
+5. **Slice reducers**: `addFlowAction(action)` — adds the action to **both** `config.pipeline.actions` (for save/validate) and the visual `nodes`/`edges` arrays (for React Flow). `removeFlowAction(actionId)` — removes the action from the pipeline config, removes the node and connected edges, re-links the chain (A→B→C becomes A→C). `updateFlowActionConfig({ actionId, config })` — updates config in pipeline actions array, in node data, and in selectedNode if matches. `toggleAddStepPanel` / `setAddStepPanelOpen` control the add panel visibility.
+6. **Node data**: All nodes now include `actionId` in their data object (set in both `convertToFlow` and `addFlowAction`), enabling the edit panel to dispatch config updates.
+7. **Column validation & typed dropdowns**: Column inputs are strictly typed — instead of free-text fields, users select from dropdowns populated by the backend's per-step column propagation engine.
+   - **Auto-validation**: `ConfigDetailsPage` dispatches `validateConfigThunk` (debounced 400ms) whenever `config.pipeline.actions` changes. The thunk calls `POST /config/{id}/validate` which dry-runs column propagation and returns `ValidationResult { steps: StepValidation[], final_columns: string[] }` where each `StepValidation = { action_id, action_type, columns_after: string[] }`.
+   - **Redux state**: `validationResult` and `isValidating` live in `ConfigDetailsState`. The `selectAvailableColumnsForAction(state, actionId)` selector returns `columns_after` of the *preceding* step (i.e. the columns feeding into the selected action). First step (ingestion) gets `[]`. If the action is not yet in the validation result (e.g. newly added), the selector falls back to `final_columns` (the output of the last validated step) so column dropdowns populate immediately.
+   - **UI binding**: `ActionEditPanel` reads `availableColumns` via the selector and passes it to all sub-editors (`FieldEditor`, `MappingEditor`, `PiiMaskingEditor`). `column-select` renders a `<select>` dropdown; `column-multi` renders a checkbox chip list with toggle behavior.
+   - **Fallback**: If validation hasn't run yet (empty `availableColumns`), column-select shows an empty dropdown with a "— Select a column —" placeholder and column-multi shows "Run validation to see columns" hint text.
+
 # Folder structure
 We are using a feature-first folder structure. 
 

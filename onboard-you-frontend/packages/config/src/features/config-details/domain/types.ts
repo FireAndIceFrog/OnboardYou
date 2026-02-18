@@ -1,5 +1,5 @@
 import type { Node, Edge } from '@xyflow/react';
-import type { PipelineConfig, WorkdayResponseGroup } from '@/generated/api';
+import type { PipelineConfig, ValidationResult, WorkdayResponseGroup } from '@/generated/api';
 
 export interface ConfigDetailsState {
   config: PipelineConfig | null;
@@ -8,8 +8,11 @@ export interface ConfigDetailsState {
   selectedNode: Node | null;
   isLoading: boolean;
   isSaving: boolean;
+  isValidating: boolean;
   error: string | null;
   chatOpen: boolean;
+  addStepPanelOpen: boolean;
+  validationResult: ValidationResult | null;
 }
 
 /* ── Connection wizard types ─────────────────────────────── */

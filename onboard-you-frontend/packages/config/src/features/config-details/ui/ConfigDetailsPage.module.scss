@@ -164,6 +164,26 @@
   }
 }
 
+.addStepBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-1;
+  padding: $spacing-1 $spacing-3;
+  font-size: $text-sm;
+  font-weight: $font-medium;
+  color: $color-primary;
+  background: rgba($color-primary, 0.06);
+  border: 1px solid rgba($color-primary, 0.2);
+  border-radius: $radius-lg;
+  cursor: pointer;
+  transition: background-color $transition-fast, border-color $transition-fast;
+
+  &:hover {
+    background: rgba($color-primary, 0.12);
+    border-color: $color-primary;
+  }
+}
+
 .loadingState,
 .errorState {
   display: flex;

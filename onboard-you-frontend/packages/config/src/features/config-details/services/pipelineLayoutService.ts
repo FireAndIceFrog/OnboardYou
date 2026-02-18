@@ -28,6 +28,7 @@ export function convertToFlow(manifest: Manifest): { nodes: Node[]; edges: Edge[
       type: category,
       position: { x: START_X + idx * NODE_GAP_X, y: START_Y },
       data: {
+        actionId: action.id,
         label: businessLabel(action.action_type),
         actionType: action.action_type,
         category,
