@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/Button';
 import { HR_SYSTEMS, RESPONSE_GROUP_OPTIONS } from '../domain/types';
@@ -21,13 +22,14 @@ export function ConnectionDetailsPage() {
     handleSystemSelect,
     handleChange,
     handleWorkdayChange,
-    handleCsvChange,
+    handleCsvFileSelect,
     handleResponseGroupToggle,
     handleNext,
     handleBack,
     validateField,
   } = useConnectionForm();
   const { t } = useTranslation();
+  const csvInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <div className={styles.wizardPage}>
@@ -217,27 +219,65 @@ export function ConnectionDetailsPage() {
             <fieldset>
             <legend className={styles.sectionHeader}>
               <span className={styles.sectionIcon}>📁</span>
-              <span>{t('configDetails.connection.csv.fileLocationTitle')}</span>
+              <span>{t('configDetails.connection.csv.uploadTitle')}</span>
             </legend>
 
             <div className={styles.formGroup}>
-              <label className={styles.formLabel} htmlFor="conn-csv-path">{t('configDetails.connection.csv.csvFilePath')}</label>
+              <label className={styles.formLabel} htmlFor="conn-csv-file">{t('configDetails.connection.csv.uploadLabel')}</label>
+
+              {/* Hidden native file input */}
               <input
-                id="conn-csv-path"
-                className={inputClass(errors['csv.csvPath'])}
-                type="text"
-                placeholder={t('configDetails.connection.csv.csvFilePathPlaceholder')}
-                value={form.csv.csvPath}
-                onChange={handleCsvChange('csvPath')}
-                onBlur={() => validateField('csv.csvPath')}
-                aria-invalid={!!errors['csv.csvPath']}
-                aria-describedby={errors['csv.csvPath'] ? 'csv-path-error' : undefined}
+                id="conn-csv-file"
+                ref={csvInputRef}
+                type="file"
+                accept=".csv"
+                className={styles.srOnly}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleCsvFileSelect(file);
+                }}
               />
-              <FieldError id="csv-path-error" error={errors['csv.csvPath']} />
+
+              {/* Custom upload area */}
+              <div className={styles.uploadArea}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  type="button"
+                  disabled={form.csv.uploadStatus === 'uploading' || form.csv.uploadStatus === 'discovering'}
+                  onClick={() => csvInputRef.current?.click()}
+                >
+                  {form.csv.uploadStatus === 'uploading' || form.csv.uploadStatus === 'discovering'
+                    ? t('configDetails.connection.csv.uploading')
+                    : t('configDetails.connection.csv.chooseFile')}
+                </Button>
+                {form.csv.filename && (
+                  <span className={styles.uploadFilename}>{form.csv.filename}</span>
+                )}
+              </div>
+
+              <FieldError id="csv-file-error" error={errors['csv.filename']} />
               <span className={styles.formHint}>
-                {t('configDetails.connection.csv.csvFilePathHint')}
+                {t('configDetails.connection.csv.uploadHint')}
               </span>
             </div>
+
+            {/* Discovered columns */}
+            {form.csv.columns.length > 0 && (
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>{t('configDetails.connection.csv.discoveredColumns')}</label>
+                <div className={styles.chipGroup}>
+                  {form.csv.columns.map((col) => (
+                    <span key={col} className={`${styles.chip} ${styles.chipActive}`}>
+                      {col}
+                    </span>
+                  ))}
+                </div>
+                <span className={styles.formHint}>
+                  {t('configDetails.connection.csv.columnsHint', { count: form.csv.columns.length })}
+                </span>
+              </div>
+            )}
             </fieldset>
           </>
         )}

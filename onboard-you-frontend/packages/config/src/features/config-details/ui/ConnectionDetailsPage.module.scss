@@ -271,3 +271,40 @@
   justify-content: space-between;
   margin-top: $spacing-6;
 }
+
+/* ── CSV upload ─────────────────────────────── */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.uploadArea {
+  display: flex;
+  align-items: center;
+  gap: $spacing-3;
+  padding: $spacing-3;
+  border: 2px dashed $neutral-200;
+  border-radius: $radius-lg;
+  background: $bg-secondary;
+  transition: border-color $transition-fast;
+
+  &:hover {
+    border-color: $neutral-300;
+  }
+}
+
+.uploadFilename {
+  font-size: $text-sm;
+  color: $text-primary;
+  font-weight: $font-medium;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

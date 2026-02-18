@@ -223,7 +223,8 @@ const configDetailsSlice = createSlice({
               response_group: buildResponseGroup(form.workday.responseGroup),
             }
           : {
-              csv_path: form.csv.csvPath,
+              filename: form.csv.filename,
+              columns: form.csv.columns,
             };
 
       const ingestionAction: ActionConfig = {

@@ -13,6 +13,8 @@ import type {
   IsoCountrySanitizerConfig,
   HandleDiacriticsConfig,
   ScdType2Config,
+  PresignedUploadResponse,
+  CsvColumnsResponse,
 } from '@/generated/api';
 
 /**
@@ -96,7 +98,8 @@ const MOCK_CONFIGS: PipelineConfig[] = [
           id: 'ingest',
           action_type: 'csv_hris_connector',
           config: {
-            csv_path: 's3://onboardyou-landing/globex/latest.csv',
+            filename: 'latest.csv',
+            columns: ['employee_id', 'first_name', 'last_name', 'email', 'employmentStatus', 'internalNote', 'legacyId'],
           } satisfies CsvHrisConnectorConfig as ActionConfigPayload,
         },
         {
@@ -266,5 +269,29 @@ export const configHandlers = [
       steps,
       final_columns: steps.length > 0 ? steps[steps.length - 1].columns_after : [],
     });
+  }),
+
+  // POST /config/:customerCompanyId/csv-upload — presigned upload URL
+  http.post(`${API_BASE}/config/:customerCompanyId/csv-upload`, ({ params, request }) => {
+    const url = new URL(request.url);
+    const filename = url.searchParams.get('filename') ?? 'upload.csv';
+    const companyId = params.customerCompanyId as string;
+    const key = `org-001/${companyId}/${filename}`;
+    return HttpResponse.json({
+      filename,
+      key,
+      upload_url: `https://mock-s3.localhost/${key}?X-Amz-Signature=mock`,
+    } satisfies PresignedUploadResponse);
+  }),
+
+  // GET /config/:customerCompanyId/csv-columns — discover CSV headers
+  http.get(`${API_BASE}/config/:customerCompanyId/csv-columns`, ({ request }) => {
+    const url = new URL(request.url);
+    const filename = url.searchParams.get('filename') ?? 'upload.csv';
+    // Return realistic mock columns
+    return HttpResponse.json({
+      filename,
+      columns: ['employee_id', 'first_name', 'last_name', 'email', 'department', 'hire_date', 'salary'],
+    } satisfies CsvColumnsResponse);
   }),
 ];

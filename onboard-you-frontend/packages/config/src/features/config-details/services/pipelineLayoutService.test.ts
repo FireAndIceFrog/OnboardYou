@@ -14,7 +14,7 @@ describe('convertToFlow', () => {
     const manifest: Manifest = {
       version: '1',
       actions: [
-        { id: 'step-1', action_type: 'csv_hris_connector', config: { csv_path: '/tmp/test.csv' } },
+        { id: 'step-1', action_type: 'csv_hris_connector', config: { filename: 'test.csv', columns: ['id', 'name'] } },
       ],
     };
     const { nodes, edges } = convertToFlow(manifest);
@@ -28,7 +28,7 @@ describe('convertToFlow', () => {
     const manifest: Manifest = {
       version: '1',
       actions: [
-        { id: 'step-1', action_type: 'csv_hris_connector', config: { csv_path: '/tmp/test.csv' } },
+        { id: 'step-1', action_type: 'csv_hris_connector', config: { filename: 'test.csv', columns: ['id', 'name'] } },
         { id: 'step-2', action_type: 'pii_masking', config: { columns: [] } },
         { id: 'step-3', action_type: 'api_dispatcher', config: { Bearer: { destination_url: 'https://example.com' } } },
       ],
@@ -49,7 +49,7 @@ describe('convertToFlow', () => {
     const manifest: Manifest = {
       version: '1',
       actions: [
-        { id: 'a', action_type: 'csv_hris_connector', config: { csv_path: '/tmp/a.csv' } },
+        { id: 'a', action_type: 'csv_hris_connector', config: { filename: 'a.csv', columns: ['id'] } },
         { id: 'b', action_type: 'pii_masking', config: { columns: [] } },
         { id: 'c', action_type: 'api_dispatcher', config: { Bearer: { destination_url: 'https://example.com' } } },
       ],
@@ -71,7 +71,7 @@ describe('convertToFlow', () => {
     const manifest: Manifest = {
       version: '1',
       actions: [
-        { id: 'ing', action_type: 'csv_hris_connector', config: { csv_path: '/tmp/test.csv' } },
+        { id: 'ing', action_type: 'csv_hris_connector', config: { filename: 'test.csv', columns: ['id'] } },
         { id: 'logic', action_type: 'pii_masking', config: { columns: [] } },
         { id: 'eg', action_type: 'api_dispatcher', config: { Bearer: { destination_url: 'https://example.com' } } },
       ],

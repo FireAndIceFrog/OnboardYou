@@ -1,8 +1,9 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { ConnectionForm, WorkdayFields, CsvFields, SystemId } from '../domain/types';
+import type { ConnectionForm, WorkdayFields, SystemId, CsvUploadStatus } from '../domain/types';
 import { INITIAL_CONNECTION_FORM } from '../domain/types';
+import { validateCsvFile, uploadCsvAndDiscoverColumns } from '../services/csvUploadService';
 
 export type ValidationErrors = Record<string, string | undefined>;
 
@@ -53,8 +54,11 @@ export function useConnectionForm() {
       }
 
       if (f.system === 'csv') {
-        if (!f.csv.csvPath.trim()) {
-          errs['csv.csvPath'] = t('validation.required');
+        if (!f.csv.filename) {
+          errs['csv.filename'] = t('validation.csvRequired');
+        }
+        if (f.csv.uploadError) {
+          errs['csv.filename'] = f.csv.uploadError;
         }
       }
 
@@ -118,25 +122,48 @@ export function useConnectionForm() {
     [form, submitted, validateAllFields],
   );
 
-  const handleCsvChange = useCallback(
-    (field: keyof CsvFields) => (e: React.ChangeEvent<HTMLInputElement>) => {
+  /**
+   * Handle CSV file selection — validates, uploads via presigned URL,
+   * then discovers column headers.
+   */
+  const handleCsvFileSelect = useCallback(
+    async (file: File) => {
+      // Client-side validation first
+      const validationError = validateCsvFile(file);
+      if (validationError) {
+        setForm((prev) => ({
+          ...prev,
+          csv: { ...prev.csv, uploadStatus: 'error' as CsvUploadStatus, uploadError: validationError },
+        }));
+        setErrors((prev) => ({ ...prev, 'csv.filename': validationError }));
+        return;
+      }
+
+      // Clear previous errors, set uploading
+      setErrors((prev) => ({ ...prev, 'csv.filename': undefined }));
       setForm((prev) => ({
         ...prev,
-        csv: { ...prev.csv, [field]: e.target.value },
+        csv: { filename: file.name, columns: [], uploadStatus: 'uploading', uploadError: null },
       }));
-      if (submitted) {
-        setTimeout(() => {
-          setErrors((prev) => {
-            const all = validateAllFields({
-              ...form,
-              csv: { ...form.csv, [field]: e.target.value },
-            } as ConnectionForm);
-            return { ...prev, [`csv.${field}`]: all[`csv.${field}`] };
-          });
-        }, 0);
+
+      try {
+        const companyId = customerCompanyId ?? 'new';
+        const { filename, columns } = await uploadCsvAndDiscoverColumns(companyId, file);
+
+        setForm((prev) => ({
+          ...prev,
+          csv: { filename, columns, uploadStatus: 'done', uploadError: null },
+        }));
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Upload failed';
+        setForm((prev) => ({
+          ...prev,
+          csv: { ...prev.csv, uploadStatus: 'error', uploadError: message },
+        }));
+        setErrors((prev) => ({ ...prev, 'csv.filename': message }));
       }
     },
-    [form, submitted, validateAllFields],
+    [customerCompanyId],
   );
 
   const handleResponseGroupToggle = useCallback((value: string) => {
@@ -183,7 +210,7 @@ export function useConnectionForm() {
       );
     }
     if (form.system === 'csv') {
-      return !!form.csv.csvPath;
+      return !!(form.csv.filename && form.csv.columns.length > 0 && form.csv.uploadStatus === 'done');
     }
     return false;
   }, [form]);
@@ -212,7 +239,7 @@ export function useConnectionForm() {
     handleSystemSelect,
     handleChange,
     handleWorkdayChange,
-    handleCsvChange,
+    handleCsvFileSelect,
     handleResponseGroupToggle,
     handleNext,
     handleBack,

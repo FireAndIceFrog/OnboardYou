@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateConfigData, CreateConfigErrors, CreateConfigResponses, GetConfigData, GetConfigErrors, GetConfigResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, ListConfigsData, ListConfigsErrors, ListConfigsResponses, LoginData, LoginErrors, LoginResponses, UpdateConfigData, UpdateConfigErrors, UpdateConfigResponses, UpsertSettingsData, UpsertSettingsErrors, UpsertSettingsResponses, ValidateConfigData, ValidateConfigErrors, ValidateConfigResponses } from './types.gen';
+import type { CreateConfigData, CreateConfigErrors, CreateConfigResponses, CsvColumnsData, CsvColumnsErrors, CsvColumnsResponses, CsvPresignedUploadData, CsvPresignedUploadErrors, CsvPresignedUploadResponses, GetConfigData, GetConfigErrors, GetConfigResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, ListConfigsData, ListConfigsErrors, ListConfigsResponses, LoginData, LoginErrors, LoginResponses, UpdateConfigData, UpdateConfigErrors, UpdateConfigResponses, UpsertSettingsData, UpsertSettingsErrors, UpsertSettingsResponses, ValidateConfigData, ValidateConfigErrors, ValidateConfigResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -91,6 +91,30 @@ export const updateConfig = <ThrowOnError extends boolean = false>(options: Opti
         'Content-Type': 'application/json',
         ...options.headers
     }
+});
+
+/**
+ * GET /config/{customer_company_id}/csv-columns?filename=employees.csv
+ *
+ * Reads the header row of an already-uploaded CSV and returns the column
+ * names.  Call this after the frontend finishes the presigned PUT upload.
+ */
+export const csvColumns = <ThrowOnError extends boolean = false>(options: Options<CsvColumnsData, ThrowOnError>) => (options.client ?? client).get<CsvColumnsResponses, CsvColumnsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/config/{customer_company_id}/csv-columns',
+    ...options
+});
+
+/**
+ * POST /config/{customer_company_id}/csv-upload?filename=employees.csv
+ *
+ * Returns a presigned PUT URL that the frontend uses to upload the CSV
+ * directly to S3.  The S3 key is `{org_id}/{company_id}/{filename}`.
+ */
+export const csvPresignedUpload = <ThrowOnError extends boolean = false>(options: Options<CsvPresignedUploadData, ThrowOnError>) => (options.client ?? client).post<CsvPresignedUploadResponses, CsvPresignedUploadErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/config/{customer_company_id}/csv-upload',
+    ...options
 });
 
 /**

@@ -210,20 +210,51 @@ export type ConfigRequest = {
 export type CountryOutputFormat = 'alpha2' | 'alpha3';
 
 /**
+ * Response payload after reading the uploaded CSV headers.
+ */
+export type CsvColumnsResponse = {
+    /**
+     * Column names parsed from the CSV header row.
+     */
+    columns: Array<string>;
+    /**
+     * The filename of the CSV.
+     */
+    filename: string;
+};
+
+/**
  * Configuration extracted from the manifest `ActionConfig.config` JSON.
  *
- * # JSON config
+ * # JSON config (user-facing)
  *
  * ```json
- * { "csv_path": "/data/employees.csv" }
+ * {
+ * "filename": "employees.csv",
+ * "columns": ["employee_id", "first_name", "last_name", "email"]
+ * }
  * ```
  *
- * | Field      | Type   | Required | Description                   |
- * |------------|--------|----------|-------------------------------|
- * | `csv_path` | string | **yes**  | Absolute path to the CSV file |
+ * | Field      | Type     | Required | Description                                        |
+ * |------------|----------|----------|----------------------------------------------------|
+ * | `filename` | string   | **yes**  | CSV file name — the S3 key prefix is added at runtime |
+ * | `columns`  | [string] | **yes**  | Declared column names from the CSV header           |
  */
 export type CsvHrisConnectorConfig = {
-    csv_path: string;
+    /**
+     * Declared column names — set when the CSV is first uploaded.
+     *
+     * Used by `calculate_columns` for schema propagation and by the
+     * validation engine to verify downstream column references.
+     */
+    columns: Array<string>;
+    /**
+     * CSV file name only (e.g. `"employees.csv"`).
+     *
+     * The full S3 key `{org_id}/{company_id}/{filename}` is resolved at
+     * runtime by the ETL trigger before pipeline execution.
+     */
+    filename: string;
 };
 
 /**
@@ -617,6 +648,24 @@ export type PipelineConfig = {
 };
 
 /**
+ * Response payload for the presigned upload URL request.
+ */
+export type PresignedUploadResponse = {
+    /**
+     * The filename that was requested.
+     */
+    filename: string;
+    /**
+     * The S3 object key (for reference — not needed by the frontend).
+     */
+    key: string;
+    /**
+     * Presigned PUT URL — the frontend uses this to upload the CSV directly.
+     */
+    upload_url: string;
+};
+
+/**
  * Configuration for the regex-replace action.
  *
  * | Field         | Type   | Description                                    |
@@ -974,6 +1023,92 @@ export type UpdateConfigResponses = {
 };
 
 export type UpdateConfigResponse = UpdateConfigResponses[keyof UpdateConfigResponses];
+
+export type CsvColumnsData = {
+    body?: never;
+    path: {
+        /**
+         * Customer company identifier
+         */
+        customer_company_id: string;
+    };
+    query: {
+        /**
+         * The CSV filename (e.g. `"employees.csv"`).
+         */
+        filename: string;
+    };
+    url: '/config/{customer_company_id}/csv-columns';
+};
+
+export type CsvColumnsErrors = {
+    /**
+     * Invalid CSV or missing file
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Internal server error
+     */
+    500: ErrorResponse;
+};
+
+export type CsvColumnsError = CsvColumnsErrors[keyof CsvColumnsErrors];
+
+export type CsvColumnsResponses = {
+    /**
+     * CSV column names
+     */
+    200: CsvColumnsResponse;
+};
+
+export type CsvColumnsResponse2 = CsvColumnsResponses[keyof CsvColumnsResponses];
+
+export type CsvPresignedUploadData = {
+    body?: never;
+    path: {
+        /**
+         * Customer company identifier
+         */
+        customer_company_id: string;
+    };
+    query: {
+        /**
+         * The CSV filename (e.g. `"employees.csv"`).
+         */
+        filename: string;
+    };
+    url: '/config/{customer_company_id}/csv-upload';
+};
+
+export type CsvPresignedUploadErrors = {
+    /**
+     * Invalid filename
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Internal server error
+     */
+    500: ErrorResponse;
+};
+
+export type CsvPresignedUploadError = CsvPresignedUploadErrors[keyof CsvPresignedUploadErrors];
+
+export type CsvPresignedUploadResponses = {
+    /**
+     * Presigned upload URL
+     */
+    200: PresignedUploadResponse;
+};
+
+export type CsvPresignedUploadResponse = CsvPresignedUploadResponses[keyof CsvPresignedUploadResponses];
 
 export type ValidateConfigData = {
     /**

@@ -44,6 +44,16 @@ All pipeline action configs are strongly typed from the OpenAPI spec. The genera
 ### Mock data conventions
 MSW mock handlers in `src/mocks/handlers/configs.ts` use `satisfies ConcreteType as ActionConfigPayload` assertions on every config object. This gives compile-time checking that mock data matches the backend schema.
 
+### CSV Upload Flow
+The CSV connector no longer stores a file path. Instead it uses a presigned S3 upload flow:
+
+1. **Domain types**: `CsvFields` = `{ filename: string; columns: string[]; uploadStatus: CsvUploadStatus; uploadError: string | null }`. `CsvUploadStatus` = `'idle' | 'uploading' | 'discovering' | 'done' | 'error'`.
+2. **Service layer**: `csvUploadService.ts` wraps the generated SDK functions (`csvPresignedUpload`, `csvColumns`) plus a raw `fetch` PUT to the presigned URL. The orchestrator `uploadCsvAndDiscoverColumns(companyId, file)` runs: presigned URL → S3 PUT → column discovery.
+3. **Form hook**: `useConnectionForm` exposes `handleCsvFileSelect(file: File)` instead of the old `handleCsvChange`. It validates the file client-side (≤50 MB, .csv extension), manages `uploadStatus` state, and auto-populates `columns` on success.
+4. **UI**: `ConnectionDetailsPage.tsx` uses a hidden `<input type="file" accept=".csv">` with a styled button overlay. Discovered columns render as read-only chips.
+5. **Config construction**: `configDetailsSlice.ts` builds `CsvHrisConnectorConfig` as `{ filename, columns }` (matching the generated type). No `csv_path` anywhere.
+6. **Mocks**: MSW handlers for `POST */csv-upload` (returns mock presigned URL) and `GET */csv-columns` (returns mock columns). Note: the actual S3 PUT will 404 in mock mode since MSW can't intercept cross-origin S3 requests — this is expected and doesn't block the column discovery mock.
+
 # Folder structure
 We are using a feature-first folder structure. 
 

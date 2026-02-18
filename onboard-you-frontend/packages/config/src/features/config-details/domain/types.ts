@@ -31,8 +31,13 @@ export interface WorkdayFields {
   responseGroup: string;
 }
 
+export type CsvUploadStatus = 'idle' | 'uploading' | 'discovering' | 'done' | 'error';
+
 export interface CsvFields {
-  csvPath: string;
+  filename: string;
+  columns: string[];
+  uploadStatus: CsvUploadStatus;
+  uploadError: string | null;
 }
 
 export interface ConnectionForm {
@@ -54,7 +59,10 @@ export const INITIAL_CONNECTION_FORM: ConnectionForm = {
     responseGroup: 'include_personal_information,include_employment_information',
   },
   csv: {
-    csvPath: '',
+    filename: '',
+    columns: [],
+    uploadStatus: 'idle',
+    uploadError: null,
   },
 };
 

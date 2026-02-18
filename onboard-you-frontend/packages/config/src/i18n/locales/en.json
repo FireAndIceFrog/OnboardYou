@@ -81,10 +81,13 @@
         "responseGroupsHint": "Select which data groups to pull from Workday."
       },
       "csv": {
-        "fileLocationTitle": "File Location",
-        "csvFilePath": "CSV File Path",
-        "csvFilePathPlaceholder": "/data/uploads/employees.csv",
-        "csvFilePathHint": "Path to the CSV file that will be ingested by the pipeline."
+        "uploadTitle": "Upload CSV File",
+        "uploadLabel": "CSV File",
+        "chooseFile": "Choose CSV file…",
+        "uploading": "Uploading…",
+        "uploadHint": "Upload a .csv file (max 50 MB). Column headers will be auto-discovered.",
+        "discoveredColumns": "Discovered Columns",
+        "columnsHint": "{{count}} column(s) detected from the CSV header row."
       },
       "backButton": "← Back",
       "nextButton": "Next: Customize Flow →"
@@ -119,7 +122,8 @@
     "invalidUrl": "Please enter a valid URL",
     "minLength": "Must be at least {{min}} characters",
     "selectSystem": "Please select an HR system",
-    "selectResponseGroup": "At least one response group must be selected"
+    "selectResponseGroup": "At least one response group must be selected",
+    "csvRequired": "Please upload a CSV file"
   },
   "common": {
     "chatIcon": "💬",
