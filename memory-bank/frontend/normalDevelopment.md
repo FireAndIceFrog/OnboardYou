@@ -107,7 +107,21 @@ ui/
 │       └── WorkdayResponseGroupPanel.tsx # custom editor for workday_hris_connector
 ```
 
-**Key patterns:**
+## config-list/ui/ structure
+Same screens/ + components/ split:
+
+```
+ui/
+├── index.ts                       # barrel – re-exports screens + components
+├── screens/
+│   ├── index.ts
+│   └── ConfigListScreen.tsx       # page layout: header, search, loading/error/empty states, grid
+├── components/
+│   ├── index.ts
+│   └── ConfigListItem.tsx         # card component + relativeTime/fullDate utility fns
+```
+
+**Key patterns (both features):**
 - **Action panel registry** (`action-panels/registry.ts`): `Partial<Record<ActionType, ComponentType<ActionEditorProps>>>`. To add support for a new action type, create a panel component conforming to `ActionEditorProps` and register it in the map. Actions without a custom panel get the generic `FieldEditor`-based form.
 - **Unified PipelineNode**: A single component with a `CATEGORY_STYLES` lookup keyed by `data.category` (`ingestion`, `logic`, `egress`). All 3 React Flow node types point to the same component.
 - **Backward-compat aliases**: `ConfigDetailsPage = ConfigDetailsScreen`, `ConnectionDetailsPage = ConnectionDetailsScreen`. Existing route imports work unchanged.

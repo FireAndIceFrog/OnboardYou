@@ -7,7 +7,7 @@ interface ConfigListItemProps {
   config: PipelineConfig;
 }
 
-function relativeTime(dateStr: string): string {
+export function relativeTime(dateStr: string): string {
   if (!dateStr) return '';
   const now = Date.now();
   const then = new Date(dateStr).getTime();
@@ -29,7 +29,7 @@ function relativeTime(dateStr: string): string {
   return `${Math.floor(diffMonths / 12)}y ago`;
 }
 
-function fullDate(dateStr: string): string {
+export function fullDate(dateStr: string): string {
   if (!dateStr) return '';
   return new Date(dateStr).toLocaleString(undefined, {
     dateStyle: 'medium',
@@ -70,6 +70,7 @@ export function ConfigListItem({ config }: ConfigListItemProps) {
           navigate(config.customerCompanyId);
         }
       }}
+      data-testid={`config-list-item-${config.customerCompanyId}`}
     >
       <Heading size="sm" mb="1" truncate>{config.name}</Heading>
       <Text fontSize="xs" color="gray.500" mb="4" truncate>{config.customerCompanyId}</Text>

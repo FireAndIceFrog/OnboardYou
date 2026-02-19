@@ -4,8 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { Box, Flex, Heading, Text, Input, Spinner } from '@chakra-ui/react';
 import { Button } from '@chakra-ui/react';
 import { useAppDispatch, useAppSelector } from '@/store';
-import { fetchConfigs, setSearchQuery, selectConfigList, selectFilteredConfigs } from '../state/configListSlice';
-import { ConfigListItem } from './ConfigListItem';
+import { fetchConfigs, setSearchQuery, selectConfigList, selectFilteredConfigs } from '../../state/configListSlice';
+import { ConfigListItem } from '../components';
 
 function ConfigListScreenInner() {
   const { t } = useTranslation();
@@ -48,7 +48,7 @@ function ConfigListScreenInner() {
 
         {/* Loading */}
         {state.isLoading && (
-          <Flex direction="column" align="center" gap="3" py="12">
+          <Flex direction="column" align="center" gap="3" py="12" data-testid="config-list-loading">
             <Spinner size="lg" />
             <Text color="gray.500">{t('configList.loading')}</Text>
           </Flex>
@@ -56,7 +56,7 @@ function ConfigListScreenInner() {
 
         {/* Error */}
         {state.error && !state.isLoading && (
-          <Flex direction="column" align="center" gap="2" py="12">
+          <Flex direction="column" align="center" gap="2" py="12" data-testid="config-list-error">
             <Text fontSize="2xl">⚠️</Text>
             <Text color="red.500">{state.error}</Text>
           </Flex>
@@ -64,7 +64,7 @@ function ConfigListScreenInner() {
 
         {/* Empty */}
         {!state.isLoading && !state.error && filteredConfigs.length === 0 && (
-          <Flex direction="column" align="center" gap="3" py="16">
+          <Flex direction="column" align="center" gap="3" py="16" data-testid="config-list-empty">
             <Text fontSize="3xl">🔗</Text>
             <Heading size="md" color="gray.700">{t('configList.empty.title')}</Heading>
             <Text color="gray.500" fontSize="sm">
@@ -81,6 +81,7 @@ function ConfigListScreenInner() {
             display="grid"
             gridTemplateColumns={{ base: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }}
             gap="5"
+            data-testid="config-list-grid"
           >
             {filteredConfigs.map((config) => (
               <ConfigListItem key={config.customerCompanyId} config={config} />

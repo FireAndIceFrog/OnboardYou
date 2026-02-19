@@ -11,7 +11,7 @@ export default defineConfig({
       filename: 'remoteEntry.js',
       exposes: {
         './App': './src/app/App.tsx',
-        './ConfigListScreen': './src/features/config-list/ui/ConfigListScreen.tsx',
+        './ConfigListScreen': './src/features/config-list/ui/screens/ConfigListScreen.tsx',
         './ConfigDetailsPage': './src/features/config-details/ui/screens/ConfigDetailsScreen.tsx',
       },
       shared: {
