@@ -30,7 +30,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
-      '@platform': resolve(__dirname, '../platform/src'),
     },
   },
   server: {

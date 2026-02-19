@@ -45,19 +45,6 @@ export function ConnectionDetailsPage() {
 
   return (
     <Box maxW="680px" mx="auto" py="8" px="6">
-      {/* Step indicator */}
-      <Flex as="nav" align="center" justify="center" gap="3" mb="8" aria-label="Configuration steps">
-        <Flex align="center" gap="2" aria-current="step">
-          <Flex align="center" justify="center" w="7" h="7" borderRadius="full" bg="blue.500" color="white" fontSize="sm" fontWeight="600">1</Flex>
-          <Text fontSize="sm" fontWeight="600" color="blue.600">{t('configDetails.steps.connectionDetails')}</Text>
-        </Flex>
-        <Box w="12" h="0.5" bg="gray.200" borderRadius="full" />
-        <Flex align="center" gap="2">
-          <Flex align="center" justify="center" w="7" h="7" borderRadius="full" bg="gray.200" color="gray.500" fontSize="sm" fontWeight="600">2</Flex>
-          <Text fontSize="sm" color="gray.500">{t('configDetails.steps.flowCustomization')}</Text>
-        </Flex>
-      </Flex>
-
       {/* Form card */}
       <Box as="form" bg="white" borderRadius="lg" border="1px solid" borderColor="gray.200" p="6" shadow="sm" onSubmit={(e: React.FormEvent) => e.preventDefault()}>
         <Heading size="lg" mb="1">{t('configDetails.connection.title')}</Heading>

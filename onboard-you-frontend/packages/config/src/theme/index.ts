@@ -1,5 +1,35 @@
+import { createSystem, defaultConfig, defineConfig } from '@chakra-ui/react';
+
 /**
- * Re-use the platform's Chakra UI theme — single source of truth.
- * The @platform alias points to packages/platform/src via vite.config.ts + tsconfig paths.
+ * Config package theme — mirrors the platform theme.
+ * In production the config remote renders inside the platform's ChakraProvider,
+ * so this only matters for standalone dev mode (`pnpm dev:config`).
  */
-export { system } from '@platform/theme';
+const config = defineConfig({
+  globalCss: {
+    '.react-flow svg, .react-flow__edges svg': {
+      display: 'initial',
+      maxWidth: 'initial',
+    },
+  },
+  theme: {
+    tokens: {
+      fonts: {
+        heading: {
+          value:
+            "'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+        },
+        body: {
+          value:
+            "'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+        },
+        mono: {
+          value:
+            "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+        },
+      },
+    },
+  },
+});
+
+export const system = createSystem(defaultConfig, config);

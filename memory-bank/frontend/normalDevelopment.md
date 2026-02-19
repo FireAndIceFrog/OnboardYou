@@ -116,7 +116,7 @@ The **platform** package uses **Chakra UI v3** (`@chakra-ui/react`) as the compo
 ## Theme
 Defined in `platform/src/theme/index.ts` using `createSystem(defaultConfig, config)`. The custom config only overrides fonts (Inter/JetBrains Mono) and adds global CSS for the React Flow SVG fix. All colors, spacing, radii, shadows use Chakra defaults.
 
-The **config** package re-exports the platform theme via `config/src/theme/index.ts` → `export { system } from '@platform/theme'`. The `@platform` alias is configured in both `vite.config.ts` (resolve alias → `../platform/src`) and `tsconfig.json` (paths → `../platform/src/*`). Both `@chakra-ui/react` and `@emotion/react` are shared singletons in Module Federation to avoid duplicate React context issues.
+The **config** package has its own inline theme in `config/src/theme/index.ts` using `createSystem(defaultConfig, config)` with the same font tokens (Inter/JetBrains Mono) and the React Flow SVG fix. It does **not** import from platform — cross-package `@platform` aliases break Module Federation's Rollup pre-build phase (which ignores Vite `resolve.alias`). The theme is small (~35 lines) so duplication is acceptable. Both `@chakra-ui/react` and `@emotion/react` are shared singletons in Module Federation to avoid duplicate React context issues.
 
 ## How to style components
 - Use Chakra **style props** directly on components: `<Box p={4} bg="bg.subtle" borderRadius="lg">`.

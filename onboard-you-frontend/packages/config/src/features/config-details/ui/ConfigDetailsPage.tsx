@@ -239,19 +239,6 @@ function ConfigDetailsContent({
 
   return (
     <Flex direction="column" h="100vh" bg="gray.50">
-      {/* Step indicator bar */}
-      <Flex as="nav" align="center" justify="center" gap="3" py="3" px="6" bg="white" borderBottom="1px solid" borderColor="gray.200" aria-label="Configuration steps">
-        <Flex align="center" gap="2">
-          <Flex align="center" justify="center" w="7" h="7" borderRadius="full" bg="green.500" color="white" fontSize="sm" fontWeight="600">✓</Flex>
-          <Text fontSize="sm" color="gray.600">{t('configDetails.steps.connectionDetails')}</Text>
-        </Flex>
-        <Box w="12" h="0.5" bg="blue.400" borderRadius="full" />
-        <Flex align="center" gap="2" aria-current="step">
-          <Flex align="center" justify="center" w="7" h="7" borderRadius="full" bg="blue.500" color="white" fontSize="sm" fontWeight="600">2</Flex>
-          <Text fontSize="sm" fontWeight="600" color="blue.600">{t('configDetails.steps.flowCustomization')}</Text>
-        </Flex>
-      </Flex>
-
       {/* Header */}
       <Flex as="header" align="center" justify="space-between" px="6" py="3" bg="white" borderBottom="1px solid" borderColor="gray.200">
         <Flex align="center" gap="3">
