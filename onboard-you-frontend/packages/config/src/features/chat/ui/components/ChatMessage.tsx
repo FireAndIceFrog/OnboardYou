@@ -6,7 +6,7 @@ interface ChatMessageProps {
   message: ChatMessage;
 }
 
-function formatTimestamp(iso: string): string {
+export function formatTimestamp(iso: string): string {
   const date = new Date(iso);
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
@@ -15,7 +15,7 @@ function formatTimestamp(iso: string): string {
  * Renders message content with simple markdown-like formatting:
  * **bold**, `inline code`, and newlines as <br />.
  */
-function renderContent(content: string): (string | ReactElement)[] {
+export function renderContent(content: string): (string | ReactElement)[] {
   const parts: (string | ReactElement)[] = [];
   const regex = /(\*\*(.+?)\*\*|`(.+?)`)/g;
   let lastIndex = 0;

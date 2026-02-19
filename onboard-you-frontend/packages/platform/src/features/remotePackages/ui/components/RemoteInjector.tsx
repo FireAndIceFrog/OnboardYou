@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import { Center, Spinner } from '@chakra-ui/react';
 import { useGlobal } from '@/shared/hooks/useGlobal';
 import { ErrorBoundary } from '@/shared/ui/ErrorBoundary';
-import type { RemoteHandle } from '../domain/types';
+import type { RemoteHandle } from '../../domain/types';
 import { RemoteLoadFallback } from './RemoteFallback';
 
 function RemoteInjector({ handle }: { handle: RemoteHandle }) {

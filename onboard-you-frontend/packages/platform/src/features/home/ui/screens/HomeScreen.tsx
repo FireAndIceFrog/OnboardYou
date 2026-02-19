@@ -4,7 +4,7 @@ import { Box, Center, Heading, SimpleGrid, Spinner, Text } from '@chakra-ui/reac
 import { useGlobal } from '@/shared/hooks/useGlobal';
 import { MOCK_MODE } from '@/shared/domain/constants';
 import { fetchDashboardStats, MOCK_STATS } from '@/features/home/services/homeService';
-import { StatCard } from './StatCard';
+import { StatCard } from '../components/StatCard';
 import type { StatCardData } from '@/features/home/domain/types';
 
 export function HomeScreen() {

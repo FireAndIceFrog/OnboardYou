@@ -2,7 +2,7 @@ import { lazy} from 'react';
 import type { RouteObject } from 'react-router-dom';
 import remotePackages from '../remotePackages';
 import { RemoteModule, RemotePackageConfig, RemoteHandle, SetGlobalValueFn } from '../domain/types';
-import { RemoteShell } from '../ui/RemoteInjector';
+import { RemoteShell } from '../ui/components/RemoteInjector';
 
 
 /* ── Static loader registry ────────────────────────────────── *

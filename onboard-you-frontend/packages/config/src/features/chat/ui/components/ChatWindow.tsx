@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box, Flex, Heading, Text, chakra } from '@chakra-ui/react';
 import { useAppDispatch, useAppSelector } from '@/store';
-import { sendMessage, clearChat, selectChatMessages, selectIsTyping } from '../state/chatSlice';
+import { sendMessage, clearChat, selectChatMessages, selectIsTyping } from '../../state/chatSlice';
 import { selectConfig } from '@/features/config-details/state/configDetailsSlice';
 import { ChatMessageComponent } from './ChatMessage';
 import { ChatInput } from './ChatInput';

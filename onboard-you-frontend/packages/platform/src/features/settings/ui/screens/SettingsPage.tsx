@@ -14,10 +14,10 @@ import {
   Spinner,
   Text,
 } from '@chakra-ui/react';
-import { PLACEMENT_OPTIONS, GRANT_TYPE_OPTIONS } from '../domain/types';
-import { useSettingsState } from '../state/useSettingsState';
-import { useSettingsValidation } from '../state/useSettingsValidation';
-import { FieldError } from './FieldError';
+import { PLACEMENT_OPTIONS, GRANT_TYPE_OPTIONS } from '../../domain/types';
+import { useSettingsState } from '../../state/useSettingsState';
+import { useSettingsValidation } from '../../state/useSettingsValidation';
+import { FieldError } from '../components/FieldError';
 
 export function SettingsPage() {
   const { t } = useTranslation();

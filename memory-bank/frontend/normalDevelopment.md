@@ -121,17 +121,100 @@ ui/
 │   └── ConfigListItem.tsx         # card component + relativeTime/fullDate utility fns
 ```
 
+## chat/ui/ structure (config package)
+Chat is an embedded panel (not a full page), so components only:
+
+```
+ui/
+├── index.ts                       # barrel – re-exports from components/
+├── components/
+│   ├── index.ts
+│   ├── ChatWindow.tsx             # panel with header, message list, typing indicator, suggestions
+│   ├── ChatInput.tsx              # auto-resize textarea + send button
+│   └── ChatMessage.tsx            # message bubble + formatTimestamp/renderContent utilities
+```
+
+## Platform feature ui/ structures
+All platform features follow the same screens/ + components/ pattern:
+
+### auth/ui/
+```
+ui/
+├── index.ts
+├── screens/
+│   ├── index.ts
+│   └── LoginPage.tsx              # full login page with email/password form, demo creds
+├── components/
+│   ├── index.ts
+│   └── ProtectedRoute.tsx         # auth guard: spinner → redirect → <Outlet />
+```
+
+### home/ui/
+```
+ui/
+├── index.ts
+├── screens/
+│   ├── index.ts
+│   └── HomeScreen.tsx             # dashboard with welcome heading + stat cards grid
+├── components/
+│   ├── index.ts
+│   └── StatCard.tsx               # card with icon, value, label, trend indicator
+```
+
+### layout/ui/
+Layout is a wrapper, not a full page — components only:
+```
+ui/
+├── index.ts
+├── components/
+│   ├── index.ts
+│   ├── AppLayout.tsx              # shell: Header + Sidebar + <Outlet /> with responsive margins
+│   ├── Header.tsx                 # fixed header: app name, hamburger, user avatar menu
+│   └── Sidebar.tsx                # fixed sidebar: nav links, mobile overlay, collapse toggle
+```
+
+### settings/ui/
+```
+ui/
+├── index.ts
+├── screens/
+│   ├── index.ts
+│   └── SettingsPage.tsx           # large form: auth type, bearer/oauth2 config, retry policy
+├── components/
+│   ├── index.ts
+│   └── FieldError.tsx             # thin error text wrapper
+```
+
+### remotePackages/ui/
+No screen — utility components for Module Federation:
+```
+ui/
+├── index.ts
+├── components/
+│   ├── index.ts
+│   ├── RemoteFallback.tsx         # error fallback with retry button
+│   └── RemoteInjector.tsx         # Suspense + ErrorBoundary wrapper, exports RemoteShell
+```
+
 **Key patterns (both features):**
 - **Action panel registry** (`action-panels/registry.ts`): `Partial<Record<ActionType, ComponentType<ActionEditorProps>>>`. To add support for a new action type, create a panel component conforming to `ActionEditorProps` and register it in the map. Actions without a custom panel get the generic `FieldEditor`-based form.
 - **Unified PipelineNode**: A single component with a `CATEGORY_STYLES` lookup keyed by `data.category` (`ingestion`, `logic`, `egress`). All 3 React Flow node types point to the same component.
 - **Backward-compat aliases**: `ConfigDetailsPage = ConfigDetailsScreen`, `ConnectionDetailsPage = ConnectionDetailsScreen`. Existing route imports work unchanged.
 
 ## Shared test wrapper
-`shared/test/testWrapper.tsx` provides:
+Both packages have their own test wrapper:
+
+### Config package (`config/src/shared/test/testWrapper.tsx`):
 - `createTestStore(preloadedState?)` — configures store with all 3 slice reducers + mocked `ThunkExtra` (`showNotification = vi.fn()`)
 - `renderWithProviders(ui, opts?)` — wraps with `ChakraProvider`, `I18nextProvider`, and Redux `Provider`
 - `mockShowNotification` — the mock spy for assertions
 - `AllProviders` — standalone wrapper component for hook tests
+
+### Platform package (`platform/src/shared/test/testWrapper.tsx`):
+- `createTestStore(preloadedState?)` — configures store with all 4 slice reducers (auth, layout, global, settings)
+- `renderWithProviders(ui, opts?)` — wraps with `ChakraProvider`, `I18nextProvider`, Redux `Provider`, and `MemoryRouter`
+- `AllProviders` — standalone wrapper component (includes `MemoryRouter` with `initialRoute`)
+- Includes `initialRoute` option for routing-dependent tests
 
 All files created should have simple and manageable tests. We follow a simple paradigm for least code. The person reviewing your code does not want to scroll through thousands of tests or code for that matter - they want to know "does it work" and when something changes it should not break.
 
