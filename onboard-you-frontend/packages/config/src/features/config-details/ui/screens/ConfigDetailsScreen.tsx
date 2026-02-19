@@ -10,7 +10,6 @@ import {
   type NodeMouseHandler,
   type NodeChange,
   type EdgeChange,
-  type Node,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Box, Flex, Heading, Text, Button, Spinner, Badge } from '@chakra-ui/react';
@@ -18,7 +17,7 @@ import { Box, Flex, Heading, Text, Button, Spinner, Badge } from '@chakra-ui/rea
 import { useAppDispatch, useAppSelector } from '@/store';
 import { useGlobal } from '@/shared/hooks';
 import { humanFrequency } from '@/shared/domain/types';
-import type { ConnectionForm } from '../domain/types';
+import type { ConnectionForm } from '../../domain/types';
 import {
   fetchConfigDetails,
   initNewConfig,
@@ -44,17 +43,15 @@ import {
   selectConfigDetailsSaving,
   selectConfigDetailsDeleting,
   selectConfigDetailsError,
-} from '../state/configDetailsSlice';
+} from '../../state/configDetailsSlice';
 import { selectLastFlowAction } from '@/features/chat/state/chatSlice';
-import { ActionEditPanel } from './ActionEditPanel';
-import { AddStepPanel } from './AddStepPanel';
-import { IngestionNode, TransformationNode, EgressNode } from './nodes';
+import { ActionEditPanel, AddStepPanel, PipelineNode } from '../components';
 import { ChatWindow } from '@/features/chat/ui';
 
 const nodeTypes = {
-  ingestion: IngestionNode,
-  logic: TransformationNode,
-  egress: EgressNode,
+  ingestion: PipelineNode,
+  logic: PipelineNode,
+  egress: PipelineNode,
 };
 
 function ConfigDetailsContent({
@@ -310,7 +307,7 @@ function ConfigDetailsContent({
   );
 }
 
-export function ConfigDetailsPage() {
+export function ConfigDetailsScreen() {
   const { t } = useTranslation();
   const { customerCompanyId } = useParams<{ customerCompanyId: string }>();
   const location = useLocation();
@@ -345,3 +342,6 @@ export function ConfigDetailsPage() {
     />
   );
 }
+
+/** @deprecated Use `ConfigDetailsScreen` instead. Kept for backward compatibility during migration. */
+export const ConfigDetailsPage = ConfigDetailsScreen;

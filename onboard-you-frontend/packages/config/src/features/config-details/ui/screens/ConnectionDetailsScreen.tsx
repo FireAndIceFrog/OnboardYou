@@ -1,14 +1,25 @@
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box, Flex, Heading, Text, Input, Button, chakra } from '@chakra-ui/react';
-import { HR_SYSTEMS, RESPONSE_GROUP_OPTIONS } from '../domain/types';
-import { useConnectionForm } from '../state/useConnectionForm';
-import { FieldError } from './FieldError';
+import { HR_SYSTEMS, RESPONSE_GROUP_OPTIONS } from '../../domain/types';
+import { useConnectionForm } from '../../state/useConnectionForm';
+import { FieldError } from '../components';
+import { inputStyles } from '../components/styles';
 
 const Label = chakra('label');
 const StyledButton = chakra('button');
 
-export function ConnectionDetailsPage() {
+const invalidInputProps = {
+  ...inputStyles,
+  borderColor: 'red.400' as const,
+  _focus: { borderColor: 'red.500', boxShadow: '0 0 0 1px var(--chakra-colors-red-500)' },
+};
+
+function getInputProps(errorKey?: string) {
+  return errorKey ? invalidInputProps : inputStyles;
+}
+
+export function ConnectionDetailsScreen() {
   const {
     form,
     errors,
@@ -26,26 +37,8 @@ export function ConnectionDetailsPage() {
   const { t } = useTranslation();
   const csvInputRef = useRef<HTMLInputElement>(null);
 
-  const inputProps = {
-    fontSize: 'sm' as const,
-    borderColor: 'gray.200' as const,
-    bg: 'white' as const,
-    _focus: { borderColor: 'blue.500', boxShadow: '0 0 0 1px var(--chakra-colors-blue-500)' },
-  };
-
-  const invalidInputProps = {
-    ...inputProps,
-    borderColor: 'red.400' as const,
-    _focus: { borderColor: 'red.500', boxShadow: '0 0 0 1px var(--chakra-colors-red-500)' },
-  };
-
-  function getInputProps(errorKey?: string) {
-    return errorKey ? invalidInputProps : inputProps;
-  }
-
   return (
     <Box maxW="680px" mx="auto" py="8" px="6">
-      {/* Form card */}
       <Box as="form" bg="white" borderRadius="lg" border="1px solid" borderColor="gray.200" p="6" shadow="sm" onSubmit={(e: React.FormEvent) => e.preventDefault()}>
         <Heading size="lg" mb="1">{t('configDetails.connection.title')}</Heading>
         <Text fontSize="sm" color="gray.500" mb="6">{t('configDetails.connection.subtitle')}</Text>
@@ -84,7 +77,7 @@ export function ConnectionDetailsPage() {
         {form.system && (
           <Box mb="5">
             <Label htmlFor="conn-display-name" fontSize="sm" fontWeight="600" display="block" mb="1">{t('configDetails.connection.displayName')}</Label>
-            <Input id="conn-display-name" type="text" placeholder={t('configDetails.connection.displayNamePlaceholder')} value={form.displayName} onChange={handleChange('displayName')} {...inputProps} />
+            <Input id="conn-display-name" type="text" placeholder={t('configDetails.connection.displayNamePlaceholder')} value={form.displayName} onChange={handleChange('displayName')} {...inputStyles} />
             <Text fontSize="xs" color="gray.400" mt="1">{t('configDetails.connection.displayNameHint')}</Text>
           </Box>
         )}
@@ -133,7 +126,7 @@ export function ConnectionDetailsPage() {
 
               <Box mb="4">
                 <Label htmlFor="conn-worker-count" fontSize="sm" fontWeight="600" display="block" mb="1">{t('configDetails.connection.workday.workerCountLimit')}</Label>
-                <Input id="conn-worker-count" type="number" min={1} max={999} value={form.workday.workerCountLimit} onChange={handleWorkdayChange('workerCountLimit')} {...inputProps} />
+                <Input id="conn-worker-count" type="number" min={1} max={999} value={form.workday.workerCountLimit} onChange={handleWorkdayChange('workerCountLimit')} {...inputStyles} />
                 <Text fontSize="xs" color="gray.400" mt="1">{t('configDetails.connection.workday.workerCountLimitHint')}</Text>
               </Box>
 
@@ -227,3 +220,6 @@ export function ConnectionDetailsPage() {
     </Box>
   );
 }
+
+/** @deprecated Use `ConnectionDetailsScreen` instead. Kept for backward compatibility during migration. */
+export const ConnectionDetailsPage = ConnectionDetailsScreen;

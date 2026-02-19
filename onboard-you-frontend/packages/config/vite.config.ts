@@ -12,7 +12,7 @@ export default defineConfig({
       exposes: {
         './App': './src/app/App.tsx',
         './ConfigListScreen': './src/features/config-list/ui/ConfigListScreen.tsx',
-        './ConfigDetailsPage': './src/features/config-details/ui/ConfigDetailsPage.tsx',
+        './ConfigDetailsPage': './src/features/config-details/ui/screens/ConfigDetailsScreen.tsx',
       },
       shared: {
         react: { singleton: true },

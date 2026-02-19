@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Box, Flex, Heading, Text } from '@chakra-ui/react';
 import { useAppDispatch } from '@/store';
 import type { ActionConfig } from '@/generated/api';
-import { ACTION_CATALOG, type ActionCatalogEntry } from '../domain/actionCatalog';
-import { addFlowAction, setAddStepPanelOpen } from '../state/configDetailsSlice';
+import { ACTION_CATALOG, type ActionCatalogEntry } from '../../domain/actionCatalog';
+import { addFlowAction, setAddStepPanelOpen } from '../../state/configDetailsSlice';
 
 const LOGIC_STEPS = ACTION_CATALOG.filter((a) => a.category === 'logic');
 const EGRESS_STEPS = ACTION_CATALOG.filter((a) => a.category === 'egress');
@@ -45,6 +45,7 @@ export function AddStepPanel({ onClose }: AddStepPanelProps) {
       zIndex="10"
       overflow="hidden"
       aria-label={t('flow.addStep.title')}
+      data-testid="add-step-panel"
     >
       {/* Header */}
       <Flex align="center" justify="space-between" px="4" py="3" borderBottom="1px solid" borderColor="gray.100" bg="gray.50">
@@ -60,6 +61,7 @@ export function AddStepPanel({ onClose }: AddStepPanelProps) {
           bg="transparent"
           border="none"
           p="0"
+          data-testid="add-step-close"
         >
           ✕
         </Box>
@@ -95,6 +97,7 @@ export function AddStepPanel({ onClose }: AddStepPanelProps) {
                   transition="background 0.15s"
                   onClick={() => handleAdd(entry)}
                   textAlign="left"
+                  data-testid={`add-step-${entry.actionType}`}
                 >
                   <Text fontSize="lg" mt="0.5">{entry.icon}</Text>
                   <Box>
@@ -132,6 +135,7 @@ export function AddStepPanel({ onClose }: AddStepPanelProps) {
                   transition="background 0.15s"
                   onClick={() => handleAdd(entry)}
                   textAlign="left"
+                  data-testid={`add-step-${entry.actionType}`}
                 >
                   <Text fontSize="lg" mt="0.5">{entry.icon}</Text>
                   <Box>
