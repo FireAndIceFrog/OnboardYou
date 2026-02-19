@@ -32,10 +32,6 @@
     }
   },
   "configDetails": {
-    "steps": {
-      "connectionDetails": "Connection Details",
-      "flowCustomization": "Flow Customization"
-    },
     "loading": "Loading configuration…",
     "noConfigId": "No configuration ID provided.",
     "backToConfigurations": "← Back to Configurations",

@@ -1,20 +1,22 @@
 import '@/i18n';
 import { Provider } from 'react-redux';
 import { Routes, Route } from 'react-router-dom';
+import { ChakraProvider } from '@chakra-ui/react';
 import { store } from '@/store';
+import { system } from '@/theme';
 import { ErrorBoundary } from '@/shared/ui';
 import { ConfigListScreen } from '@/features/config-list/ui';
 import { ConfigDetailsPage, ConnectionDetailsPage } from '@/features/config-details/ui';
 
-// Global styles — imported here so they load when consumed via Module Federation
-import '@/styles/config.scss';
+// React Flow stylesheet — needed when consumed via Module Federation
 import '@xyflow/react/dist/style.css';
 
 export function ConfigRoutes() {
   return (
-    <ErrorBoundary>
-      <Provider store={store}>
-        <Routes>
+    <ChakraProvider value={system}>
+      <ErrorBoundary>
+        <Provider store={store}>
+          <Routes>
           <Route index element={<ConfigListScreen />} />
           {/* Step 1: Connection Details (new setup) */}
           <Route path="new" element={<ConnectionDetailsPage />} />
@@ -26,5 +28,6 @@ export function ConfigRoutes() {
         </Routes>
       </Provider>
     </ErrorBoundary>
+  </ChakraProvider>
   );
 }

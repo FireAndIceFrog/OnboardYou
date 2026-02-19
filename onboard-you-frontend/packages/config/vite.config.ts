@@ -1,20 +1,18 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { federation } from '@module-federation/vite';
-import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
 import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [
     react(),
-    cssInjectedByJsPlugin({ relativeCSSInjection: true }),
     federation({
       name: 'configApp',
       filename: 'remoteEntry.js',
       exposes: {
         './App': './src/app/App.tsx',
-        './ConfigListScreen': './src/features/config-list/ui/ConfigListScreen.tsx',
-        './ConfigDetailsPage': './src/features/config-details/ui/ConfigDetailsPage.tsx',
+        './ConfigListScreen': './src/features/config-list/ui/screens/ConfigListScreen.tsx',
+        './ConfigDetailsPage': './src/features/config-details/ui/screens/ConfigDetailsScreen.tsx',
       },
       shared: {
         react: { singleton: true },
@@ -24,20 +22,14 @@ export default defineConfig({
         'react-redux': { singleton: true },
         'react-i18next': { singleton: true },
         i18next: { singleton: true },
+        '@chakra-ui/react': { singleton: true },
+        '@emotion/react': { singleton: true },
       },
-      bundleAllCSS: true,
     }),
   ],
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
-    },
-  },
-  css: {
-    preprocessorOptions: {
-      scss: {
-        api: 'modern-compiler',
-      },
     },
   },
   server: {

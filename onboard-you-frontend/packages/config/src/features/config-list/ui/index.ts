@@ -1,2 +1,2 @@
-export { ConfigListScreen } from './ConfigListScreen';
-export { ConfigListItem } from './ConfigListItem';
+export { ConfigListScreen } from './screens';
+export { ConfigListItem, relativeTime, fullDate } from './components';

@@ -1,2 +1,2 @@
-export { LoginPage } from './LoginPage';
-export { ProtectedRoute } from './ProtectedRoute';
+export { LoginPage } from './screens/LoginPage';
+export { ProtectedRoute } from './components/ProtectedRoute';

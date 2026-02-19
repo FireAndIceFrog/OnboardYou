@@ -59,13 +59,13 @@ The flow customisation page now has a proper user-friendly UI for non-technical 
 
 1. **Action catalog**: `actionCatalog.ts` defines `ACTION_CATALOG` (11 addable action types with labels, icons, descriptions, categories, default configs) and `ACTION_FIELD_SCHEMAS` (field-level definitions for all 13 action types, specifying field key, label, type, hint, placeholder, and options).
 2. **Field types**: `text`, `number`, `select`, `column-select` (single column dropdown), `column-multi` (multi-column checkbox chips), `mapping` (key-value pair editor), `readonly`. Legacy `columns` (comma-separated text) is kept as fallback but all schemas now use the typed variants.
-3. **AddStepPanel**: Slide-out panel on the right (triggered by "➕ Add Step" button in header). Shows available actions grouped by category (Transform & Clean / Destinations). Clicking an entry dispatches `addFlowAction` with the default config.
-4. **ActionEditPanel**: Replaces the old `ConfigDetailsForm` (which showed raw JSON). Renders friendly form inputs per action type using the field schemas. Special sub-editors for PII masking (column + strategy dropdown) and rename_column (key-value mapping rows). Ingestion steps are read-only. Non-ingestion steps show a 2-click "Remove this step" button.
+3. **AddStepPanel** (`ui/components/AddStepPanel.tsx`): Slide-out panel on the right (triggered by "➕ Add Step" button in header). Shows available actions grouped by category (Transform & Clean / Destinations). Clicking an entry dispatches `addFlowAction` with the default config.
+4. **ActionEditPanel** (`ui/components/ActionEditPanel.tsx`): Slim (~230 lines) panel that delegates to the **action-panel registry** (`ui/components/action-panels/registry.ts`). If a custom panel exists for an action type (e.g. `pii_masking → PiiMaskingPanel`, `workday_hris_connector → WorkdayResponseGroupPanel`), it is rendered; otherwise the generic `FieldEditor` iterates `ACTION_FIELD_SCHEMAS[actionType]` to render form inputs. Ingestion steps are read-only. Non-ingestion steps show a 2-click "Remove this step" button.
 5. **Slice reducers**: `addFlowAction(action)` — adds the action to **both** `config.pipeline.actions` (for save/validate) and the visual `nodes`/`edges` arrays (for React Flow). `removeFlowAction(actionId)` — removes the action from the pipeline config, removes the node and connected edges, re-links the chain (A→B→C becomes A→C). `updateFlowActionConfig({ actionId, config })` — updates config in pipeline actions array, in node data, and in selectedNode if matches. `toggleAddStepPanel` / `setAddStepPanelOpen` control the add panel visibility.
 6. **Node data**: All nodes now include `actionId` in their data object (set in both `convertToFlow` and `addFlowAction`), enabling the edit panel to dispatch config updates.
 7. **Delete config**: `deleteConfigThunk({ customerCompanyId })` calls `DELETE /config/{id}` (204 No Content). On success, slice resets to `initialState` and the page navigates to `/config`. A red `danger` variant Button is shown in the header next to Save (only for existing configs, not new ones). Confirmation uses `window.confirm()` before dispatching. The `isDeleting` boolean is in `ConfigDetailsState` for loading feedback.
 7. **Column validation & typed dropdowns**: Column inputs are strictly typed — instead of free-text fields, users select from dropdowns populated by the backend's per-step column propagation engine.
-   - **Auto-validation**: `ConfigDetailsPage` dispatches `validateConfigThunk` (debounced 400ms) whenever `config.pipeline.actions` changes. The thunk calls `POST /config/{id}/validate` which dry-runs column propagation and returns `ValidationResult { steps: StepValidation[], final_columns: string[] }` where each `StepValidation = { action_id, action_type, columns_after: string[] }`.
+   - **Auto-validation**: `ConfigDetailsScreen` dispatches `validateConfigThunk` (debounced 400ms) whenever `config.pipeline.actions` changes. The thunk calls `POST /config/{id}/validate` which dry-runs column propagation and returns `ValidationResult { steps: StepValidation[], final_columns: string[] }` where each `StepValidation = { action_id, action_type, columns_after: string[] }`.
    - **Redux state**: `validationResult` and `isValidating` live in `ConfigDetailsState`. The `selectAvailableColumnsForAction(state, actionId)` selector returns `columns_after` of the *preceding* step (i.e. the columns feeding into the selected action). First step (ingestion) gets `[]`. If the action is not yet in the validation result (e.g. newly added), the selector falls back to `final_columns` (the output of the last validated step) so column dropdowns populate immediately.
    - **UI binding**: `ActionEditPanel` reads `availableColumns` via the selector and passes it to all sub-editors (`FieldEditor`, `MappingEditor`, `PiiMaskingEditor`). `column-select` renders a `<select>` dropdown; `column-multi` renders a checkbox chip list with toggle behavior.
    - **Fallback**: If validation hasn't run yet (empty `availableColumns`), column-select shows an empty dropdown with a "— Select a column —" placeholder and column-multi shows "Run validation to see columns" hint text.
@@ -81,6 +81,140 @@ features/my-feature/
 - domain (models - one per file)
 - services (api fetching, no business logic)
 - state (business logic - ideally everything should be contained in redux toolkit however it is acceptable to put hooks here too)
+
+## config-details/ui/ structure
+The `ui/` folder is split into **screens/** (full-page layout + orchestration) and **components/** (rendering logic):
+
+```
+ui/
+├── index.ts                       # barrel – re-exports screens + backward-compat aliases
+├── screens/
+│   ├── index.ts
+│   ├── ConfigDetailsScreen.tsx    # ReactFlow canvas, header, chat panel (alias: ConfigDetailsPage)
+│   └── ConnectionDetailsScreen.tsx # Connection wizard form (alias: ConnectionDetailsPage)
+├── components/
+│   ├── index.ts
+│   ├── styles.ts                  # shared inputStyles / selectStyles
+│   ├── ActionEditPanel.tsx        # ~230 lines, delegates to registry or generic FieldEditor
+│   ├── AddStepPanel.tsx           # slide-out panel listing ACTION_CATALOG
+│   ├── FieldEditor.tsx            # generic switch-based renderer for 8 field types
+│   ├── FieldError.tsx             # thin Chakra error text wrapper
+│   ├── MappingEditor.tsx          # key-value pair editor with column dropdowns
+│   ├── PipelineNode.tsx           # unified React Flow node (replaces 3 near-identical nodes)
+│   └── action-panels/
+│       ├── registry.ts            # getActionPanel(actionType) → custom panel or undefined
+│       ├── PiiMaskingPanel.tsx    # custom editor for pii_masking
+│       └── WorkdayResponseGroupPanel.tsx # custom editor for workday_hris_connector
+```
+
+## config-list/ui/ structure
+Same screens/ + components/ split:
+
+```
+ui/
+├── index.ts                       # barrel – re-exports screens + components
+├── screens/
+│   ├── index.ts
+│   └── ConfigListScreen.tsx       # page layout: header, search, loading/error/empty states, grid
+├── components/
+│   ├── index.ts
+│   └── ConfigListItem.tsx         # card component + relativeTime/fullDate utility fns
+```
+
+## chat/ui/ structure (config package)
+Chat is an embedded panel (not a full page), so components only:
+
+```
+ui/
+├── index.ts                       # barrel – re-exports from components/
+├── components/
+│   ├── index.ts
+│   ├── ChatWindow.tsx             # panel with header, message list, typing indicator, suggestions
+│   ├── ChatInput.tsx              # auto-resize textarea + send button
+│   └── ChatMessage.tsx            # message bubble + formatTimestamp/renderContent utilities
+```
+
+## Platform feature ui/ structures
+All platform features follow the same screens/ + components/ pattern:
+
+### auth/ui/
+```
+ui/
+├── index.ts
+├── screens/
+│   ├── index.ts
+│   └── LoginPage.tsx              # full login page with email/password form, demo creds
+├── components/
+│   ├── index.ts
+│   └── ProtectedRoute.tsx         # auth guard: spinner → redirect → <Outlet />
+```
+
+### home/ui/
+```
+ui/
+├── index.ts
+├── screens/
+│   ├── index.ts
+│   └── HomeScreen.tsx             # dashboard with welcome heading + stat cards grid
+├── components/
+│   ├── index.ts
+│   └── StatCard.tsx               # card with icon, value, label, trend indicator
+```
+
+### layout/ui/
+Layout is a wrapper, not a full page — components only:
+```
+ui/
+├── index.ts
+├── components/
+│   ├── index.ts
+│   ├── AppLayout.tsx              # shell: Header + Sidebar + <Outlet /> with responsive margins
+│   ├── Header.tsx                 # fixed header: app name, hamburger, user avatar menu
+│   └── Sidebar.tsx                # fixed sidebar: nav links, mobile overlay, collapse toggle
+```
+
+### settings/ui/
+```
+ui/
+├── index.ts
+├── screens/
+│   ├── index.ts
+│   └── SettingsPage.tsx           # large form: auth type, bearer/oauth2 config, retry policy
+├── components/
+│   ├── index.ts
+│   └── FieldError.tsx             # thin error text wrapper
+```
+
+### remotePackages/ui/
+No screen — utility components for Module Federation:
+```
+ui/
+├── index.ts
+├── components/
+│   ├── index.ts
+│   ├── RemoteFallback.tsx         # error fallback with retry button
+│   └── RemoteInjector.tsx         # Suspense + ErrorBoundary wrapper, exports RemoteShell
+```
+
+**Key patterns (both features):**
+- **Action panel registry** (`action-panels/registry.ts`): `Partial<Record<ActionType, ComponentType<ActionEditorProps>>>`. To add support for a new action type, create a panel component conforming to `ActionEditorProps` and register it in the map. Actions without a custom panel get the generic `FieldEditor`-based form.
+- **Unified PipelineNode**: A single component with a `CATEGORY_STYLES` lookup keyed by `data.category` (`ingestion`, `logic`, `egress`). All 3 React Flow node types point to the same component.
+- **Backward-compat aliases**: `ConfigDetailsPage = ConfigDetailsScreen`, `ConnectionDetailsPage = ConnectionDetailsScreen`. Existing route imports work unchanged.
+
+## Shared test wrapper
+Both packages have their own test wrapper:
+
+### Config package (`config/src/shared/test/testWrapper.tsx`):
+- `createTestStore(preloadedState?)` — configures store with all 3 slice reducers + mocked `ThunkExtra` (`showNotification = vi.fn()`)
+- `renderWithProviders(ui, opts?)` — wraps with `ChakraProvider`, `I18nextProvider`, and Redux `Provider`
+- `mockShowNotification` — the mock spy for assertions
+- `AllProviders` — standalone wrapper component for hook tests
+
+### Platform package (`platform/src/shared/test/testWrapper.tsx`):
+- `createTestStore(preloadedState?)` — configures store with all 4 slice reducers (auth, layout, global, settings)
+- `renderWithProviders(ui, opts?)` — wraps with `ChakraProvider`, `I18nextProvider`, Redux `Provider`, and `MemoryRouter`
+- `AllProviders` — standalone wrapper component (includes `MemoryRouter` with `initialRoute`)
+- Includes `initialRoute` option for routing-dependent tests
 
 All files created should have simple and manageable tests. We follow a simple paradigm for least code. The person reviewing your code does not want to scroll through thousands of tests or code for that matter - they want to know "does it work" and when something changes it should not break.
 
@@ -102,6 +236,60 @@ We care about accessibility. Keyboard navigation is important as is screen reade
 Using accessible tags allows users to read our code easier - instead of reading a div tag we should use sections
 
 When we need to create a readable list of items we should use <dd> and <dt> for items. Follow best practices as much as possible here. 
+
+# UI Component Library — Chakra UI v3
+
+The **platform** package uses **Chakra UI v3** (`@chakra-ui/react`) as the component library. There is **no SCSS** — all styling is done via Chakra style props and semantic tokens.
+
+## Key decisions
+- **No dark mode** — we ship light-only to keep things simple and maintainable.
+- **No custom shared UI primitives** — use Chakra's built-in `Button`, `Badge`, `Spinner`, `Card`, `Input`, `Field`, `NativeSelect`, `Menu`, etc. directly. The old `shared/ui/Button`, `Badge`, `Card`, `Spinner` directories have been deleted in both platform and config packages.
+- **ErrorBoundary** remains a custom class component in `shared/ui/ErrorBoundary/` since Chakra doesn't provide one. Uses Chakra `Box`, `Heading`, `Text`, `Button` for rendering.
+- Both **platform** and **config** packages are fully migrated — zero SCSS, all Chakra style props.
+
+## Theme
+Defined in `platform/src/theme/index.ts` using `createSystem(defaultConfig, config)`. The custom config only overrides fonts (Inter/JetBrains Mono) and adds global CSS for the React Flow SVG fix. All colors, spacing, radii, shadows use Chakra defaults.
+
+The **config** package has its own inline theme in `config/src/theme/index.ts` using `createSystem(defaultConfig, config)` with the same font tokens (Inter/JetBrains Mono) and the React Flow SVG fix. It does **not** import from platform — cross-package `@platform` aliases break Module Federation's Rollup pre-build phase (which ignores Vite `resolve.alias`). The theme is small (~35 lines) so duplication is acceptable. Both `@chakra-ui/react` and `@emotion/react` are shared singletons in Module Federation to avoid duplicate React context issues.
+
+## How to style components
+- Use Chakra **style props** directly on components: `<Box p={4} bg="bg.subtle" borderRadius="lg">`.
+- Use **semantic tokens** for colors: `fg`, `fg.muted`, `fg.error`, `bg`, `bg.subtle`, `border`, `border.emphasized`, etc.
+- Use **color palettes** for variants: `colorPalette="blue"`, `colorPalette="red"`, `colorPalette="green"`.
+- Use **responsive objects** for breakpoints: `columns={{ base: 1, md: 2, lg: 4 }}`.
+- **Never** create `.module.scss` or `.css` files — use Chakra style props only.
+- **Polymorphic type workaround**: Chakra v3's `Box as="button"` / `Text as="label"` etc. don't carry native element types. Use `chakra()` factory instead: `const StyledButton = chakra('button')`, `const Label = chakra('label')`, `const StyledSelect = chakra('select')`, `const StyledTextarea = chakra('textarea')`. These give full native element typing with Chakra style props.
+
+## Component mapping (old → new)
+| Old (SCSS)                 | New (Chakra v3)                                      |
+|---------------------------|------------------------------------------------------|
+| `<Button variant="primary">` | `<Button colorPalette="blue">`                     |
+| `<Button variant="secondary">` | `<Button variant="outline">`                    |
+| `<Button variant="ghost">`   | `<Button variant="ghost">`                        |
+| `<Button variant="danger">`  | `<Button colorPalette="red">`                     |
+| `<Badge variant="active">`   | `<Badge colorPalette="green">`                    |
+| `<Badge variant="draft">`    | `<Badge colorPalette="gray">`                     |
+| `<Badge variant="error">`    | `<Badge colorPalette="red">`                      |
+| `<Badge variant="info">`     | `<Badge colorPalette="blue">`                     |
+| `<Card>`                     | `<Card.Root>` + `<Card.Body>`                     |
+| `<Spinner size="md">`        | `<Spinner size="md">` (from `@chakra-ui/react`)   |
+| Custom `<FieldError>`        | `<Field.ErrorText>` or thin `<FieldError>` wrapper |
+| `<select>` + SCSS            | `<NativeSelect.Root>` + `.Field` + `.Indicator`    |
+| Custom dropdown              | `<Menu.Root>` + `.Trigger` + `.Content` + `.Item`  |
+
+## ChakraProvider
+Wrapped at the top of `App.tsx` around `RouterProvider`:
+```tsx
+<ChakraProvider value={system}>
+  <RouterProvider router={router} />
+</ChakraProvider>
+```
+
+## Layout constants
+Sidebar width, header height, etc. are plain TypeScript constants in the layout components (not in a theme file):
+- `HEADER_HEIGHT = '64px'`
+- `SIDEBAR_WIDTH = '260px'`
+- `SIDEBAR_COLLAPSED_WIDTH = '64px'`
 
 # Translations
 We should create a translations file per package. React-i18next is the package of choice here

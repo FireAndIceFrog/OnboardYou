@@ -1,6 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { Box, Heading, Text, Button } from '@chakra-ui/react';
 import i18n from '@/i18n';
-import styles from './ErrorBoundary.module.scss';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -37,16 +37,27 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       }
 
       return (
-        <div className={styles.errorBoundary} role="alert" aria-live="assertive">
-          <span className={styles.icon}>⚠️</span>
-          <h2 className={styles.title}>{i18n.t('errorBoundary.title')}</h2>
-          <p className={styles.message}>
+        <Box
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          justifyContent="center"
+          minH="200px"
+          p="8"
+          textAlign="center"
+          gap="4"
+          role="alert"
+          aria-live="assertive"
+        >
+          <Text fontSize="2.5rem">⚠️</Text>
+          <Heading size="lg">{i18n.t('errorBoundary.title')}</Heading>
+          <Text fontSize="sm" color="gray.500" maxW="420px" lineHeight="1.5">
             {i18n.t('errorBoundary.message')}
-          </p>
-          <button type="button" className={styles.retryButton} onClick={this.handleReset}>
+          </Text>
+          <Button size="sm" colorPalette="blue" onClick={this.handleReset}>
             {i18n.t('errorBoundary.retry')}
-          </button>
-        </div>
+          </Button>
+        </Box>
       );
     }
 

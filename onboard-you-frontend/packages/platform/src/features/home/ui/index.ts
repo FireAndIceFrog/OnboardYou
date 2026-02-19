@@ -1,2 +1,2 @@
-export { HomeScreen } from './HomeScreen';
-export { StatCard } from './StatCard';
+export { HomeScreen } from './screens/HomeScreen';
+export { StatCard } from './components/StatCard';

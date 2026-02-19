@@ -1,6 +1,6 @@
 import { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
-import styles from './ErrorBoundary.module.scss';
+import { Box, Button, Center, Heading, Text, VStack } from '@chakra-ui/react';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -44,22 +44,18 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       }
 
       return (
-        <div className={styles.container} role="alert" aria-live="assertive">
-          <div className={styles.content}>
-            <span className={styles.icon} aria-hidden="true">⚠️</span>
-            <h2 className={styles.title}>Something went wrong</h2>
-            <p className={styles.message}>
+        <Center minH="300px" p={8} role="alert" aria-live="assertive">
+          <VStack gap={4} maxW="420px" textAlign="center">
+            <Text fontSize="4xl" aria-hidden="true">⚠️</Text>
+            <Heading size="lg">Something went wrong</Heading>
+            <Text fontSize="sm" color="fg.muted">
               An unexpected error occurred. Please try again.
-            </p>
-            <button
-              className={styles.button}
-              onClick={this.handleReset}
-              type="button"
-            >
+            </Text>
+            <Button colorPalette="blue" onClick={this.handleReset}>
               Try Again
-            </button>
-          </div>
-        </div>
+            </Button>
+          </VStack>
+        </Center>
       );
     }
 
