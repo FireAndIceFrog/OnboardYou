@@ -238,7 +238,7 @@ function ConfigDetailsContent({
   if (!config) return null;
 
   return (
-    <Flex direction="column" h="100vh" bg="gray.50">
+    <Flex direction="column" h="100%" bg="gray.50">
       {/* Header */}
       <Flex as="header" align="center" justify="space-between" px="6" py="3" bg="white" borderBottom="1px solid" borderColor="gray.200">
         <Flex align="center" gap="3">

@@ -13,7 +13,7 @@ export function AppLayout() {
   const sidebarCollapsed = useAppSelector(selectSidebarCollapsed);
 
   return (
-    <Box minH="100vh">
+    <Box minH="100%" display="flex" flexDirection="column" height="100%">
       <Header />
       <Sidebar />
       <Box
@@ -21,7 +21,8 @@ export function AppLayout() {
         mt={HEADER_HEIGHT}
         ml={{ base: '0', lg: sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH }}
         p={6}
-        minH={`calc(100vh - ${HEADER_HEIGHT})`}
+        flex="1"
+        minH="0"
         transition="margin-left 0.25s ease"
       >
         <Outlet />

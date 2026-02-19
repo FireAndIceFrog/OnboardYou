@@ -12,7 +12,7 @@ export function ProtectedRoute() {
 
   if (isLoading) {
     return (
-      <Center minH="100vh">
+      <Center minH="100%">
         <Spinner size="lg" />
       </Center>
     );

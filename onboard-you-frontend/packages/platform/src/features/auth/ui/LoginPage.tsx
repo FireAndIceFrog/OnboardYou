@@ -34,7 +34,7 @@ export function LoginPage() {
   };
 
   return (
-    <Center minH="100vh" bg="bg.subtle" p={4}>
+    <Center minH="100%" bg="bg.subtle" p={4}>
       <Card.Root maxW="420px" w="full" shadow="lg">
         <Card.Body p={{ base: 8, md: 12 }}>
           <VStack gap={2} mb={7} textAlign="center">

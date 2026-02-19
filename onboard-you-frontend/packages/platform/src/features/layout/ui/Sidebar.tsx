@@ -46,7 +46,7 @@ export function Sidebar() {
         position="fixed"
         top={HEADER_HEIGHT}
         left="0"
-        height={`calc(100vh - ${HEADER_HEIGHT})`}
+        height={`calc(100% - ${HEADER_HEIGHT})`}
         width={sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH}
         bg="bg"
         borderRightWidth="1px"

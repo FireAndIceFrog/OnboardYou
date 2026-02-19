@@ -483,7 +483,7 @@ export function ActionEditPanel() {
       zIndex="10"
       display="flex"
       flexDirection="column"
-      maxH="calc(100vh - 200px)"
+      maxH="calc(100% - 200px)"
     >
       {/* Header */}
       <Flex align="center" justify="space-between" px="4" py="3" borderBottom="1px solid" borderColor="gray.100" bg="gray.50" borderTopRadius="lg">
