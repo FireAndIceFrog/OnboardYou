@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ChakraProvider } from '@chakra-ui/react';
 import { system } from '@/theme';
-import { FieldError } from '../FieldError';
+import { FieldError } from './FieldError';
 
 function renderFieldError(id: string, error?: string) {
   return render(

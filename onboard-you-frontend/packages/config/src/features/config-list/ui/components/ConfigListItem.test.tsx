@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/shared/test/testWrapper';
-import { ConfigListItem, relativeTime, fullDate } from '../ConfigListItem';
+import { ConfigListItem, relativeTime, fullDate } from './ConfigListItem';
 import type { PipelineConfig } from '@/shared/domain/types';
 
 // Mock react-router-dom to track navigation

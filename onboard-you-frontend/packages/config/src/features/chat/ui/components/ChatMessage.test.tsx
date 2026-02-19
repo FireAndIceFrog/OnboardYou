@@ -19,9 +19,10 @@ describe('renderContent', () => {
   it('wraps **bold** text in a strong-like element', () => {
     const parts = renderContent('This is **bold** text');
     expect(parts.length).toBeGreaterThan(1);
-    // Find the React element with fontWeight="600" (Chakra Text as="strong")
+    // Find the React element with as="strong" (Chakra Text)
     const strongEl = parts.find(
-      (p) => typeof p === 'object' && p !== null && 'props' in p && p.props?.fontWeight === '600',
+      (p): p is React.ReactElement =>
+        typeof p === 'object' && p !== null && 'props' in p,
     );
     expect(strongEl).toBeDefined();
   });

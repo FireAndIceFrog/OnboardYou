@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/shared/test/testWrapper';
-import { MappingEditor } from '../MappingEditor';
+import { MappingEditor } from './MappingEditor';
 
 function renderMapping(value: unknown, availableColumns: string[] = []) {
   const onChange = vi.fn();

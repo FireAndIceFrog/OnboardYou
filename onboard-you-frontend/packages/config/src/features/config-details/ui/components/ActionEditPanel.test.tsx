@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/shared/test/testWrapper';
-import { ActionEditPanel } from '../ActionEditPanel';
-import type { ConfigDetailsState } from '../../../domain/types';
+import { ActionEditPanel } from './ActionEditPanel';
+import type { ConfigDetailsState } from '../../domain/types';
 
 /** Minimal state with a selected node to render the panel. */
 function makeState(overrides: Partial<ConfigDetailsState> = {}): {

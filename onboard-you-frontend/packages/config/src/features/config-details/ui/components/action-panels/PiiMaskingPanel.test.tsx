@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/shared/test/testWrapper';
-import { PiiMaskingPanel } from '../PiiMaskingPanel';
+import { PiiMaskingPanel } from './PiiMaskingPanel';
 
 function renderPanel(
   config: Record<string, unknown>,
