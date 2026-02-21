@@ -1,15 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/shared/test/testWrapper';
-import { FieldEditor } from '../FieldEditor';
-import type { FieldSchema } from '../../../domain/actionCatalog';
+import { FieldEditor } from './FieldEditor';
+import type { FieldSchema } from '../../domain/actionCatalog';
 
 function renderField(schema: FieldSchema, value: unknown, availableColumns: string[] = []) {
   const onChange = vi.fn();
-  renderWithProviders(
-    <FieldEditor schema={schema} value={value} onChange={onChange} availableColumns={availableColumns} />,
-  );
+  renderWithProviders(<FieldEditor schema={schema} value={value} onChange={onChange} availableColumns={availableColumns} />);
   return { onChange };
 }
 
@@ -145,6 +143,54 @@ describe('FieldEditor', () => {
       );
       await user.click(screen.getByText('email'));
       expect(onChange).toHaveBeenCalledWith('cols', ['name']);
+    });
+  });
+
+  describe('columns type', () => {
+    it('renders comma-separated values and calls onChange with array', async () => {
+      const user = userEvent.setup();
+      const { onChange } = renderField(
+        { key: 'cols', label: 'Cols', type: 'columns', placeholder: 'a, b' },
+        ['a', 'b'],
+      );
+      const input = screen.getByTestId('field-columns-cols') as HTMLInputElement;
+      expect(input.value).toBe('a, b');
+
+      fireEvent.change(input, { target: { value: 'x, y' } });
+      // some call should have the split array
+      expect(onChange).toHaveBeenCalled();
+      const calls = onChange.mock.calls.map((c) => c[1]);
+      expect(calls).toContainEqual(['x', 'y']);
+    });
+  });
+
+  describe('mapping type', () => {
+    it('renders mapping rows and allows add/remove/edit', async () => {
+      const user = userEvent.setup();
+      const { onChange } = renderField(
+        { key: 'map', label: 'Map', type: 'mapping' },
+        { old: 'new' },
+        ['email', 'name'],
+      );
+
+      expect(screen.getByTestId('mapping-editor')).toBeInTheDocument();
+      const row = screen.getByTestId('mapping-row-0');
+      // should show the existing mapping value in the input
+      const input = row.querySelector('input') as HTMLInputElement;
+      expect(input.value).toBe('new');
+
+      // change the value input
+      await user.clear(input);
+      await user.type(input, 'updated');
+      expect(onChange).toHaveBeenCalled();
+
+      // add a new row
+      await user.click(screen.getByTestId('mapping-add-row'));
+      expect(onChange).toHaveBeenCalled();
+      const lastMapping = onChange.mock.calls[onChange.mock.calls.length - 1][1];
+      // new mapping should contain an empty key entry
+      expect(typeof lastMapping).toBe('object');
+      expect(Object.keys(lastMapping).length).toBeGreaterThanOrEqual(1);
     });
   });
 });

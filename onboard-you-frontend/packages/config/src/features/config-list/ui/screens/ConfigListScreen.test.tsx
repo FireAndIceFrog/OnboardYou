@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/shared/test/testWrapper';
-import type { ConfigListState } from '../../../domain/types';
+import type { ConfigListState } from '../../domain/types';
 import type { PipelineConfig } from '@/shared/domain/types';
 
 // Mock react-router-dom
@@ -13,8 +13,8 @@ vi.mock('react-router-dom', async () => {
 });
 
 // Mock fetchConfigs to prevent the useEffect from firing real API calls
-vi.mock('../../../state/configListSlice', async () => {
-  const actual = await vi.importActual<Record<string, unknown>>('../../../state/configListSlice');
+vi.mock('../../state/configListSlice', async () => {
+  const actual = await vi.importActual<Record<string, unknown>>('../../state/configListSlice');
   return {
     ...actual,
     fetchConfigs: () => ({ type: 'configList/fetchConfigs/noop' }),
@@ -51,32 +51,32 @@ describe('ConfigListScreen', () => {
   });
 
   it('shows loading spinner when isLoading is true', async () => {
-    const { ConfigListScreen } = await import('../ConfigListScreen');
+    const { ConfigListScreen } = await import('./ConfigListScreen');
     renderWithProviders(<ConfigListScreen />, {
       preloadedState: makeState({ isLoading: true }),
     });
-    expect(screen.getByTestId('config-list-loading')).toBeInTheDocument();
+    expect(await screen.findByTestId('config-list-loading')).toBeInTheDocument();
   });
 
   it('shows error message when error is set', async () => {
-    const { ConfigListScreen } = await import('../ConfigListScreen');
+    const { ConfigListScreen } = await import('./ConfigListScreen');
     renderWithProviders(<ConfigListScreen />, {
       preloadedState: makeState({ error: 'Network error' }),
     });
-    expect(screen.getByTestId('config-list-error')).toBeInTheDocument();
-    expect(screen.getByText('Network error')).toBeInTheDocument();
+    expect(await screen.findByTestId('config-list-error')).toBeInTheDocument();
+    expect(await screen.findByText('Network error')).toBeInTheDocument();
   });
 
   it('shows empty state when no configs match', async () => {
-    const { ConfigListScreen } = await import('../ConfigListScreen');
+    const { ConfigListScreen } = await import('./ConfigListScreen');
     renderWithProviders(<ConfigListScreen />, {
       preloadedState: makeState({ configs: [] }),
     });
-    expect(screen.getByTestId('config-list-empty')).toBeInTheDocument();
+    expect(await screen.findByTestId('config-list-empty')).toBeInTheDocument();
   });
 
   it('renders config items in a grid', async () => {
-    const { ConfigListScreen } = await import('../ConfigListScreen');
+    const { ConfigListScreen } = await import('./ConfigListScreen');
     renderWithProviders(<ConfigListScreen />, {
       preloadedState: makeState({
         configs: [
@@ -85,13 +85,13 @@ describe('ConfigListScreen', () => {
         ],
       }),
     });
-    expect(screen.getByTestId('config-list-grid')).toBeInTheDocument();
-    expect(screen.getByText('Alpha Corp')).toBeInTheDocument();
-    expect(screen.getByText('Beta Inc')).toBeInTheDocument();
+    expect(await screen.findByTestId('config-list-grid')).toBeInTheDocument();
+    expect(await screen.findByText('Alpha Corp')).toBeInTheDocument();
+    expect(await screen.findByText('Beta Inc')).toBeInTheDocument();
   });
 
   it('filters configs based on search query', async () => {
-    const { ConfigListScreen } = await import('../ConfigListScreen');
+    const { ConfigListScreen } = await import('./ConfigListScreen');
     renderWithProviders(<ConfigListScreen />, {
       preloadedState: makeState({
         configs: [
@@ -101,7 +101,8 @@ describe('ConfigListScreen', () => {
         searchQuery: 'alpha',
       }),
     });
-    expect(screen.getByText('Alpha Corp')).toBeInTheDocument();
+    expect(await screen.findByText('Alpha Corp')).toBeInTheDocument();
+    // ensure beta is not present
     expect(screen.queryByText('Beta Inc')).not.toBeInTheDocument();
   });
 });

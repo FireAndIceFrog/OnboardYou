@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/shared/test/testWrapper';
-import { AddStepPanel } from '../AddStepPanel';
-import { ACTION_CATALOG } from '../../../domain/actionCatalog';
+import { AddStepPanel } from './AddStepPanel';
+import { ACTION_CATALOG } from '../../domain/actionCatalog';
 import { vi } from 'vitest';
 
 const LOGIC_COUNT = ACTION_CATALOG.filter((a) => a.category === 'logic').length;

@@ -5,7 +5,7 @@ import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n';
 import { system } from '@/theme';
 import { ReactFlowProvider } from '@xyflow/react';
-import { PipelineNode } from '../PipelineNode';
+import { PipelineNode } from './PipelineNode';
 
 /**
  * PipelineNode is rendered inside React Flow which requires a ReactFlowProvider.

@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/shared/test/testWrapper';
-import { WorkdayResponseGroupPanel } from '../WorkdayResponseGroupPanel';
+import { WorkdayResponseGroupPanel } from './WorkdayResponseGroupPanel';
 
 function renderPanel(config: Record<string, unknown>) {
   const onChange = vi.fn();

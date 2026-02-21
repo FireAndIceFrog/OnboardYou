@@ -3,7 +3,7 @@ import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/shared/test/testWrapper';
 
 // Mock useConnectionForm to avoid needing the full state/service chain
-vi.mock('../../../state/useConnectionForm', () => ({
+vi.mock('../../state/useConnectionForm', () => ({
   useConnectionForm: () => ({
     form: {
       system: '',
@@ -38,7 +38,7 @@ describe('ConnectionDetailsScreen', () => {
   });
 
   it('renders the form with system selector', async () => {
-    const { ConnectionDetailsScreen } = await import('../ConnectionDetailsScreen');
+    const { ConnectionDetailsScreen } = await import('./ConnectionDetailsScreen');
     renderWithProviders(<ConnectionDetailsScreen />);
     // Should show the two HR system options
     expect(screen.getByText('Workday')).toBeInTheDocument();
@@ -46,14 +46,14 @@ describe('ConnectionDetailsScreen', () => {
   });
 
   it('renders back and next buttons', async () => {
-    const { ConnectionDetailsScreen } = await import('../ConnectionDetailsScreen');
+    const { ConnectionDetailsScreen } = await import('./ConnectionDetailsScreen');
     renderWithProviders(<ConnectionDetailsScreen />);
     expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /next/i })).toBeInTheDocument();
   });
 
   it('disables next button when form is invalid', async () => {
-    const { ConnectionDetailsScreen } = await import('../ConnectionDetailsScreen');
+    const { ConnectionDetailsScreen } = await import('./ConnectionDetailsScreen');
     renderWithProviders(<ConnectionDetailsScreen />);
     const nextBtn = screen.getByRole('button', { name: /next/i });
     expect(nextBtn).toBeDisabled();
