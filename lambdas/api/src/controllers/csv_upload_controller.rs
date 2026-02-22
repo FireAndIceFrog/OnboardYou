@@ -6,16 +6,8 @@ use axum::{
     Json,
 };
 
-use crate::engine;
+use crate::{engine, models::{CsvColumnsResponse, CsvFileQuery, PresignedUploadResponse}};
 use crate::models::{ApiError, AppState, Claims};
-use engine::csv_upload_engine::{CsvColumnsResponse, PresignedUploadResponse};
-
-/// Query parameters for CSV upload / column discovery.
-#[derive(Debug, serde::Deserialize, utoipa::IntoParams)]
-pub struct CsvFileQuery {
-    /// The CSV filename (e.g. `"employees.csv"`).
-    pub filename: String,
-}
 
 /// POST /config/{customer_company_id}/csv-upload?filename=employees.csv
 ///

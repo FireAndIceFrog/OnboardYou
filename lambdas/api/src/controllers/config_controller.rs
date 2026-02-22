@@ -7,9 +7,8 @@ use axum::{
     Json,
 };
 
-use crate::engine;
+use crate::{engine, models::ValidationResult};
 use crate::models::{ApiError, AppState, Claims, ConfigRequest, ErrorResponse, PipelineConfig};
-use engine::validation_engine::ValidationResult;
 
 /// GET /config
 ///
