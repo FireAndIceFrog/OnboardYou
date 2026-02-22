@@ -7,11 +7,13 @@
 mod engine;
 mod models;
 mod repositories;
+mod dependancies;
 
-use engine::auth_engine::{self, AuthConfig};
 use lambda_runtime::{service_fn, Error, LambdaEvent};
 use models::{AuthEvent, AuthResponse};
 use tracing_subscriber::{fmt, EnvFilter};
+
+use crate::dependancies::Dependancies;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -20,11 +22,11 @@ async fn main() -> Result<(), Error> {
         .json()
         .init();
 
-    let config = AuthConfig::from_env();
+    let dependancies = Dependancies::new();
 
     lambda_runtime::run(service_fn(|event: LambdaEvent<AuthEvent>| {
-        let config = &config;
-        async move { handler(config, event).await }
+        let dependancies = dependancies.clone();
+        async move { handler(event, dependancies).await }
     }))
     .await
 }
@@ -34,12 +36,12 @@ async fn main() -> Result<(), Error> {
 /// Receives the authorizer event, delegates to the engine, and returns
 /// the IAM policy response.
 async fn handler(
-    config: &AuthConfig,
     event: LambdaEvent<AuthEvent>,
+    dependancies: Dependancies,
 ) -> Result<AuthResponse, Error> {
     let (payload, _ctx) = event.into_parts();
 
-    match auth_engine::authorize(config, &payload).await {
+    match dependancies.auth_engine.authorize(&payload).await {
         Ok(response) => Ok(response),
         Err(e) => {
             tracing::warn!(error = %e, "Authorization denied");
