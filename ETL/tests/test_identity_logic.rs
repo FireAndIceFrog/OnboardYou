@@ -23,7 +23,7 @@ fn test_identity_resolution_basic() {
         action_type: ActionType::IdentityDeduplicator,
         config: ActionConfigPayload::IdentityDeduplicator(serde_json::from_value(serde_json::json!({ "columns": ["email"] })).unwrap()),
     };
-    let action = ActionFactory::create(&config).expect("create deduplicator");
+    let action = ActionFactory::new().create(&config).expect("create deduplicator");
     assert_eq!(action.id(), "identity_deduplicator");
 
     let ctx = RosterContext::new(df.lazy());

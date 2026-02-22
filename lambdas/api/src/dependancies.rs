@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::repositories::cognito_repository::{AuthRepo, CognitoAuthRepo};
 use crate::repositories::config_repository::{ConfigRepo, DynamoConfigRepo};
+use crate::repositories::etl_repository::{EtlRepo, EtlRepository};
 use crate::repositories::s3_repository::{S3Repo, S3Repository};
 use crate::repositories::schedule_repository::{EventBridgeScheduleRepo, ScheduleRepo};
 use crate::repositories::settings_repository::{DynamoSettingsRepo, SettingsRepo};
@@ -17,6 +18,7 @@ pub struct Dependancies {
     pub settings_repo: Arc<dyn SettingsRepo>,
     pub s3_repo: Arc<dyn S3Repo>,
     pub auth_repo: Arc<dyn AuthRepo>,
+    pub etl_repo: Arc<dyn EtlRepo>,
 }
 
 impl Dependancies {
@@ -54,6 +56,7 @@ impl Dependancies {
                 client_id: std::env::var("COGNITO_CLIENT_ID")
                     .expect("COGNITO_CLIENT_ID must be set"),
             }),
+            etl_repo: Arc::new(EtlRepository {}),
         }
     }
 }

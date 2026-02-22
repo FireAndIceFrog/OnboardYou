@@ -89,7 +89,7 @@ pub async fn create_config(
     Path(customer_company_id): Path<String>,
     Json(body): Json<ConfigRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
-    engine::validation_engine::validate_pipeline(&body.pipeline)?;
+    engine::validation_engine::validate_pipeline(&state, &body.pipeline)?;
     let config = body.into_config();
     let saved =
         engine::config_engine::upsert(&state, &claims.organization_id, &customer_company_id, config)
@@ -126,7 +126,7 @@ pub async fn update_config(
     Path(customer_company_id): Path<String>,
     Json(body): Json<ConfigRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
-    engine::validation_engine::validate_pipeline(&body.pipeline)?;
+    engine::validation_engine::validate_pipeline(&state, &body.pipeline)?;
     let config = body.into_config();
     let saved =
         engine::config_engine::upsert(&state, &claims.organization_id, &customer_company_id, config)
@@ -183,11 +183,12 @@ pub async fn delete_config(
     )
 )]
 pub async fn validate_config(
+    State(state): State<Dependancies>,
     claims: Claims,
     Path(_customer_company_id): Path<String>,
     Json(body): Json<ConfigRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
     let _ = &claims; // org scoping available if needed later
-    let result = engine::validation_engine::validate_pipeline(&body.pipeline)?;
+    let result = engine::validation_engine::validate_pipeline(&state, &body.pipeline)?;
     Ok(Json(result))
 }

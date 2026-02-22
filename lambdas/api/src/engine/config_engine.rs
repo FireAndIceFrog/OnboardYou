@@ -100,6 +100,7 @@ mod tests {
     use async_trait::async_trait;
     use crate::repositories::cognito_repository::CognitoAuthRepo;
     use crate::repositories::config_repository::ConfigRepo;
+    use crate::repositories::etl_repository::EtlRepository;
     use crate::repositories::s3_repository::S3Repository;
     use crate::repositories::schedule_repository::ScheduleRepo;
     use crate::repositories::settings_repository::DynamoSettingsRepo;
@@ -187,6 +188,7 @@ mod tests {
                 cognito: aws_sdk_cognitoidentityprovider::Client::new(&aws_cfg),
                 client_id: "test-client-id".into(),
             }),
+            etl_repo: Arc::new(EtlRepository {}),
         }
     }
 

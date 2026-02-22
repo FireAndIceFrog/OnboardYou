@@ -4,15 +4,15 @@
 //! `calculate_columns` through the pipeline without executing any real
 //! transformations or touching external data sources.
 
-use crate::models::{ApiError, StepValidation, ValidationResult};
-use onboard_you::{ActionFactory, Manifest, RosterContext};
+use crate::{dependancies::Dependancies, models::{ApiError, StepValidation, ValidationResult}};
+use onboard_you::{ActionFactoryTrait, Manifest, RosterContext};
 use polars::prelude::*;
 
 
 /// Validate a pipeline manifest by propagating columns through every step.
 ///
 /// Returns the column set at each step, or an `ApiError` on the first failure.
-pub fn validate_pipeline(pipeline_json: &Manifest) -> Result<ValidationResult, ApiError> {
+pub fn validate_pipeline(state: &Dependancies, pipeline_json: &Manifest) -> Result<ValidationResult, ApiError> {
     let manifest: Manifest = pipeline_json.clone();
 
     if manifest.actions.is_empty() {
@@ -21,13 +21,13 @@ pub fn validate_pipeline(pipeline_json: &Manifest) -> Result<ValidationResult, A
             final_columns: vec![],
         });
     }
-
+    let action_factory = state.etl_repo.create_action_factory();
     // Build every action via the factory (validates config too)
     let actions: Vec<_> = manifest
         .actions
         .iter()
         .map(|ac| {
-            ActionFactory::create(ac).map_err(|e| {
+            action_factory.create(ac).map_err(|e| {
                 ApiError::Validation(format!(
                     "Action '{}' (type '{}'): {e}",
                     ac.id, ac.action_type

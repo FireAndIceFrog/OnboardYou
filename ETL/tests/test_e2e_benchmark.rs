@@ -13,7 +13,7 @@
 mod common;
 
 use common::mock_data::{full_pipeline_manifest, generate_hris_csv};
-use onboard_you::{ActionFactory, Manifest, RosterContext};
+use onboard_you::{ActionFactory, ActionFactoryTrait, Manifest, RosterContext};
 use polars::prelude::*;
 use std::time::Instant;
 
@@ -94,7 +94,7 @@ fn run_full_pipeline(n: usize) -> RunMetrics {
         .actions
         .iter()
         .skip(1)
-        .map(|ac| ActionFactory::create(ac).expect(&format!("create action '{}'", ac.action_type)))
+        .map(|ac| ActionFactory::new().create(ac).expect(&format!("create action '{}'", ac.action_type)))
         .collect();
 
     // 5. Run the pipeline, timing each action individually

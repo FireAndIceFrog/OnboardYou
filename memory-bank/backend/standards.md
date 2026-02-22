@@ -459,7 +459,7 @@ cargo test -p api
 
 Integration tests in `ETL/tests/` should:
 1. Use `common/mock_data.rs` helpers to build test data and manifests
-2. Resolve actions through `ActionFactory::create()` — **not** by constructing them directly — to verify factory wiring
+2. Resolve actions through `ActionFactory::new().create()` — **not** by constructing them directly — to verify factory wiring
 3. Run the full pipeline via `PipelineRunner::run()`
 4. Assert on the final `RosterContext`: row counts, column existence, cell values, metadata
 
@@ -469,7 +469,7 @@ fn test_e2e_csv_to_scd() {
     let (temp, path) = create_mock_csv_file();
     let manifest = create_test_manifest(&path);
     let actions = manifest.actions.iter()
-        .map(|a| ActionFactory::create(a).unwrap())
+        .map(|a| ActionFactory::new().create(a).unwrap())
         .collect::<Vec<_>>();
     let ctx = RosterContext::new(LazyFrame::default());
     let result = PipelineRunner::run(&manifest, actions, ctx).unwrap();

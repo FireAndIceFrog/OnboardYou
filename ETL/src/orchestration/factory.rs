@@ -21,11 +21,21 @@ use std::sync::Arc;
 pub struct ActionFactory;
 
 impl ActionFactory {
+    pub fn new() -> Self {
+        ActionFactory {}
+    }
+}
+
+pub trait ActionFactoryTrait {
+    fn create(&self, action_config: &ActionConfig) -> Result<Arc<dyn OnboardingAction>>;
+}
+
+impl ActionFactoryTrait for ActionFactory {
     /// Create an action instance from a full `ActionConfig`.
     ///
     /// The `action_type` enum selects the concrete implementation, while
     /// `config` is forwarded as-is to the implementation's constructor.
-    pub fn create(action_config: &ActionConfig) -> Result<Arc<dyn OnboardingAction>> {
+    fn create(&self, action_config: &ActionConfig) -> Result<Arc<dyn OnboardingAction>> {
         let action_type = action_config.action_type.clone();
         let payload = action_config.config.clone();
 
@@ -106,7 +116,7 @@ mod tests {
             action_type: ActionType::CsvHrisConnector,
             config: ActionConfigPayload::CsvHrisConnector(serde_json::from_value(serde_json::json!({ "filename": "data.csv", "columns": ["a", "b"] })).unwrap()),
         };
-        let action = ActionFactory::create(&config).expect("should create csv connector");
+        let action = ActionFactory::new().create(&config).expect("should create csv connector");
         assert_eq!(action.id(), "csv_hris_connector");
     }
 
@@ -120,7 +130,7 @@ mod tests {
                 "date_column": "start_date"
             })).unwrap()),
         };
-        let action = ActionFactory::create(&config).expect("should create scd_type_2");
+        let action = ActionFactory::new().create(&config).expect("should create scd_type_2");
         assert_eq!(action.id(), "scd_type_2");
     }
 
@@ -131,7 +141,7 @@ mod tests {
             action_type: ActionType::PiiMasking,
             config: ActionConfigPayload::PiiMasking(serde_json::from_value(serde_json::json!({ "mask_ssn": true, "mask_salary": false })).unwrap()),
         };
-        let action = ActionFactory::create(&config).expect("should create pii_masking");
+        let action = ActionFactory::new().create(&config).expect("should create pii_masking");
         assert_eq!(action.id(), "pii_masking");
     }
 
@@ -142,7 +152,7 @@ mod tests {
             action_type: ActionType::IdentityDeduplicator,
             config: ActionConfigPayload::IdentityDeduplicator(serde_json::from_value(serde_json::json!({ "columns": ["email"] })).unwrap()),
         };
-        let action = ActionFactory::create(&config).expect("should create identity_deduplicator");
+        let action = ActionFactory::new().create(&config).expect("should create identity_deduplicator");
         assert_eq!(action.id(), "identity_deduplicator");
     }
 
@@ -157,7 +167,7 @@ mod tests {
                 "replacement": "0"
             })).unwrap()),
         };
-        let action = ActionFactory::create(&config).expect("should create regex_replace");
+        let action = ActionFactory::new().create(&config).expect("should create regex_replace");
         assert_eq!(action.id(), "regex_replace");
     }
 
@@ -172,7 +182,7 @@ mod tests {
                 "output_column": "phone_intl"
             })).unwrap()),
         };
-        let action = ActionFactory::create(&config).expect("should create cellphone_sanitizer");
+        let action = ActionFactory::new().create(&config).expect("should create cellphone_sanitizer");
         assert_eq!(action.id(), "cellphone_sanitizer");
     }
 
@@ -208,7 +218,7 @@ mod tests {
                 "auth_type": "default"
             })).unwrap()),
         };
-        let action = ActionFactory::create(&config).expect("Default should create an unconfigured dispatcher");
+        let action = ActionFactory::new().create(&config).expect("Default should create an unconfigured dispatcher");
         assert_eq!(action.id(), "api_dispatcher");
     }
 }

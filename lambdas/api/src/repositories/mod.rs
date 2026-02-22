@@ -3,3 +3,4 @@ pub mod config_repository;
 pub mod s3_repository;
 pub mod schedule_repository;
 pub mod settings_repository;
+pub mod etl_repository;

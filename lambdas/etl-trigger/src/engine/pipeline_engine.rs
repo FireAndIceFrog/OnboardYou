@@ -38,7 +38,7 @@ pub async fn run(
     let actions: Vec<_> = manifest
         .actions
         .iter()
-        .map(ActionFactory::create)
+        .map(ActionFactory::new().create)
         .collect::<onboard_you::Result<_>>()
         .map_err(|e| Error::from(format!("Failed to build actions: {e}")))?;
 

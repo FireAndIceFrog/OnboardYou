@@ -85,7 +85,7 @@ fn test_factory_creates_workday_connector() {
             "password": "test_password"
         })).unwrap()),
     };
-    let action = ActionFactory::create(&config).expect("factory should create workday connector");
+    let action = ActionFactory::new().create(&config).expect("factory should create workday connector");
     assert_eq!(action.id(), "workday_hris_connector");
 }
 
@@ -109,7 +109,7 @@ fn test_factory_workday_with_full_config() {
             }
         })).unwrap()),
     };
-    let action = ActionFactory::create(&config).expect("factory should create workday connector");
+    let action = ActionFactory::new().create(&config).expect("factory should create workday connector");
     assert_eq!(action.id(), "workday_hris_connector");
 }
 
@@ -212,7 +212,7 @@ fn test_e2e_workday_pipeline_with_scd_type_2() {
             "date_column": "hire_date"
         })).unwrap()),
     };
-    let scd_action = ActionFactory::create(&scd_config).expect("create scd_type_2");
+    let scd_action = ActionFactory::new().create(&scd_config).expect("create scd_type_2");
     let result = scd_action.execute(ctx).expect("scd should execute on Workday data");
     let result_df = result.data.collect().expect("collect");
 
@@ -234,7 +234,7 @@ fn test_e2e_workday_pipeline_with_deduplication() {
         action_type: ActionType::IdentityDeduplicator,
         config: ActionConfigPayload::IdentityDeduplicator(serde_json::from_value(serde_json::json!({ "columns": ["email"] })).unwrap()),
     };
-    let dedup_action = ActionFactory::create(&dedup_config).expect("create dedup");
+    let dedup_action = ActionFactory::new().create(&dedup_config).expect("create dedup");
     let result = dedup_action.execute(ctx).expect("dedup should succeed on Workday data");
     let result_df = result.data.collect().expect("collect");
 
