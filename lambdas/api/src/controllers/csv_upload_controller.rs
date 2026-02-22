@@ -6,8 +6,8 @@ use axum::{
     Json,
 };
 
-use crate::{engine, models::{CsvColumnsResponse, CsvFileQuery, PresignedUploadResponse}};
-use crate::models::{ApiError, AppState, Claims};
+use crate::{dependancies::Dependancies, engine, models::{CsvColumnsResponse, CsvFileQuery, PresignedUploadResponse}};
+use crate::models::{ApiError, Claims};
 
 /// POST /config/{customer_company_id}/csv-upload?filename=employees.csv
 ///
@@ -29,7 +29,7 @@ use crate::models::{ApiError, AppState, Claims};
     )
 )]
 pub async fn csv_presigned_upload(
-    State(state): State<AppState>,
+    State(state): State<Dependancies>,
     claims: Claims,
     Path(customer_company_id): Path<String>,
     Query(query): Query<CsvFileQuery>,
@@ -65,7 +65,7 @@ pub async fn csv_presigned_upload(
     )
 )]
 pub async fn csv_columns(
-    State(state): State<AppState>,
+    State(state): State<Dependancies>,
     claims: Claims,
     Path(customer_company_id): Path<String>,
     Query(query): Query<CsvFileQuery>,

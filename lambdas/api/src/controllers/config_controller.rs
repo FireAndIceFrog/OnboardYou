@@ -7,8 +7,8 @@ use axum::{
     Json,
 };
 
-use crate::{engine, models::ValidationResult};
-use crate::models::{ApiError, AppState, Claims, ConfigRequest, ErrorResponse, PipelineConfig};
+use crate::{dependancies::Dependancies, engine, models::ValidationResult};
+use crate::models::{ApiError, Claims, ConfigRequest, ErrorResponse, PipelineConfig};
 
 /// GET /config
 ///
@@ -25,7 +25,7 @@ use crate::models::{ApiError, AppState, Claims, ConfigRequest, ErrorResponse, Pi
     )
 )]
 pub async fn list_configs(
-    State(state): State<AppState>,
+    State(state): State<Dependancies>,
     claims: Claims,
 ) -> Result<impl IntoResponse, ApiError> {
     let configs = engine::config_engine::list(&state, &claims.organization_id).await?;
@@ -51,7 +51,7 @@ pub async fn list_configs(
     )
 )]
 pub async fn get_config(
-    State(state): State<AppState>,
+    State(state): State<Dependancies>,
     claims: Claims,
     Path(customer_company_id): Path<String>,
 ) -> Result<impl IntoResponse, ApiError> {
@@ -84,7 +84,7 @@ pub async fn get_config(
     )
 )]
 pub async fn create_config(
-    State(state): State<AppState>,
+    State(state): State<Dependancies>,
     claims: Claims,
     Path(customer_company_id): Path<String>,
     Json(body): Json<ConfigRequest>,
@@ -121,7 +121,7 @@ pub async fn create_config(
     )
 )]
 pub async fn update_config(
-    State(state): State<AppState>,
+    State(state): State<Dependancies>,
     claims: Claims,
     Path(customer_company_id): Path<String>,
     Json(body): Json<ConfigRequest>,
@@ -152,7 +152,7 @@ pub async fn update_config(
     )
 )]
 pub async fn delete_config(
-    State(state): State<AppState>,
+    State(state): State<Dependancies>,
     claims: Claims,
     Path(customer_company_id): Path<String>,
 ) -> Result<impl IntoResponse, ApiError> {

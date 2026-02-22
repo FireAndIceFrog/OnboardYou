@@ -7,8 +7,9 @@ use axum::{
     Json,
 };
 
+use crate::dependancies::Dependancies;
 use crate::engine;
-use crate::models::{ApiError, AppState, Claims, ErrorResponse, OrgSettings, SettingsRequest};
+use crate::models::{ApiError, Claims, ErrorResponse, OrgSettings, SettingsRequest};
 
 /// GET /settings
 ///
@@ -26,7 +27,7 @@ use crate::models::{ApiError, AppState, Claims, ErrorResponse, OrgSettings, Sett
     )
 )]
 pub async fn get_settings(
-    State(state): State<AppState>,
+    State(state): State<Dependancies>,
     claims: Claims,
 ) -> Result<impl IntoResponse, ApiError> {
     let settings = engine::settings_engine::get(&state, &claims.organization_id).await?;
@@ -53,7 +54,7 @@ pub async fn get_settings(
     )
 )]
 pub async fn upsert_settings(
-    State(state): State<AppState>,
+    State(state): State<Dependancies>,
     claims: Claims,
     Json(body): Json<SettingsRequest>,
 ) -> Result<impl IntoResponse, ApiError> {

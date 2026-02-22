@@ -3,11 +3,11 @@
 //! Validates inputs, stamps server-controlled fields,
 //! then delegates to repository trait objects for persistence and scheduling.
 
-use crate::models::{ApiError, AppState, PipelineConfig};
+use crate::{dependancies::Dependancies, models::{ApiError, PipelineConfig}};
 
 /// Fetch a pipeline config by organization ID and customer company ID.
 pub async fn get(
-    state: &AppState,
+    state: &Dependancies,
     organization_id: &str,
     customer_company_id: &str,
 ) -> Result<PipelineConfig, ApiError> {
@@ -20,7 +20,7 @@ pub async fn get(
 
 /// List all pipeline configs owned by an organization.
 pub async fn list(
-    state: &AppState,
+    state: &Dependancies,
     organization_id: &str,
 ) -> Result<Vec<PipelineConfig>, ApiError> {
     state.config_repo.list(organization_id).await
@@ -28,7 +28,7 @@ pub async fn list(
 
 /// Validate, persist, and schedule a pipeline config.
 pub async fn upsert(
-    state: &AppState,
+    state: &Dependancies,
     organization_id: &str,
     customer_company_id: &str,
     mut config: PipelineConfig,
@@ -54,7 +54,7 @@ pub async fn upsert(
 
 /// Delete a pipeline config and its associated schedule.
 pub async fn delete(
-    state: &AppState,
+    state: &Dependancies,
     organization_id: &str,
     customer_company_id: &str,
 ) -> Result<(), ApiError> {
@@ -99,7 +99,9 @@ mod tests {
     use super::*;
     use async_trait::async_trait;
     use crate::repositories::config_repository::ConfigRepo;
+    use crate::repositories::s3_repository::S3Repository;
     use crate::repositories::schedule_repository::ScheduleRepo;
+    use crate::repositories::settings_repository::DynamoSettingsRepo;
     use onboard_you::Manifest;
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -166,16 +168,22 @@ mod tests {
 
     // ---- Helpers ----
 
-    async fn test_state() -> AppState {
+    async fn test_state() -> Dependancies {
         let aws_cfg = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
 
-        AppState {
+        Dependancies {
             config_repo: Arc::new(InMemoryConfigRepo::default()),
             schedule_repo: Arc::new(NoOpScheduleRepo),
+            settings_repo: Arc::new(DynamoSettingsRepo {
+                dynamo: aws_sdk_dynamodb::Client::new(&aws_cfg),
+                table_name: "test-settings".into(),
+            }),
+            s3_repo: Arc::new(S3Repository {
+                s3: aws_sdk_s3::Client::new(&aws_cfg),
+                bucket: "test-bucket".into(),
+            }),
             dynamo: aws_sdk_dynamodb::Client::new(&aws_cfg),
             cognito: aws_sdk_cognitoidentityprovider::Client::new(&aws_cfg),
-            s3: aws_sdk_s3::Client::new(&aws_cfg),
-            settings_table_name: "test-settings".into(),
             cognito_client_id: "test-client-id".into(),
             csv_upload_bucket: "test-bucket".into(),
         }

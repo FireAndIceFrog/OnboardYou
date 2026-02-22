@@ -1,7 +1,7 @@
 //! CSV upload engine — coordinates presigned URL generation and column discovery.
 
-use crate::models::{ApiError, AppState, CsvColumnsResponse, PresignedUploadResponse};
-use crate::repositories::s3_repository;
+use crate::dependancies::Dependancies;
+use crate::models::{ApiError, CsvColumnsResponse, PresignedUploadResponse};
 
 /// Build the S3 object key from runtime context.
 fn s3_key(organization_id: &str, customer_company_id: &str, filename: &str) -> String {
@@ -10,7 +10,7 @@ fn s3_key(organization_id: &str, customer_company_id: &str, filename: &str) -> S
 
 /// Generate a presigned PUT URL for a CSV upload.
 pub async fn presigned_upload(
-    state: &AppState,
+    state: &Dependancies,
     organization_id: &str,
     customer_company_id: &str,
     filename: &str,
@@ -29,7 +29,7 @@ pub async fn presigned_upload(
     let key = s3_key(organization_id, customer_company_id, filename);
 
     let upload_url =
-        s3_repository::presigned_put_url(&state.s3, &state.csv_upload_bucket, &key).await?;
+        state.s3_repo.presigned_put_url(&key).await?;
 
     Ok(PresignedUploadResponse {
         upload_url,
@@ -40,7 +40,7 @@ pub async fn presigned_upload(
 
 /// Read the columns from an already-uploaded CSV in S3.
 pub async fn read_columns(
-    state: &AppState,
+    state: &Dependancies,
     organization_id: &str,
     customer_company_id: &str,
     filename: &str,
@@ -48,7 +48,7 @@ pub async fn read_columns(
     let key = s3_key(organization_id, customer_company_id, filename);
 
     let columns =
-        s3_repository::read_csv_headers(&state.s3, &state.csv_upload_bucket, &key).await?;
+        state.s3_repo.read_csv_headers(&key).await?;
 
     Ok(CsvColumnsResponse {
         filename: filename.to_string(),

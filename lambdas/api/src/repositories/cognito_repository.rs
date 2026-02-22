@@ -3,7 +3,7 @@
 
 use aws_sdk_cognitoidentityprovider::types::AuthFlowType;
 
-use crate::models::{ApiError, AppState, LoginResponse};
+use crate::{dependancies::Dependancies, models::{ApiError, LoginResponse}};
 
 /// Authenticate a user with email + password against Cognito.
 ///
@@ -11,7 +11,7 @@ use crate::models::{ApiError, AppState, LoginResponse};
 /// which is enabled on the Cognito app client via
 /// `ALLOW_USER_PASSWORD_AUTH`.
 pub async fn authenticate(
-    state: &AppState,
+    state: &Dependancies,
     email: &str,
     password: &str,
 ) -> Result<LoginResponse, ApiError> {

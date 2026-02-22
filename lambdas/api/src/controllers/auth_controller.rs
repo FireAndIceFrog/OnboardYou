@@ -8,7 +8,8 @@ use axum::{
 };
 
 use crate::engine;
-use crate::models::{AppState, ErrorResponse, LoginRequest, LoginResponse};
+use crate::models::{ErrorResponse, LoginRequest, LoginResponse};
+use crate::dependancies::Dependancies;
 
 /// POST /auth/login
 ///
@@ -31,7 +32,7 @@ use crate::models::{AppState, ErrorResponse, LoginRequest, LoginResponse};
     )
 )]
 pub async fn login(
-    State(state): State<AppState>,
+    State(state): State<Dependancies>,
     Json(body): Json<LoginRequest>,
 ) -> Result<impl IntoResponse, crate::models::ApiError> {
     let tokens = engine::auth_engine::login(&state, &body).await?;

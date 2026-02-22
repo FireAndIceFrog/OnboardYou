@@ -7,7 +7,9 @@ mod controllers;
 mod engine;
 mod models;
 mod repositories;
+mod dependancies;
 
+use dependancies::Dependancies;
 use axum::{
     routing::{get, post},
     Router,
@@ -17,7 +19,7 @@ use controllers::{create_config, delete_config, get_config, list_configs, update
 use controllers::{csv_columns, csv_presigned_upload};
 use controllers::{get_settings, upsert_settings};
 use controllers::login;
-use models::{CsvColumnsResponse, PresignedUploadResponse, StepValidation, ValidationResult, AppState, ConfigRequest, ErrorResponse, LoginRequest, LoginResponse, OrgSettings, PipelineConfig, SettingsRequest};
+use models::{CsvColumnsResponse, PresignedUploadResponse, StepValidation, ValidationResult, ConfigRequest, ErrorResponse, LoginRequest, LoginResponse, OrgSettings, PipelineConfig, SettingsRequest};
 use tracing_subscriber::{fmt, EnvFilter};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -121,7 +123,7 @@ async fn main() -> Result<(), lambda_http::Error> {
         .json()
         .init();
 
-    let state = AppState::from_env().await;
+    let state = Dependancies::new().await;
     let app = router(state);
 
     lambda_http::run(app).await
@@ -129,7 +131,7 @@ async fn main() -> Result<(), lambda_http::Error> {
 
 // ── Routes ──────────────────────────────────────────────────
 
-fn router(state: AppState) -> Router {
+fn router(state: Dependancies) -> Router {
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)

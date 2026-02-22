@@ -7,13 +7,13 @@
 //! an `ApiEngine` from it — the same code path used at pipeline
 //! execution time. If the config is invalid, the save is rejected.
 
-use crate::models::{ApiError, AppState, OrgSettings};
-use crate::repositories::settings_repository;
+use crate::dependancies::Dependancies;
+use crate::models::{ApiError, OrgSettings};
 use onboard_you::capabilities::egress::engine::api_engine::ApiEngine;
 
 /// Fetch settings for an organization. Returns `NotFound` if no settings exist.
-pub async fn get(state: &AppState, organization_id: &str) -> Result<OrgSettings, ApiError> {
-    settings_repository::get(state, organization_id)
+pub async fn get(state: &Dependancies, organization_id: &str) -> Result<OrgSettings, ApiError> {
+    state.settings_repo.get(organization_id)
         .await?
         .ok_or_else(|| ApiError::NotFound(format!("{organization_id}")))
 }
@@ -23,7 +23,7 @@ pub async fn get(state: &AppState, organization_id: &str) -> Result<OrgSettings,
 /// Validates that `default_auth` can be parsed by `ApiEngine::from_action_config`
 /// before persisting — prevents storing broken configs.
 pub async fn upsert(
-    state: &AppState,
+    state: &Dependancies,
     organization_id: &str,
     mut settings: OrgSettings,
 ) -> Result<OrgSettings, ApiError> {
@@ -32,7 +32,7 @@ pub async fn upsert(
 
     validate(&settings)?;
 
-    settings_repository::put(state, &settings).await?;
+    state.settings_repo.put(&settings).await?;
 
     tracing::info!(
         organization_id = %settings.organization_id,
