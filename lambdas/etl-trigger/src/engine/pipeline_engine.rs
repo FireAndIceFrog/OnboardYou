@@ -5,7 +5,7 @@
 //! and injects them into the action config before factory construction.
 
 use lambda_runtime::Error;
-use onboard_you::{ActionFactory, ActionConfigPayload, Manifest, PipelineRunner, RosterContext};
+use onboard_you::{ActionFactory, ActionFactoryTrait, ActionConfigPayload, Manifest, PipelineRunner, RosterContext};
 use polars::prelude::LazyFrame;
 
 use crate::models::PipelineResult;
@@ -33,12 +33,12 @@ pub async fn run(
 
     // 3b. Resolve CSV S3 keys from org_id / company_id / filename
     resolve_csv_s3_keys(organization_id, customer_company_id, &mut manifest);
-
+    let action_factory = ActionFactory::new();
     // 4. Build actions from manifest via Factory
     let actions: Vec<_> = manifest
         .actions
         .iter()
-        .map(ActionFactory::new().create)
+        .map(|ac| action_factory.create(ac))
         .collect::<onboard_you::Result<_>>()
         .map_err(|e| Error::from(format!("Failed to build actions: {e}")))?;
 
