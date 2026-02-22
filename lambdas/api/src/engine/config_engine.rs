@@ -98,7 +98,7 @@ fn validate(config: &PipelineConfig) -> Result<(), ApiError> {
 mod tests {
     use super::*;
     use async_trait::async_trait;
-    use crate::dependancies::{Env, FakeItem};
+    use crate::dependancies::{Env};
     use crate::repositories::config_repository::ConfigRepo;
     use crate::repositories::schedule_repository::ScheduleRepo;
     use onboard_you::Manifest;
@@ -169,9 +169,8 @@ mod tests {
 
     async fn test_state() -> Dependancies {
         let mut deps = Dependancies::new(Env::default()).await;
-
-        deps.override_with_fakes(FakeItem::ConfigRepo(Arc::new(InMemoryConfigRepo::default())));
-        deps.override_with_fakes(FakeItem::ScheduleRepo(Arc::new(NoOpScheduleRepo)));
+        deps.config_repo = Arc::new(InMemoryConfigRepo::default());
+        deps.schedule_repo = Arc::new(NoOpScheduleRepo);
 
         deps
     }

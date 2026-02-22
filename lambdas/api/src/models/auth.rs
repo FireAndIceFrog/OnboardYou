@@ -13,7 +13,7 @@ pub struct LoginRequest {
 }
 
 /// Successful login response — Cognito token set.
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, ToSchema, Clone)]
 pub struct LoginResponse {
     /// JWT ID token (contains custom claims such as `organizationId`).
     pub id_token: String,

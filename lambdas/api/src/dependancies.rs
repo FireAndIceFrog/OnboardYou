@@ -74,19 +74,4 @@ impl Dependancies {
             etl_repo: Arc::new(EtlRepository {}),
         }
     }
-
-    pub fn override_with_fakes(
-        &mut self, 
-        item: FakeItem
-    ) {
-        match item {
-            FakeItem::ConfigRepo(repo) => self.config_repo = repo,
-            FakeItem::ScheduleRepo(repo) => self.schedule_repo = repo,
-        }
-    }
-}
-
-pub enum FakeItem {
-    ConfigRepo(Arc<dyn ConfigRepo>),
-    ScheduleRepo(Arc<dyn ScheduleRepo>),
 }

@@ -75,3 +75,60 @@ pub fn validate_pipeline(state: &Dependancies, pipeline_json: &Manifest) -> Resu
         final_columns,
     })
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dependancies::{Dependancies, Env};
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn validate_empty_manifest_returns_empty() {
+        let state = Dependancies::new(Env::default()).await;
+        let manifest = Manifest { version: "1.0".into(), actions: vec![] };
+
+        let res = validate_pipeline(&state, &manifest).expect("should succeed");
+        assert!(res.steps.is_empty());
+        assert!(res.final_columns.is_empty());
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn validate_propagates_csv_columns() {
+        let state = Dependancies::new(Env::default()).await;
+
+        let json = r#"{
+            "version": "1.0",
+            "actions": [
+                { "id": "ingest", "action_type": "csv_hris_connector", "config": { "filename": "data.csv", "columns": ["a","b"] } }
+            ]
+        }"#;
+
+        let manifest = Manifest::from_json(json).expect("parse manifest");
+
+        let res = validate_pipeline(&state, &manifest).expect("validation should succeed");
+        assert_eq!(res.steps.len(), 1);
+        let step = &res.steps[0];
+        assert_eq!(step.action_id, "ingest");
+        assert_eq!(step.action_type, "csv_hris_connector");
+        assert_eq!(step.columns_after, vec!["a".to_string(), "b".to_string()]);
+        assert_eq!(res.final_columns, vec!["a".to_string(), "b".to_string()]);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn validate_rejects_bad_action_config() {
+        let state = Dependancies::new(Env::default()).await;
+
+        // Csv connector with empty columns -> factory.create should fail
+        let json = r#"{
+            "version": "1.0",
+            "actions": [
+                { "id": "ingest", "action_type": "csv_hris_connector", "config": { "filename": "data.csv", "columns": [] } }
+            ]
+        }"#;
+
+        let manifest = Manifest::from_json(json).expect("parse manifest");
+
+        let err = validate_pipeline(&state, &manifest).expect_err("should error");
+        assert!(matches!(err, ApiError::Validation(_)));
+    }
+}

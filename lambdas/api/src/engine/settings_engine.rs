@@ -62,3 +62,85 @@ fn validate(settings: &OrgSettings) -> Result<(), ApiError> {
     })?;
     Ok(())
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dependancies::{Dependancies, Env};
+    use crate::repositories::settings_repository::SettingsRepo;
+    use async_trait::async_trait;
+    use onboard_you::ApiDispatcherConfig;
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
+
+    #[derive(Default)]
+    struct InMemorySettingsRepo {
+        store: RwLock<Option<OrgSettings>>,
+    }
+
+    #[async_trait]
+    impl SettingsRepo for InMemorySettingsRepo {
+        async fn put(&self, settings: &OrgSettings) -> Result<(), ApiError> {
+            self.store.write().await.replace(settings.clone());
+            Ok(())
+        }
+
+        async fn get(&self, _organization_id: &str) -> Result<Option<OrgSettings>, ApiError> {
+            let guard = self.store.read().await;
+            Ok(guard.clone())
+        }
+    }
+
+    async fn test_state() -> Dependancies {
+        let mut deps = Dependancies::new(Env::default()).await;
+        deps.settings_repo = Arc::new(InMemorySettingsRepo::default());
+        deps
+    }
+
+    fn bearer_config() -> ApiDispatcherConfig {
+        let json = serde_json::json!({
+            "auth_type": "bearer",
+            "destination_url": "https://api.example.com/employees",
+            "token": "sk-live-abc123"
+        });
+        serde_json::from_value(json).unwrap()
+    }
+
+    #[tokio::test]
+    async fn upsert_persists_and_stamps_org_id() {
+        let state = test_state().await;
+
+        let settings = OrgSettings {
+            organization_id: String::new(),
+            default_auth: bearer_config(),
+        };
+
+        let out = super::upsert(&state, "org-1", settings).await.unwrap();
+        assert_eq!(out.organization_id, "org-1");
+
+        let fetched = super::get(&state, "org-1").await.unwrap();
+        assert_eq!(fetched.organization_id, "org-1");
+    }
+
+    #[tokio::test]
+    async fn upsert_rejects_default_variant() {
+        let state = test_state().await;
+
+        let cfg = serde_json::json!({ "auth_type": "default" });
+        let settings = OrgSettings {
+            organization_id: String::new(),
+            default_auth: serde_json::from_value(cfg).unwrap(),
+        };
+
+        let err = super::upsert(&state, "org-1", settings).await.unwrap_err();
+        assert!(matches!(err, ApiError::Validation(_)));
+    }
+
+    #[tokio::test]
+    async fn get_not_found_returns_notfound() {
+        let state = test_state().await;
+        let err = super::get(&state, "missing").await.unwrap_err();
+        assert!(matches!(err, ApiError::NotFound(_)));
+    }
+}
