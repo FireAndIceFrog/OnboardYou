@@ -123,7 +123,7 @@ async fn main() -> Result<(), lambda_http::Error> {
         .json()
         .init();
 
-    let state = Dependancies::new().await;
+    let state = Dependancies::new(Dependancies::create_env()).await;
     let app = router(state);
 
     lambda_http::run(app).await

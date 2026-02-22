@@ -11,7 +11,7 @@ use crate::models::{ApiError, PipelineConfig};
 
 /// Abstract persistence for pipeline configurations.
 #[async_trait]
-pub trait ConfigRepo: Send + Sync {
+pub trait ConfigRepo: Send + Sync + 'static {
     async fn put(&self, config: &PipelineConfig) -> Result<(), ApiError>;
     async fn get(
         &self,

@@ -98,12 +98,9 @@ fn validate(config: &PipelineConfig) -> Result<(), ApiError> {
 mod tests {
     use super::*;
     use async_trait::async_trait;
-    use crate::repositories::cognito_repository::CognitoAuthRepo;
+    use crate::dependancies::{Env, FakeItem};
     use crate::repositories::config_repository::ConfigRepo;
-    use crate::repositories::etl_repository::EtlRepository;
-    use crate::repositories::s3_repository::S3Repository;
     use crate::repositories::schedule_repository::ScheduleRepo;
-    use crate::repositories::settings_repository::DynamoSettingsRepo;
     use onboard_you::Manifest;
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -171,25 +168,12 @@ mod tests {
     // ---- Helpers ----
 
     async fn test_state() -> Dependancies {
-        let aws_cfg = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
+        let mut deps = Dependancies::new(Env::default()).await;
 
-        Dependancies {
-            config_repo: Arc::new(InMemoryConfigRepo::default()),
-            schedule_repo: Arc::new(NoOpScheduleRepo),
-            settings_repo: Arc::new(DynamoSettingsRepo {
-                dynamo: aws_sdk_dynamodb::Client::new(&aws_cfg),
-                table_name: "test-settings".into(),
-            }),
-            s3_repo: Arc::new(S3Repository {
-                s3: aws_sdk_s3::Client::new(&aws_cfg),
-                bucket: "test-bucket".into(),
-            }),
-            auth_repo: Arc::new(CognitoAuthRepo {
-                cognito: aws_sdk_cognitoidentityprovider::Client::new(&aws_cfg),
-                client_id: "test-client-id".into(),
-            }),
-            etl_repo: Arc::new(EtlRepository {}),
-        }
+        deps.override_with_fakes(FakeItem::ConfigRepo(Arc::new(InMemoryConfigRepo::default())));
+        deps.override_with_fakes(FakeItem::ScheduleRepo(Arc::new(NoOpScheduleRepo)));
+
+        deps
     }
 
     fn sample_config() -> PipelineConfig {

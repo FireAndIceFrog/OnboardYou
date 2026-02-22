@@ -12,6 +12,7 @@ use onboard_you::capabilities::ingestion::engine::{
     parse_response_results, workers_to_dataframe,
 };
 use polars::prelude::*;
+use onboard_you::*;
 
 // ── Sample Workday XML for integration tests ─────────────────────────────
 

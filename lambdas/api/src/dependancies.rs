@@ -7,6 +7,16 @@ use crate::repositories::s3_repository::{S3Repo, S3Repository};
 use crate::repositories::schedule_repository::{EventBridgeScheduleRepo, ScheduleRepo};
 use crate::repositories::settings_repository::{DynamoSettingsRepo, SettingsRepo};
 
+#[derive(Debug, Clone, Default)]
+pub struct Env {
+    pub config_table_name: String,
+    pub settings_table_name: String,
+    pub etl_lambda_arn: String,
+    pub scheduler_role_arn: String,
+    pub csv_upload_bucket: String,
+    pub cognito_client_id: String,
+}
+
 /// Shared application state, injected via axum's State extractor.
 ///
 /// Repository traits are behind `Arc<dyn Trait>` so the engine layer
@@ -21,42 +31,62 @@ pub struct Dependancies {
     pub etl_repo: Arc<dyn EtlRepo>,
 }
 
+
 impl Dependancies {
-    pub async fn new() -> Self {
+    pub fn create_env() -> Env {
+        Env {
+            config_table_name: std::env::var("CONFIG_TABLE_NAME").unwrap_or_else(|_| "PipelineConfigs".into()),
+            settings_table_name: std::env::var("SETTINGS_TABLE_NAME").unwrap_or_else(|_| "OrgSettings".into()),
+            etl_lambda_arn: std::env::var("ETL_LAMBDA_ARN").expect("ETL_LAMBDA_ARN must be set"),
+            scheduler_role_arn: std::env::var("SCHEDULER_ROLE_ARN").expect("SCHEDULER_ROLE_ARN must be set"),
+            csv_upload_bucket: std::env::var("CSV_UPLOAD_BUCKET").expect("CSV_UPLOAD_BUCKET must be set"),
+            cognito_client_id: std::env::var("COGNITO_CLIENT_ID").expect("COGNITO_CLIENT_ID must be set"),
+        }
+    }
+
+    pub async fn new(env: Env) -> Self {
         let aws_config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
 
         let dynamo = aws_sdk_dynamodb::Client::new(&aws_config);
-        let table_name =
-            std::env::var("CONFIG_TABLE_NAME").unwrap_or_else(|_| "PipelineConfigs".into());
-
+ 
         Self {
             config_repo: Arc::new(DynamoConfigRepo {
                 dynamo: dynamo.clone(),
-                table_name,
+                table_name: env.config_table_name.clone(),
             }),
             settings_repo: Arc::new(DynamoSettingsRepo {
                 dynamo: dynamo.clone(),
-                table_name: std::env::var("SETTINGS_TABLE_NAME")
-                    .unwrap_or_else(|_| "OrgSettings".into()),
+                table_name: env.settings_table_name.clone(),
             }),
             schedule_repo: Arc::new(EventBridgeScheduleRepo {
                 scheduler: aws_sdk_scheduler::Client::new(&aws_config),
-                etl_lambda_arn: std::env::var("ETL_LAMBDA_ARN")
-                    .expect("ETL_LAMBDA_ARN must be set"),
-                scheduler_role_arn: std::env::var("SCHEDULER_ROLE_ARN")
-                    .expect("SCHEDULER_ROLE_ARN must be set"),
+                etl_lambda_arn: env.etl_lambda_arn.clone(),
+                scheduler_role_arn: env.scheduler_role_arn.clone(),
             }),
             s3_repo: Arc::new(S3Repository {
                 s3: aws_sdk_s3::Client::new(&aws_config),
-                bucket: std::env::var("CSV_UPLOAD_BUCKET")
-                    .expect("CSV_UPLOAD_BUCKET must be set"),
+                bucket: env.csv_upload_bucket.clone(),
             }),
             auth_repo: Arc::new(CognitoAuthRepo {
                 cognito: aws_sdk_cognitoidentityprovider::Client::new(&aws_config),
-                client_id: std::env::var("COGNITO_CLIENT_ID")
-                    .expect("COGNITO_CLIENT_ID must be set"),
+                client_id: env.cognito_client_id.clone(),
             }),
             etl_repo: Arc::new(EtlRepository {}),
         }
     }
+
+    pub fn override_with_fakes(
+        &mut self, 
+        item: FakeItem
+    ) {
+        match item {
+            FakeItem::ConfigRepo(repo) => self.config_repo = repo,
+            FakeItem::ScheduleRepo(repo) => self.schedule_repo = repo,
+        }
+    }
+}
+
+pub enum FakeItem {
+    ConfigRepo(Arc<dyn ConfigRepo>),
+    ScheduleRepo(Arc<dyn ScheduleRepo>),
 }
