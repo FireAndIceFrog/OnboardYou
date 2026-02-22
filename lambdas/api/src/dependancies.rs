@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::repositories::cognito_repository::{AuthRepo, CognitoAuthRepo};
 use crate::repositories::config_repository::{ConfigRepo, DynamoConfigRepo};
 use crate::repositories::s3_repository::{S3Repo, S3Repository};
 use crate::repositories::schedule_repository::{EventBridgeScheduleRepo, ScheduleRepo};
@@ -15,10 +16,7 @@ pub struct Dependancies {
     pub schedule_repo: Arc<dyn ScheduleRepo>,
     pub settings_repo: Arc<dyn SettingsRepo>,
     pub s3_repo: Arc<dyn S3Repo>,
-    pub dynamo: aws_sdk_dynamodb::Client,
-    pub cognito: aws_sdk_cognitoidentityprovider::Client,
-    pub cognito_client_id: String,
-    pub csv_upload_bucket: String,
+    pub auth_repo: Arc<dyn AuthRepo>,
 }
 
 impl Dependancies {
@@ -51,12 +49,11 @@ impl Dependancies {
                 bucket: std::env::var("CSV_UPLOAD_BUCKET")
                     .expect("CSV_UPLOAD_BUCKET must be set"),
             }),
-            dynamo,
-            cognito: aws_sdk_cognitoidentityprovider::Client::new(&aws_config),
-            cognito_client_id: std::env::var("COGNITO_CLIENT_ID")
-                .expect("COGNITO_CLIENT_ID must be set"),
-            csv_upload_bucket: std::env::var("CSV_UPLOAD_BUCKET")
-                .expect("CSV_UPLOAD_BUCKET must be set"),
+            auth_repo: Arc::new(CognitoAuthRepo {
+                cognito: aws_sdk_cognitoidentityprovider::Client::new(&aws_config),
+                client_id: std::env::var("COGNITO_CLIENT_ID")
+                    .expect("COGNITO_CLIENT_ID must be set"),
+            }),
         }
     }
 }

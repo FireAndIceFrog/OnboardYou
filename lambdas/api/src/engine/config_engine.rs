@@ -98,6 +98,7 @@ fn validate(config: &PipelineConfig) -> Result<(), ApiError> {
 mod tests {
     use super::*;
     use async_trait::async_trait;
+    use crate::repositories::cognito_repository::CognitoAuthRepo;
     use crate::repositories::config_repository::ConfigRepo;
     use crate::repositories::s3_repository::S3Repository;
     use crate::repositories::schedule_repository::ScheduleRepo;
@@ -182,10 +183,10 @@ mod tests {
                 s3: aws_sdk_s3::Client::new(&aws_cfg),
                 bucket: "test-bucket".into(),
             }),
-            dynamo: aws_sdk_dynamodb::Client::new(&aws_cfg),
-            cognito: aws_sdk_cognitoidentityprovider::Client::new(&aws_cfg),
-            cognito_client_id: "test-client-id".into(),
-            csv_upload_bucket: "test-bucket".into(),
+            auth_repo: Arc::new(CognitoAuthRepo {
+                cognito: aws_sdk_cognitoidentityprovider::Client::new(&aws_cfg),
+                client_id: "test-client-id".into(),
+            }),
         }
     }
 

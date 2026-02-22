@@ -5,7 +5,6 @@
 
 use crate::dependancies::Dependancies;
 use crate::models::{ApiError, LoginRequest, LoginResponse};
-use crate::repositories::cognito_repository;
 
 /// Authenticate a user with email + password.
 ///
@@ -19,7 +18,7 @@ pub async fn login(state: &Dependancies, req: &LoginRequest) -> Result<LoginResp
         return Err(ApiError::Validation("password is required".into()));
     }
 
-    let response = cognito_repository::authenticate(state, &req.email, &req.password).await?;
+    let response = state.auth_repo.authenticate(&req.email, &req.password).await?;
 
     tracing::info!(email = %req.email, "User authenticated successfully");
 
