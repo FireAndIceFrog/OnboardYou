@@ -6,17 +6,20 @@
 
 use std::sync::Arc;
 
-use crate::models::{AuthError, AuthEvent, AuthResponse, AuthConfig, Claims};
-use crate::repositories::jwks_repository::IJwksRepository;
+use crate::dependancies::Dependancies;
+use crate::models::{AuthConfig, AuthError, AuthEvent, AuthResponse, Claims};
 use async_trait::async_trait;
 
 #[async_trait]
 pub trait IAuthEngine: Send + Sync {
-    async fn authorize(&self, event: &AuthEvent) -> Result<AuthResponse, AuthError>;
+    async fn authorize(
+        &self,
+        state: &Dependancies,
+        event: &AuthEvent,
+    ) -> Result<AuthResponse, AuthError>;
 }
 
 pub struct AuthEngine {
-    jwks_repository: Arc<dyn IJwksRepository>,
     cfg: Arc<AuthConfig>,
 }
 
@@ -27,7 +30,11 @@ impl IAuthEngine for AuthEngine {
     ///
     /// Returns an `AuthResponse` (Allow or Deny) that API Gateway turns into
     /// an IAM policy.
-    async fn authorize(&self, event: &AuthEvent) -> Result<AuthResponse, AuthError> {
+    async fn authorize(
+        &self,
+        state: &Dependancies,
+        event: &AuthEvent,
+    ) -> Result<AuthResponse, AuthError> {
         let method_arn = event.method_arn.as_deref().unwrap_or("*");
 
         // ── Dev mode — allow everything ─────────────────────────
@@ -43,50 +50,45 @@ impl IAuthEngine for AuthEngine {
             .and_then(|t| t.strip_prefix("Bearer "))
             .ok_or(AuthError::MissingToken)?;
 
-        let claims = self.get_claims(&self.cfg, token).await?;
+        let claims = self.get_claims(state, token).await?;
 
         let sub = claims.sub.unwrap_or_else(|| "unknown".to_string());
-        let organization_id = claims
-            .organization_id
-            .ok_or_else(|| AuthError::InvalidToken("Token missing custom:organizationId claim".into()))?;
+        let organization_id = claims.organization_id.ok_or_else(|| {
+            AuthError::InvalidToken("Token missing custom:organizationId claim".into())
+        })?;
 
         tracing::info!(sub = %sub, organization_id = %organization_id, "Token validated");
 
         Ok(AuthResponse::allow(&sub, &organization_id, method_arn))
     }
-
-
 }
 
 //------------------------------------ Private methods ------------------------------------------------
 impl AuthEngine {
     /// Constructor for the auth engine, taking dependancies as input.
-    pub fn new(jwks_repository: Arc<dyn IJwksRepository>, cfg: Arc<AuthConfig>) -> Arc<Self> {
-        Arc::new(Self {
-            jwks_repository: jwks_repository.clone(),
-            cfg,
-        })
+    pub fn new(cfg: Arc<AuthConfig>) -> Arc<Self> {
+        Arc::new(Self { cfg })
     }
 
-    async fn get_claims(&self, cfg: &AuthConfig, token: &str) -> Result<Claims, AuthError> {
+    async fn get_claims(&self, state: &Dependancies, token: &str) -> Result<Claims, AuthError> {
         // ── Production — validate Cognito JWT ───────────────────
-        let user_pool_id = cfg
-            .user_pool_id
-            .as_deref()
-            .ok_or_else(|| AuthError::InvalidToken("COGNITO_USER_POOL_ID not configured".into()))?;
+        let user_pool_id =
+            self.cfg.user_pool_id.as_deref().ok_or_else(|| {
+                AuthError::InvalidToken("COGNITO_USER_POOL_ID not configured".into())
+            })?;
 
-        let client_id = cfg
-            .client_id
-            .as_deref()
-            .ok_or_else(|| AuthError::InvalidToken("COGNITO_CLIENT_ID not configured".into()))?;
+        let client_id =
+            self.cfg.client_id.as_deref().ok_or_else(|| {
+                AuthError::InvalidToken("COGNITO_CLIENT_ID not configured".into())
+            })?;
 
         let issuer = format!(
             "https://cognito-idp.{}.amazonaws.com/{}",
-            cfg.aws_region, user_pool_id
+            self.cfg.aws_region, user_pool_id
         );
 
         // Fetch the JWKS (cached at the HTTP layer across warm invocations)
-        let jwks = self.jwks_repository.fetch_jwks(&issuer).await?;
+        let jwks = state.jwks_repository.fetch_jwks(&issuer).await?;
 
         // Decode the JWT header to find the key id
         let header = jsonwebtoken::decode_header(token)
@@ -116,22 +118,20 @@ impl AuthEngine {
         validation.set_issuer(&[&issuer]);
         validation.set_audience(&[client_id]);
 
-        let token_data = jsonwebtoken::decode::<Claims>(
-            token,
-            &decoding_key,
-            &validation,
-        )
-        .map_err(|e| AuthError::InvalidToken(format!("JWT verification failed: {e}")))?;
+        let token_data = jsonwebtoken::decode::<Claims>(token, &decoding_key, &validation)
+            .map_err(|e| AuthError::InvalidToken(format!("JWT verification failed: {e}")))?;
 
         Ok(token_data.claims)
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{AuthConfig, AuthEvent, AuthError};
+    use crate::{
+        models::{AuthConfig, AuthError, AuthEvent},
+        repositories::jwks_repository::IJwksRepository,
+    };
     use serde_json::json;
     use std::sync::{Arc, Mutex};
 
@@ -141,7 +141,9 @@ mod tests {
 
     impl MockJwksRepository {
         fn new() -> Arc<Self> {
-            Arc::new(Self { called: Mutex::new(vec![]) })
+            Arc::new(Self {
+                called: Mutex::new(vec![]),
+            })
         }
 
         fn called_issuers(&self) -> Vec<String> {
@@ -159,42 +161,83 @@ mod tests {
 
     #[tokio::test]
     async fn dev_mode_allows_everything() {
-        let mock = MockJwksRepository::new();
-        let cfg = Arc::new(AuthConfig { dev_mode: true, user_pool_id: None, client_id: None, aws_region: "eu-west-1".into() });
-        let engine = AuthEngine::new(mock, cfg);
+        let cfg = Arc::new(AuthConfig {
+            dev_mode: true,
+            user_pool_id: None,
+            client_id: None,
+            aws_region: "eu-west-1".into(),
+        });
 
-        let event = AuthEvent { authorization_token: None, method_arn: Some("arn:aws:execute-api:eu-west-1:123:api/stage/GET/resource".into()) };
+        let mut dependancies = Dependancies::new(cfg);
+        dependancies.jwks_repository = MockJwksRepository::new();
 
-        let res = engine.authorize(&event).await.expect("dev mode should allow");
+        let event = AuthEvent {
+            authorization_token: None,
+            method_arn: Some("arn:aws:execute-api:eu-west-1:123:api/stage/GET/resource".into()),
+        };
+
+        let res = dependancies
+            .auth_engine
+            .authorize(&dependancies, &event)
+            .await
+            .expect("dev mode should allow");
         assert_eq!(res.principal_id, "dev-user");
         assert_eq!(res.context["organizationId"], json!("dev-org"));
     }
 
     #[tokio::test]
     async fn missing_token_returns_error_in_prod() {
-        let mock = MockJwksRepository::new();
-        let cfg = Arc::new(AuthConfig { dev_mode: false, user_pool_id: None, client_id: None, aws_region: "eu-west-1".into() });
-        let engine = AuthEngine::new(mock, cfg);
+        let cfg = Arc::new(AuthConfig {
+            dev_mode: false,
+            user_pool_id: None,
+            client_id: None,
+            aws_region: "eu-west-1".into(),
+        });
 
-        let event = AuthEvent { authorization_token: None, method_arn: None };
+        let mut dependancies = Dependancies::new(cfg);
+        dependancies.jwks_repository = MockJwksRepository::new();
 
-        let res = engine.authorize(&event).await;
+        let event = AuthEvent {
+            authorization_token: None,
+            method_arn: None,
+        };
+
+        let res = dependancies
+            .auth_engine
+            .authorize(&dependancies, &event)
+            .await;
         assert!(matches!(res, Err(AuthError::MissingToken)));
     }
 
     #[tokio::test]
     async fn jwks_repository_is_called_and_error_propagates() {
-        let mock = MockJwksRepository::new();
-        let cfg = Arc::new(AuthConfig { dev_mode: false, user_pool_id: Some("userpool123".into()), client_id: Some("clientid".into()), aws_region: "eu-west-1".into() });
-        let engine = AuthEngine::new(mock.clone(), cfg);
+        let jwks_repository = MockJwksRepository::new();
 
-        let event = AuthEvent { authorization_token: Some("Bearer dummy.token.value".into()), method_arn: None };
+        let cfg = Arc::new(AuthConfig {
+            dev_mode: false,
+            user_pool_id: Some("userpool123".into()),
+            client_id: Some("clientid".into()),
+            aws_region: "eu-west-1".into(),
+        });
+        let mut dependancies = Dependancies::new(cfg);
+        dependancies.jwks_repository = jwks_repository.clone();
 
-        let res = engine.authorize(&event).await;
+        let event = AuthEvent {
+            authorization_token: Some("Bearer dummy.token.value".into()),
+            method_arn: None,
+        };
+
+        let res = dependancies
+            .auth_engine
+            .authorize(&dependancies, &event)
+            .await;
         assert!(matches!(res, Err(AuthError::JwksError(_))));
 
-        let called = mock.called_issuers();
+        let called = jwks_repository.called_issuers();
         assert_eq!(called.len(), 1);
-        assert_eq!(called[0], "https://cognito-idp.eu-west-1.amazonaws.com/userpool123");
+        assert_eq!(
+            called[0],
+            "https://cognito-idp.eu-west-1.amazonaws.com/userpool123"
+        );
     }
 }

@@ -22,7 +22,7 @@ async fn main() -> Result<(), Error> {
         .json()
         .init();
 
-    let dependancies = Dependancies::new();
+    let dependancies = Dependancies::new(Dependancies::create_env());
 
     lambda_runtime::run(service_fn(|event: LambdaEvent<AuthEvent>| {
         let dependancies = dependancies.clone();
@@ -41,7 +41,7 @@ async fn handler(
 ) -> Result<AuthResponse, Error> {
     let (payload, _ctx) = event.into_parts();
 
-    match dependancies.auth_engine.authorize(&payload).await {
+    match dependancies.auth_engine.authorize(&dependancies, &payload).await {
         Ok(response) => Ok(response),
         Err(e) => {
             tracing::warn!(error = %e, "Authorization denied");
