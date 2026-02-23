@@ -32,6 +32,7 @@ aws-config = { workspace = true }
 aws-sdk-s3 = { workspace = true }
 
 # Utilities
+async-trait = { workspace = true }
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = "0.3"

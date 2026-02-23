@@ -6,6 +6,8 @@
 //! The match is **exhaustive** — adding a new `ActionType` variant forces
 //! a compiler error here until you wire it up.
 
+use async_trait::async_trait;
+use crate::RosterContext;
 use crate::capabilities::egress::api_dispatcher::ApiDispatcher;
 use crate::capabilities::ingestion::engine::{CsvHrisConnector, WorkdayHrisConnector};
 use crate::capabilities::logic::engine::{
@@ -26,8 +28,14 @@ impl ActionFactory {
     }
 }
 
-pub trait ActionFactoryTrait {
+#[async_trait]
+pub trait ActionFactoryTrait:  Send + Sync  {
     fn create(&self, action_config: &ActionConfig) -> Result<Arc<dyn OnboardingAction>>;
+    fn run(
+        &self,
+        actions: Vec<Arc<dyn OnboardingAction>>,
+        context: RosterContext,
+    ) -> Result<RosterContext>;
 }
 
 impl ActionFactoryTrait for ActionFactory {
@@ -102,12 +110,62 @@ impl ActionFactoryTrait for ActionFactory {
             (t, _) => Err(Error::ConfigurationError(format!("Mismatched payload for action type {t:?}"))),
         }
     }
+
+    /// Execute a pipeline defined by a manifest.
+    ///
+    /// Each action receives the `RosterContext` produced by the previous step
+    /// (fold pattern). The final context is returned.
+    fn run(
+        &self,
+        actions: Vec<Arc<dyn OnboardingAction>>,
+        mut context: RosterContext,
+    ) -> Result<RosterContext> {
+        for action in &actions {
+            tracing::info!(action_id = action.id(), "PipelineRunner: executing action");
+            context = action.execute(context)?;
+        }
+        Ok(context)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::domain::ActionType;
+    use crate::capabilities::logic::traits::ColumnCalculator;
+    use crate::domain::models::manifest::{ActionConfig, ActionConfigPayload};
+    use polars::prelude::*;
+
+    /// A trivial pass-through action for testing the runner.
+    struct NoopAction;
+    impl ColumnCalculator for NoopAction {
+        fn calculate_columns(&self, ctx: RosterContext) -> Result<RosterContext> {
+            Ok(ctx)
+        }
+    }
+    impl OnboardingAction for NoopAction {
+        fn id(&self) -> &str {
+            "noop"
+        }
+        fn execute(&self, ctx: RosterContext) -> Result<RosterContext> {
+            Ok(ctx)
+        }
+    }
+
+    #[test]
+    fn test_pipeline_runner_no_actions() {
+        let ctx = RosterContext::new(LazyFrame::default());
+        let result = ActionFactory::new().run(vec![], ctx).expect("run");
+        assert!(result.field_metadata.is_empty());
+    }
+
+    #[test]
+    fn test_pipeline_runner_single_action() {
+        let ctx = RosterContext::new(LazyFrame::default());
+        let actions: Vec<Arc<dyn OnboardingAction>> = vec![Arc::new(NoopAction)];
+        let result = ActionFactory::new().run(actions, ctx).expect("run");
+        assert!(result.field_metadata.is_empty());
+    }
 
     #[test]
     fn test_factory_creates_csv_connector() {

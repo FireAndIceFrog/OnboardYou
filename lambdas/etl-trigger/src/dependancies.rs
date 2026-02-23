@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
 use crate::repositories::{
-    config_repository::{self, DynamoConfigRepo},
-    settings_repository::{self, DynamoSettingsRepo},
+    config_repository::{self, DynamoConfigRepo}, etl_repository::{EtlRepository, IEtlRepo}, pipeline_repository::{IPipelineRepo, PipelineRepository}, settings_repository::{self, DynamoSettingsRepo}
 };
 use config_repository::IConfigRepo;
+use onboard_you::ActionFactoryTrait;
 use settings_repository::ISettingsRepo;
 
 /// Environment configuration read from process env.
@@ -31,6 +31,9 @@ impl Env {
 pub struct Dependancies {
     pub config_repo: Arc<dyn IConfigRepo>,
     pub settings_repo: Arc<dyn ISettingsRepo>,
+    pub etl_repo: Arc<dyn IEtlRepo>,
+    pub pipeline_repo: Arc<dyn IPipelineRepo>,
+    pub action_factory: Arc<dyn ActionFactoryTrait>,
 }
 
 impl Dependancies {
@@ -45,6 +48,9 @@ impl Dependancies {
         Arc::new(Self {
             config_repo: DynamoConfigRepo::new(dynamo.clone(), cfg.table_name.clone()),
             settings_repo: DynamoSettingsRepo::new(dynamo.clone(), cfg.settings_table_name.clone()),
+            etl_repo: EtlRepository::new(),
+            pipeline_repo: PipelineRepository::new(),
+            action_factory: Arc::new(onboard_you::ActionFactory::new()),
         })
     }
 }

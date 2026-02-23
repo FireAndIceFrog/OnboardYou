@@ -2621,6 +2621,7 @@ dependencies = [
 name = "onboard_you"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "aws-config",
  "aws-sdk-s3",
  "criterion",

@@ -30,4 +30,4 @@ pub use domain::{
     ActionConfig, ActionType, ColumnCalculator, Error, Manifest, OnboardingAction, OrgSettings,
     PipelineConfig, Result, RosterContext,
 };
-pub use orchestration::{ActionFactory, ActionFactoryTrait, PipelineRunner};
+pub use orchestration::{ActionFactory, ActionFactoryTrait};
