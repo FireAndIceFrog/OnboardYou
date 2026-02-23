@@ -139,7 +139,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_run_pipeline_uses_action_factory() {
         let factory = Arc::new(FakeFactory::new());
         let mut deps = Dependancies::new(Arc::new(Env::default())).await;
