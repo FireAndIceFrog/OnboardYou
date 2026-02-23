@@ -15,7 +15,7 @@ use polars::prelude::*;
 ///
 /// Returns the column set at each step, or an `ApiError` on the first failure.
 pub fn validate_pipeline(
-    state: &Dependancies,
+    deps: &Dependancies,
     pipeline_json: &Manifest,
 ) -> Result<ValidationResult, ApiError> {
     let manifest: Manifest = pipeline_json.clone();
@@ -26,7 +26,7 @@ pub fn validate_pipeline(
             final_columns: vec![],
         });
     }
-    let action_factory = state.etl_repo.create_action_factory();
+    let action_factory = deps.etl_repo.create_action_factory();
     // Build every action via the factory (validates config too)
     let actions: Vec<_> = manifest
         .actions

@@ -14,7 +14,7 @@ use async_trait::async_trait;
 pub trait IAuthEngine: Send + Sync {
     async fn authorize(
         &self,
-        state: &Dependancies,
+        deps: &Dependancies,
         event: &AuthEvent,
     ) -> Result<AuthResponse, AuthError>;
 }
@@ -32,7 +32,7 @@ impl IAuthEngine for AuthEngine {
     /// an IAM policy.
     async fn authorize(
         &self,
-        state: &Dependancies,
+        deps: &Dependancies,
         event: &AuthEvent,
     ) -> Result<AuthResponse, AuthError> {
         let method_arn = event.method_arn.as_deref().unwrap_or("*");
@@ -50,7 +50,7 @@ impl IAuthEngine for AuthEngine {
             .and_then(|t| t.strip_prefix("Bearer "))
             .ok_or(AuthError::MissingToken)?;
 
-        let claims = self.get_claims(state, token).await?;
+        let claims = self.get_claims(deps, token).await?;
 
         let sub = claims.sub.unwrap_or_else(|| "unknown".to_string());
         let organization_id = claims.organization_id.ok_or_else(|| {
@@ -70,7 +70,7 @@ impl AuthEngine {
         Arc::new(Self { cfg })
     }
 
-    async fn get_claims(&self, state: &Dependancies, token: &str) -> Result<Claims, AuthError> {
+    async fn get_claims(&self, deps: &Dependancies, token: &str) -> Result<Claims, AuthError> {
         // ── Production — validate Cognito JWT ───────────────────
         let user_pool_id =
             self.cfg.user_pool_id.as_deref().ok_or_else(|| {
@@ -88,7 +88,7 @@ impl AuthEngine {
         );
 
         // Fetch the JWKS (cached at the HTTP layer across warm invocations)
-        let jwks = state.jwks_repository.fetch_jwks(&issuer).await?;
+        let jwks = deps.jwks_repository.fetch_jwks(&issuer).await?;
 
         // Decode the JWT header to find the key id
         let header = jsonwebtoken::decode_header(token)

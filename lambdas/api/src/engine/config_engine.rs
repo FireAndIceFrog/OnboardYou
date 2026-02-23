@@ -9,11 +9,11 @@ use onboard_you::PipelineConfig;
 
 /// Fetch a pipeline config by organization ID and customer company ID.
 pub async fn get(
-    state: &Dependancies,
+    deps: &Dependancies,
     organization_id: &str,
     customer_company_id: &str,
 ) -> Result<PipelineConfig, ApiError> {
-    state
+    deps
         .config_repo
         .get(organization_id, customer_company_id)
         .await?
@@ -22,15 +22,15 @@ pub async fn get(
 
 /// List all pipeline configs owned by an organization.
 pub async fn list(
-    state: &Dependancies,
+    deps: &Dependancies,
     organization_id: &str,
 ) -> Result<Vec<PipelineConfig>, ApiError> {
-    state.config_repo.list(organization_id).await
+    deps.config_repo.list(organization_id).await
 }
 
 /// Validate, persist, and schedule a pipeline config.
 pub async fn upsert(
-    state: &Dependancies,
+    deps: &Dependancies,
     organization_id: &str,
     customer_company_id: &str,
     mut config: PipelineConfig,
@@ -42,8 +42,8 @@ pub async fn upsert(
 
     validate(&config)?;
 
-    state.config_repo.put(&config).await?;
-    state.schedule_repo.upsert(&config).await?;
+    deps.config_repo.put(&config).await?;
+    deps.schedule_repo.upsert(&config).await?;
 
     tracing::info!(
         organization_id = %config.organization_id,
@@ -56,17 +56,17 @@ pub async fn upsert(
 
 /// Delete a pipeline config and its associated schedule.
 pub async fn delete(
-    state: &Dependancies,
+    deps: &Dependancies,
     organization_id: &str,
     customer_company_id: &str,
 ) -> Result<(), ApiError> {
-    state
+    deps
         .config_repo
         .delete(organization_id, customer_company_id)
         .await?;
 
     // Best-effort schedule cleanup — don't fail the delete if it's missing
-    if let Err(e) = state
+    if let Err(e) = deps
         .schedule_repo
         .delete(organization_id, customer_company_id)
         .await

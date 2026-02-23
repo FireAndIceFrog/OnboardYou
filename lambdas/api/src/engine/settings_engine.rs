@@ -13,8 +13,8 @@ use onboard_you::capabilities::egress::engine::api_engine::ApiEngine;
 use onboard_you::OrgSettings;
 
 /// Fetch settings for an organization. Returns `NotFound` if no settings exist.
-pub async fn get(state: &Dependancies, organization_id: &str) -> Result<OrgSettings, ApiError> {
-    state
+pub async fn get(deps: &Dependancies, organization_id: &str) -> Result<OrgSettings, ApiError> {
+    deps
         .settings_repo
         .get(organization_id)
         .await?
@@ -26,7 +26,7 @@ pub async fn get(state: &Dependancies, organization_id: &str) -> Result<OrgSetti
 /// Validates that `default_auth` can be parsed by `ApiEngine::from_action_config`
 /// before persisting — prevents storing broken configs.
 pub async fn upsert(
-    state: &Dependancies,
+    deps: &Dependancies,
     organization_id: &str,
     mut settings: OrgSettings,
 ) -> Result<OrgSettings, ApiError> {
@@ -35,7 +35,7 @@ pub async fn upsert(
 
     validate(&settings)?;
 
-    state.settings_repo.put(&settings).await?;
+    deps.settings_repo.put(&settings).await?;
 
     tracing::info!(
         organization_id = %settings.organization_id,

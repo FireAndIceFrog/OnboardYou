@@ -10,7 +10,7 @@ fn s3_key(organization_id: &str, customer_company_id: &str, filename: &str) -> S
 
 /// Generate a presigned PUT URL for a CSV upload.
 pub async fn presigned_upload(
-    state: &Dependancies,
+    deps: &Dependancies,
     organization_id: &str,
     customer_company_id: &str,
     filename: &str,
@@ -28,7 +28,7 @@ pub async fn presigned_upload(
 
     let key = s3_key(organization_id, customer_company_id, filename);
 
-    let upload_url = state.s3_repo.presigned_put_url(&key).await?;
+    let upload_url = deps.s3_repo.presigned_put_url(&key).await?;
 
     Ok(PresignedUploadResponse {
         upload_url,
@@ -39,14 +39,14 @@ pub async fn presigned_upload(
 
 /// Read the columns from an already-uploaded CSV in S3.
 pub async fn read_columns(
-    state: &Dependancies,
+    deps: &Dependancies,
     organization_id: &str,
     customer_company_id: &str,
     filename: &str,
 ) -> Result<CsvColumnsResponse, ApiError> {
     let key = s3_key(organization_id, customer_company_id, filename);
 
-    let columns = state.s3_repo.read_csv_headers(&key).await?;
+    let columns = deps.s3_repo.read_csv_headers(&key).await?;
 
     Ok(CsvColumnsResponse {
         filename: filename.to_string(),
