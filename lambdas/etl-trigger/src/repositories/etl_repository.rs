@@ -119,3 +119,110 @@ impl IEtlRepo for EtlRepository {
         Ok(manifest.clone())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dependancies::{Dependancies, Env};
+    use crate::repositories::settings_repository::ISettingsRepo;
+    use async_trait::async_trait;
+    use lambda_runtime::Error;
+    use std::sync::Arc;
+
+    struct FakeSettingsRepo;
+
+    #[async_trait]
+    impl ISettingsRepo for FakeSettingsRepo {
+        async fn get(
+            &self,
+            _organization_id: &str,
+        ) -> Result<Option<onboard_you::OrgSettings>, Error> {
+            let bearer = onboard_you::ApiDispatcherConfig::Bearer(onboard_you::BearerRepoConfig {
+                destination_url: "https://example.com".into(),
+                token: Some("tkn".into()),
+                placement: onboard_you::BearerPlacement::AuthorizationHeader,
+                placement_key: None,
+                extra_headers: std::collections::HashMap::new(),
+            });
+
+            Ok(Some(onboard_you::OrgSettings {
+                organization_id: _organization_id.into(),
+                default_auth: bearer,
+            }))
+        }
+    }
+
+    #[tokio::test]
+    async fn test_resolve_default_auth_replaces_default() {
+        let etl_repo = EtlRepository::new();
+
+        // Build a manifest with one ApiDispatcher(Default) action
+        let manifest = onboard_you::Manifest {
+            version: "1.0".into(),
+            actions: vec![onboard_you::ActionConfig {
+                id: "egress".into(),
+                action_type: onboard_you::ActionType::ApiDispatcher,
+                config: onboard_you::ActionConfigPayload::ApiDispatcher(
+                    onboard_you::ApiDispatcherConfig::Default,
+                ),
+            }],
+        };
+        let mut manifest_mut = manifest.clone();
+        let mut deps = Dependancies::new(Arc::new(Env::default())).await;
+
+        deps.settings_repo = Arc::new(FakeSettingsRepo);
+
+        let resolved = etl_repo
+            .resolve_default_auth(&deps, &mut manifest_mut, "org-1")
+            .await
+            .expect("resolve");
+
+        assert_eq!(resolved.actions.len(), 1);
+        match &resolved.actions[0].config {
+            onboard_you::ActionConfigPayload::ApiDispatcher(cfg) => {
+                assert!(
+                    !cfg.is_default(),
+                    "expected default to be replaced with org settings"
+                );
+            }
+            _ => panic!("unexpected payload variant"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_resolve_csv_s3_keys_replaces_path() {
+        let etl_repo = EtlRepository::new();
+
+        // Build a manifest with one CsvHrisConnector action
+        let mut manifest = onboard_you::Manifest {
+            version: "1.0".into(),
+            actions: vec![onboard_you::ActionConfig {
+                id: "csv".into(),
+                action_type: onboard_you::ActionType::CsvHrisConnector,
+                config: onboard_you::ActionConfigPayload::CsvHrisConnector(
+                    onboard_you::CsvHrisConnectorConfig {
+                        filename: "data.csv".into(),
+                        resolved_s3_key: None,
+                        columns: vec![],
+                    },
+                ),
+            }],
+        };
+
+        let resolved = etl_repo
+            .resolve_csv_s3_keys(&mut manifest, "org-1", "comp-1")
+            .expect("resolve");
+
+        assert_eq!(resolved.actions.len(), 1);
+        match &resolved.actions[0].config {
+            onboard_you::ActionConfigPayload::CsvHrisConnector(cfg) => {
+                assert_eq!(
+                    cfg.resolved_s3_key.as_deref(),
+                    Some("org-1/comp-1/data.csv"),
+                    "expected S3 key to be resolved with org and company ID"
+                );
+            }
+            _ => panic!("unexpected payload variant"),
+        }
+    }
+}

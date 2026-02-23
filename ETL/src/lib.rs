@@ -25,6 +25,7 @@ pub use capabilities::egress::models::{
     ApiDispatcherConfig, AuthType, BearerPlacement, BearerRepoConfig, OAuth2GrantType,
     OAuth2RepoConfig, OAuthRepoConfig,
 };
+pub use capabilities::ingestion::CsvHrisConnectorConfig;
 pub use domain::models::manifest::ActionConfigPayload;
 pub use domain::{
     ActionConfig, ActionType, ColumnCalculator, Error, Manifest, OnboardingAction, OrgSettings,

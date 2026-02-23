@@ -5,10 +5,7 @@ use lambda_runtime::Error;
 use polars::prelude::LazyFrame;
 use std::sync::Arc;
 
-use onboard_you::{
-    Manifest,
-    RosterContext,
-};
+use onboard_you::{Manifest, RosterContext};
 
 use crate::{dependancies::Dependancies, models::PipelineResult};
 
@@ -17,7 +14,7 @@ use crate::{dependancies::Dependancies, models::PipelineResult};
 pub trait IPipelineRepo: Send + Sync {
     async fn run_pipeline(
         &self,
-        deps: &Dependancies, 
+        deps: &Dependancies,
         manifest: Manifest,
         organization_id: &str,
         customer_company_id: &str,
@@ -37,7 +34,7 @@ impl PipelineRepository {
 impl IPipelineRepo for PipelineRepository {
     async fn run_pipeline(
         &self,
-        deps: &Dependancies, 
+        deps: &Dependancies,
         manifest: Manifest,
         organization_id: &str,
         customer_company_id: &str,
@@ -78,5 +75,94 @@ impl IPipelineRepo for PipelineRepository {
                 ))
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::dependancies::{Dependancies, Env};
+
+    use super::*;
+    use onboard_you::{
+        ActionConfig, ActionConfigPayload, ActionType, OnboardingAction, RosterContext,
+    };
+    use std::sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    };
+
+    struct NoopAction;
+    impl onboard_you::capabilities::logic::traits::ColumnCalculator for NoopAction {
+        fn calculate_columns(&self, ctx: RosterContext) -> onboard_you::Result<RosterContext> {
+            Ok(ctx)
+        }
+    }
+    impl OnboardingAction for NoopAction {
+        fn id(&self) -> &str {
+            "noop"
+        }
+        fn execute(&self, ctx: RosterContext) -> onboard_you::Result<RosterContext> {
+            Ok(ctx)
+        }
+    }
+
+    struct FakeFactory {
+        create_count: Arc<AtomicUsize>,
+        run_count: Arc<AtomicUsize>,
+    }
+
+    impl FakeFactory {
+        fn new() -> Self {
+            Self {
+                create_count: Arc::new(AtomicUsize::new(0)),
+                run_count: Arc::new(AtomicUsize::new(0)),
+            }
+        }
+    }
+
+    impl onboard_you::ActionFactoryTrait for FakeFactory {
+        fn create(
+            &self,
+            _action_config: &ActionConfig,
+        ) -> onboard_you::Result<std::sync::Arc<dyn OnboardingAction>> {
+            self.create_count.fetch_add(1, Ordering::SeqCst);
+            Ok(std::sync::Arc::new(NoopAction))
+        }
+
+        fn run(
+            &self,
+            _actions: Vec<std::sync::Arc<dyn OnboardingAction>>,
+            context: RosterContext,
+        ) -> onboard_you::Result<RosterContext> {
+            self.run_count.fetch_add(1, Ordering::SeqCst);
+            Ok(context)
+        }
+    }
+
+    #[tokio::test]
+    async fn test_run_pipeline_uses_action_factory() {
+        let factory = Arc::new(FakeFactory::new());
+        let mut deps = Dependancies::new(Arc::new(Env::default())).await;
+        deps.action_factory = factory.clone();
+
+        let manifest = onboard_you::Manifest {
+            version: "1.0".into(),
+            actions: vec![ActionConfig {
+                id: "a".into(),
+                action_type: ActionType::ApiDispatcher,
+                config: ActionConfigPayload::ApiDispatcher(
+                    onboard_you::ApiDispatcherConfig::Default,
+                ),
+            }],
+        };
+
+        let repo = PipelineRepository::new();
+        let res = repo
+            .run_pipeline(&deps, manifest, "org", "cust")
+            .await
+            .expect("run pipeline");
+        assert_eq!(res.status, "success");
+        assert_eq!(factory.create_count.load(Ordering::SeqCst), 1);
+        assert_eq!(factory.run_count.load(Ordering::SeqCst), 1);
     }
 }

@@ -7,6 +7,8 @@ mod models;
 mod repositories;
 mod dependancies;
 
+use std::sync::Arc;
+
 use lambda_runtime::{service_fn, Error, LambdaEvent};
 use models::ScheduleEvent;
 use tracing_subscriber::{fmt, EnvFilter};
@@ -20,7 +22,7 @@ async fn main() -> Result<(), Error> {
 
     // Build environment + dependancies (repositories/clients)
     let env = dependancies::Env::from_env();
-    let deps = dependancies::Dependancies::new(env.clone()).await;
+    let deps = Arc::new(dependancies::Dependancies::new(env.clone()).await);
 
     lambda_runtime::run(service_fn(|event: LambdaEvent<ScheduleEvent>| {
         let deps = deps.clone();

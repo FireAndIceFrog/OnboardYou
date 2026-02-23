@@ -136,7 +136,17 @@ impl CsvHrisConnector {
                 "CsvHrisConnector requires a non-empty filename".into(),
             ));
         }
-        Ok(Self::new(config.clone()))
+
+        if config.filename.contains("/") || config.filename.contains("\\") || config.filename.contains("..") {
+            return Err(Error::ConfigurationError(
+                "CsvHrisConnector filename must not contain path separators or '..'".into(),
+            ));
+        }
+
+        let mut cleaned_config = config.clone();
+        cleaned_config.filename = cleaned_config.filename.trim().to_string();
+
+        Ok(Self::new(cleaned_config))
     }
 
     /// Download the CSV from S3 and return the bytes.

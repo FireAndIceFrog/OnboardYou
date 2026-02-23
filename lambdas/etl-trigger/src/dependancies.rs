@@ -8,7 +8,7 @@ use onboard_you::ActionFactoryTrait;
 use settings_repository::ISettingsRepo;
 
 /// Environment configuration read from process env.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Env {
     pub table_name: String,
     pub settings_table_name: String,
@@ -39,18 +39,18 @@ pub struct Dependancies {
 impl Dependancies {
     /// Create a new `Dependancies` from the provided `Env`.
     /// This loads the AWS config and constructs the clients/repositories, so it's async.
-    pub async fn new(cfg: Arc<Env>) -> Arc<Self> {
+    pub async fn new(cfg: Arc<Env>) -> Self {
         let aws_config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
         let dynamo = aws_sdk_dynamodb::Client::new(&aws_config);
 
         // Construct concrete Dynamo-backed repo implementations from their modules
 
-        Arc::new(Self {
+        Self {
             config_repo: DynamoConfigRepo::new(dynamo.clone(), cfg.table_name.clone()),
             settings_repo: DynamoSettingsRepo::new(dynamo.clone(), cfg.settings_table_name.clone()),
             etl_repo: EtlRepository::new(),
             pipeline_repo: PipelineRepository::new(),
             action_factory: Arc::new(onboard_you::ActionFactory::new()),
-        })
+        }
     }
 }
