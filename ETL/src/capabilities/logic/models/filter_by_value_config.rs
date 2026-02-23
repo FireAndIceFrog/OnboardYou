@@ -1,9 +1,9 @@
 //! Configuration model for the filter-by-value engine.
 
+use super::SafeRegex;
 use crate::domain::{Error, Result};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-use super::SafeRegex;
 
 /// Configuration for the filter-by-value action.
 ///

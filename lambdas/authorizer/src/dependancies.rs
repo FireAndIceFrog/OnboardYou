@@ -1,6 +1,10 @@
 use std::sync::Arc;
 
-use crate::{engine::auth_engine::{AuthEngine, IAuthEngine}, models::AuthConfig, repositories::jwks_repository::{IJwksRepository, JwksRepository}};
+use crate::{
+    engine::auth_engine::{AuthEngine, IAuthEngine},
+    models::AuthConfig,
+    repositories::jwks_repository::{IJwksRepository, JwksRepository},
+};
 
 // Public impls for constructing the auth engine and its dependancies.
 #[derive(Clone)]

@@ -280,7 +280,9 @@ fn resolve_dial_code(iso_code: &str) -> Option<&'static str> {
 
 /// Strip all non-digit, non-`+` characters from a phone number.
 fn strip_noise(raw: &str) -> String {
-    raw.chars().filter(|c| c.is_ascii_digit() || *c == '+').collect()
+    raw.chars()
+        .filter(|c| c.is_ascii_digit() || *c == '+')
+        .collect()
 }
 
 /// Sanitise a single phone number given an already-resolved calling code.
@@ -339,9 +341,8 @@ impl CellphoneSanitizer {
 impl ColumnCalculator for CellphoneSanitizer {
     fn calculate_columns(&self, mut context: RosterContext) -> Result<RosterContext> {
         let lf = std::mem::replace(&mut context.data, LazyFrame::default());
-        context.data = lf.with_column(
-            col(&self.config.phone_column).alias(&self.config.output_column),
-        );
+        context.data =
+            lf.with_column(col(&self.config.phone_column).alias(&self.config.output_column));
         context.set_field_source(
             self.config.output_column.clone(),
             "cellphone_sanitizer".into(),
@@ -380,15 +381,13 @@ impl OnboardingAction for CellphoneSanitizer {
                     move |s| {
                         let ca = s.struct_().map_err(|e| {
                             polars::error::PolarsError::ComputeError(
-                                format!("cellphone_sanitizer: expected struct column: {e}")
-                                    .into(),
+                                format!("cellphone_sanitizer: expected struct column: {e}").into(),
                             )
                         })?;
 
                         let phone_field = ca.field_by_name(&phone_col_name).map_err(|e| {
                             polars::error::PolarsError::ComputeError(
-                                format!("cellphone_sanitizer: phone field not found: {e}")
-                                    .into(),
+                                format!("cellphone_sanitizer: phone field not found: {e}").into(),
                             )
                         })?;
                         let phone_ca = phone_field.str().map_err(|e| {
@@ -403,19 +402,17 @@ impl OnboardingAction for CellphoneSanitizer {
                             .iter()
                             .filter_map(|name| ca.field_by_name(name).ok())
                             .collect();
-                        let country_cas: Vec<&StringChunked> = country_fields
-                            .iter()
-                            .filter_map(|f| f.str().ok())
-                            .collect();
+                        let country_cas: Vec<&StringChunked> =
+                            country_fields.iter().filter_map(|f| f.str().ok()).collect();
 
                         let result: StringChunked = phone_ca
                             .into_iter()
                             .enumerate()
                             .map(|(idx, opt_phone)| {
                                 opt_phone.and_then(|phone| {
-                                    let calling_code = country_cas.iter().find_map(|cc| {
-                                        cc.get(idx).and_then(resolve_dial_code)
-                                    });
+                                    let calling_code = country_cas
+                                        .iter()
+                                        .find_map(|cc| cc.get(idx).and_then(resolve_dial_code));
                                     sanitise_number(phone, calling_code)
                                 })
                             })
@@ -556,7 +553,8 @@ mod tests {
             "phone_column": "mobile_phone",
             "country_columns": ["work_country", "home_country"],
             "output_column": "phone_intl"
-        })).unwrap();
+        }))
+        .unwrap();
         let action = CellphoneSanitizer::from_action_config(&cfg).expect("valid config");
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).expect("execute");
@@ -584,7 +582,8 @@ mod tests {
             "phone_column": "mobile_phone",
             "country_columns": ["work_country"],
             "output_column": "mobile_phone"
-        })).unwrap();
+        }))
+        .unwrap();
         let action = CellphoneSanitizer::from_action_config(&cfg).expect("valid config");
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).expect("execute");
@@ -608,7 +607,8 @@ mod tests {
             "phone_column": "phone",
             "country_columns": ["primary", "fallback"],
             "output_column": "phone_intl"
-        })).unwrap();
+        }))
+        .unwrap();
         let action = CellphoneSanitizer::from_action_config(&cfg).expect("valid config");
         let ctx = RosterContext::new(df.lazy());
         let result = action.execute(ctx).expect("execute");
@@ -630,7 +630,8 @@ mod tests {
             "phone_column": "phone",
             "country_columns": ["country"],
             "output_column": "phone_intl"
-        })).unwrap();
+        }))
+        .unwrap();
         let action = CellphoneSanitizer::from_action_config(&cfg).expect("valid config");
         let ctx = RosterContext::new(df.lazy());
         let result = action.execute(ctx).expect("execute");
@@ -648,7 +649,8 @@ mod tests {
             "phone_column": "",
             "country_columns": ["c"],
             "output_column": "out"
-        })).unwrap();
+        }))
+        .unwrap();
         assert!(CellphoneSanitizer::from_action_config(&cfg).is_err());
     }
 
@@ -658,7 +660,8 @@ mod tests {
             "phone_column": "phone",
             "country_columns": [],
             "output_column": "out"
-        })).unwrap();
+        }))
+        .unwrap();
         assert!(CellphoneSanitizer::from_action_config(&cfg).is_err());
     }
 
@@ -668,7 +671,8 @@ mod tests {
             "phone_column": "phone",
             "country_columns": ["c"],
             "output_column": ""
-        })).unwrap();
+        }))
+        .unwrap();
         assert!(CellphoneSanitizer::from_action_config(&cfg).is_err());
     }
 
@@ -678,7 +682,8 @@ mod tests {
             "phone_column": "mobile_phone",
             "country_columns": ["work_country"],
             "output_column": "phone_intl"
-        })).unwrap();
+        }))
+        .unwrap();
         let action = CellphoneSanitizer::from_action_config(&cfg).expect("valid config");
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).expect("execute");
@@ -695,7 +700,8 @@ mod tests {
             "phone_column": "ph",
             "country_columns": ["c1", "c2"],
             "output_column": "out"
-        })).unwrap();
+        }))
+        .unwrap();
         let action = CellphoneSanitizer::from_action_config(&cfg).expect("valid");
         assert_eq!(action.config.phone_column, "ph");
         assert_eq!(action.config.country_columns, vec!["c1", "c2"]);
@@ -715,7 +721,8 @@ mod tests {
             "phone_column": "phone",
             "country_columns": ["country"],
             "output_column": "phone_intl"
-        })).unwrap();
+        }))
+        .unwrap();
         let action = CellphoneSanitizer::from_action_config(&cfg).expect("valid config");
         let ctx = RosterContext::new(df.lazy());
         let result = action.execute(ctx).expect("execute");

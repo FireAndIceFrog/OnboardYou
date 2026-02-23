@@ -66,9 +66,8 @@ impl EgressRepository for OAuthRepo {
     fn send_data(
         &self,
         payload: &str,
-    ) -> std::pin::Pin<
-        Box<dyn std::future::Future<Output = Result<DispatchResponse>> + Send + '_>,
-    > {
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<DispatchResponse>> + Send + '_>>
+    {
         let destination_url = self.config.destination_url.clone();
         let auth_header = self.build_authorization_header("POST", &destination_url);
         let payload = payload.to_string();
@@ -98,4 +97,3 @@ impl EgressRepository for OAuthRepo {
         })
     }
 }
-

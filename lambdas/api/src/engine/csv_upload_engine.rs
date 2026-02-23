@@ -28,8 +28,7 @@ pub async fn presigned_upload(
 
     let key = s3_key(organization_id, customer_company_id, filename);
 
-    let upload_url =
-        state.s3_repo.presigned_put_url(&key).await?;
+    let upload_url = state.s3_repo.presigned_put_url(&key).await?;
 
     Ok(PresignedUploadResponse {
         upload_url,
@@ -47,8 +46,7 @@ pub async fn read_columns(
 ) -> Result<CsvColumnsResponse, ApiError> {
     let key = s3_key(organization_id, customer_company_id, filename);
 
-    let columns =
-        state.s3_repo.read_csv_headers(&key).await?;
+    let columns = state.s3_repo.read_csv_headers(&key).await?;
 
     Ok(CsvColumnsResponse {
         filename: filename.to_string(),
@@ -56,11 +54,10 @@ pub async fn read_columns(
     })
 }
 
-
 #[cfg(test)]
 mod tests {
     use crate::dependancies::{Dependancies, Env};
-    use crate::models::{ApiError};
+    use crate::models::ApiError;
     use crate::repositories::s3_repository::S3Repo;
     use async_trait::async_trait;
     use std::sync::Arc;
@@ -77,7 +74,10 @@ mod tests {
             if let Some(e) = &self.err {
                 return Err(ApiError::Repository(e.clone()));
             }
-            Ok(self.presign.clone().unwrap_or_else(|| "https://example.com/upload".into()))
+            Ok(self
+                .presign
+                .clone()
+                .unwrap_or_else(|| "https://example.com/upload".into()))
         }
 
         async fn read_csv_headers(&self, _key: &str) -> Result<Vec<String>, ApiError> {
@@ -96,9 +96,16 @@ mod tests {
 
     #[tokio::test]
     async fn presigned_upload_success() {
-        let state = build_state(FakeS3 { presign: Some("https://presigned.url".into()), headers: None, err: None }).await;
+        let state = build_state(FakeS3 {
+            presign: Some("https://presigned.url".into()),
+            headers: None,
+            err: None,
+        })
+        .await;
 
-        let out = super::presigned_upload(&state, "org", "comp", "file.csv").await.unwrap();
+        let out = super::presigned_upload(&state, "org", "comp", "file.csv")
+            .await
+            .unwrap();
         assert_eq!(out.upload_url, "https://presigned.url");
         assert_eq!(out.filename, "file.csv");
         assert_eq!(out.key, "org/comp/file.csv");
@@ -106,20 +113,36 @@ mod tests {
 
     #[tokio::test]
     async fn presigned_upload_validation() {
-        let state = build_state(FakeS3 { presign: None, headers: None, err: None }).await;
-        let err = super::presigned_upload(&state, "org", "comp", "").await.unwrap_err();
+        let state = build_state(FakeS3 {
+            presign: None,
+            headers: None,
+            err: None,
+        })
+        .await;
+        let err = super::presigned_upload(&state, "org", "comp", "")
+            .await
+            .unwrap_err();
         assert!(matches!(err, ApiError::Validation(_)));
 
-        let err2 = super::presigned_upload(&state, "org", "comp", "../evil").await.unwrap_err();
+        let err2 = super::presigned_upload(&state, "org", "comp", "../evil")
+            .await
+            .unwrap_err();
         assert!(matches!(err2, ApiError::Validation(_)));
     }
 
     #[tokio::test]
     async fn read_columns_success() {
         let headers = vec!["a".into(), "b".into()];
-        let state = build_state(FakeS3 { presign: None, headers: Some(headers.clone()), err: None }).await;
+        let state = build_state(FakeS3 {
+            presign: None,
+            headers: Some(headers.clone()),
+            err: None,
+        })
+        .await;
 
-        let out = super::read_columns(&state, "org", "comp", "file.csv").await.unwrap();
+        let out = super::read_columns(&state, "org", "comp", "file.csv")
+            .await
+            .unwrap();
         assert_eq!(out.filename, "file.csv");
         assert_eq!(out.columns, headers);
     }

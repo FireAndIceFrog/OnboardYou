@@ -49,15 +49,9 @@ impl ApiEngine {
     /// The config's variant selects the right repository implementation.
     pub fn from_action_config(config: &ApiDispatcherConfig) -> Result<Self> {
         let repo: Box<dyn EgressRepository> = match config {
-            ApiDispatcherConfig::Bearer(cfg) => {
-                Box::new(BearerRepo::from_action_config(cfg)?)
-            }
-            ApiDispatcherConfig::OAuth(cfg) => {
-                Box::new(OAuthRepo::from_action_config(cfg)?)
-            }
-            ApiDispatcherConfig::OAuth2(cfg) => {
-                Box::new(OAuth2Repo::from_action_config(cfg)?)
-            }
+            ApiDispatcherConfig::Bearer(cfg) => Box::new(BearerRepo::from_action_config(cfg)?),
+            ApiDispatcherConfig::OAuth(cfg) => Box::new(OAuthRepo::from_action_config(cfg)?),
+            ApiDispatcherConfig::OAuth2(cfg) => Box::new(OAuth2Repo::from_action_config(cfg)?),
             ApiDispatcherConfig::Default => {
                 return Err(Error::ConfigurationError(
                     "auth_type 'default' must be resolved to a concrete auth config \
@@ -87,9 +81,7 @@ impl ApiEngine {
     pub fn dispatch(&self, payload: &str) -> Result<DispatchResponse> {
         // Use the existing tokio runtime (Lambda / pipeline already runs inside one).
         let handle = tokio::runtime::Handle::try_current().map_err(|_| {
-            Error::EgressError(
-                "ApiEngine::dispatch requires a running tokio runtime".into(),
-            )
+            Error::EgressError("ApiEngine::dispatch requires a running tokio runtime".into())
         })?;
 
         handle.block_on(self.dispatch_with_retry(payload))
@@ -147,9 +139,8 @@ impl ApiEngine {
             }
         }
 
-        Err(last_error.unwrap_or_else(|| {
-            Error::EgressError("Dispatch failed: no attempts made".into())
-        }))
+        Err(last_error
+            .unwrap_or_else(|| Error::EgressError("Dispatch failed: no attempts made".into())))
     }
 }
 

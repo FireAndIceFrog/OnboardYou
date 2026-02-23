@@ -1,4 +1,3 @@
-
 /// Configuration read once at cold-start.
 pub struct AuthConfig {
     pub dev_mode: bool,

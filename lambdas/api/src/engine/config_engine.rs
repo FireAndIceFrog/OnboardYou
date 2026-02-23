@@ -3,7 +3,7 @@
 //! Validates inputs, stamps server-controlled fields,
 //! then delegates to repository trait objects for persistence and scheduling.
 
-use crate::{dependancies::Dependancies, models::{ApiError}};
+use crate::{dependancies::Dependancies, models::ApiError};
 
 use onboard_you::PipelineConfig;
 
@@ -99,10 +99,10 @@ fn validate(config: &PipelineConfig) -> Result<(), ApiError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use async_trait::async_trait;
-    use crate::dependancies::{Env};
+    use crate::dependancies::Env;
     use crate::repositories::config_repository::ConfigRepo;
     use crate::repositories::schedule_repository::ScheduleRepo;
+    use async_trait::async_trait;
     use onboard_you::Manifest;
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -126,15 +126,9 @@ mod tests {
             Ok(())
         }
 
-        async fn get(
-            &self,
-            org: &str,
-            company: &str,
-        ) -> Result<Option<PipelineConfig>, ApiError> {
+        async fn get(&self, org: &str, company: &str) -> Result<Option<PipelineConfig>, ApiError> {
             let store = self.store.read().await;
-            Ok(store
-                .get(&(org.to_string(), company.to_string()))
-                .cloned())
+            Ok(store.get(&(org.to_string(), company.to_string())).cloned())
         }
 
         async fn list(&self, org: &str) -> Result<Vec<PipelineConfig>, ApiError> {
@@ -239,9 +233,15 @@ mod tests {
     async fn list_returns_matching_configs() {
         let state = test_state().await;
 
-        upsert(&state, "org-1", "c1", sample_config()).await.unwrap();
-        upsert(&state, "org-1", "c2", sample_config()).await.unwrap();
-        upsert(&state, "org-2", "c3", sample_config()).await.unwrap();
+        upsert(&state, "org-1", "c1", sample_config())
+            .await
+            .unwrap();
+        upsert(&state, "org-1", "c2", sample_config())
+            .await
+            .unwrap();
+        upsert(&state, "org-2", "c3", sample_config())
+            .await
+            .unwrap();
 
         let org1 = list(&state, "org-1").await.unwrap();
         assert_eq!(org1.len(), 2);

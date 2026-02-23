@@ -1,15 +1,10 @@
 //! HTTP handlers for authentication endpoints.
 
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
-    Json,
-};
+use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 
+use crate::dependancies::Dependancies;
 use crate::engine;
 use crate::models::{ErrorResponse, LoginRequest, LoginResponse};
-use crate::dependancies::Dependancies;
 
 /// POST /auth/login
 ///

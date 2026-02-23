@@ -205,7 +205,10 @@ mod tests {
         let manifest = Manifest::from_json(json).expect("Failed to parse manifest");
         assert_eq!(manifest.version, "1.0");
         assert_eq!(manifest.actions.len(), 1);
-        assert_eq!(manifest.actions[0].action_type, ActionType::CsvHrisConnector);
+        assert_eq!(
+            manifest.actions[0].action_type,
+            ActionType::CsvHrisConnector
+        );
     }
 
     #[test]
@@ -227,7 +230,10 @@ mod tests {
 
     #[test]
     fn test_action_type_display() {
-        assert_eq!(ActionType::CsvHrisConnector.to_string(), "csv_hris_connector");
+        assert_eq!(
+            ActionType::CsvHrisConnector.to_string(),
+            "csv_hris_connector"
+        );
         assert_eq!(ActionType::ScdType2.to_string(), "scd_type_2");
         assert_eq!(ActionType::ApiDispatcher.to_string(), "api_dispatcher");
     }

@@ -35,8 +35,7 @@ use utoipa::ToSchema;
 pub const WORKDAY_API_VERSION: &str = "v45.2";
 
 /// Default Workday SOAP namespace for Human_Resources.
-pub const WORKDAY_HR_NAMESPACE: &str =
-    "urn:com.workday/bsvc/Human_Resources";
+pub const WORKDAY_HR_NAMESPACE: &str = "urn:com.workday/bsvc/Human_Resources";
 
 /// Configuration extracted from the manifest `ActionConfig.config` JSON.
 ///
@@ -118,10 +117,7 @@ impl WorkdayConfig {
     /// Build from the raw `serde_json::Value` stored in `ActionConfig.config`.
     pub fn from_json(value: &serde_json::Value) -> Result<Self> {
         serde_json::from_value(value.clone()).map_err(|e| {
-            Error::ConfigurationError(format!(
-                "WorkdayHrisConnector config error: {}",
-                e
-            ))
+            Error::ConfigurationError(format!("WorkdayHrisConnector config error: {}", e))
         })
     }
 
@@ -248,8 +244,8 @@ pub struct WorkdayWorkerRecord {
     pub department: String,
     pub location: String,
     pub hire_date: String,
-    pub worker_type: String,        // "Employee" | "Contingent_Worker"
-    pub worker_status: String,      // "Active" | "Terminated" | etc.
+    pub worker_type: String,   // "Employee" | "Contingent_Worker"
+    pub worker_status: String, // "Active" | "Terminated" | etc.
     pub manager_id: String,
     pub manager_name: String,
     pub position_id: String,
@@ -316,8 +312,7 @@ pub fn parse_get_workers_response(xml: &str) -> Result<Vec<WorkdayWorkerRecord>>
         };
 
         let record = WorkdayWorkerRecord {
-            worker_id: extract_tag(&block, "Worker_ID")
-                .or_else(|| extract_tag(&block, "WID")),
+            worker_id: extract_tag(&block, "Worker_ID").or_else(|| extract_tag(&block, "WID")),
             employee_id: extract_tag(&block, "Employee_ID"),
             first_name: extract_tag(&block, "First_Name")
                 .or_else(|| extract_tag(&block, "Legal_First_Name")),
@@ -383,7 +378,10 @@ pub fn workers_to_dataframe(records: &[WorkdayWorkerRecord]) -> Result<DataFrame
     let manager_ids: Vec<&str> = records.iter().map(|r| r.manager_id.as_str()).collect();
     let manager_names: Vec<&str> = records.iter().map(|r| r.manager_name.as_str()).collect();
     let position_ids: Vec<&str> = records.iter().map(|r| r.position_id.as_str()).collect();
-    let comp_grades: Vec<&str> = records.iter().map(|r| r.compensation_grade.as_str()).collect();
+    let comp_grades: Vec<&str> = records
+        .iter()
+        .map(|r| r.compensation_grade.as_str())
+        .collect();
     let pay_rates: Vec<&str> = records.iter().map(|r| r.pay_rate_type.as_str()).collect();
 
     let df = DataFrame::new_infer_height(vec![
@@ -444,15 +442,9 @@ pub fn parse_response_results(xml: &str) -> ResponseResults {
     let total_results = extract_tag(xml, "Total_Results")
         .parse::<u32>()
         .unwrap_or(0);
-    let total_pages = extract_tag(xml, "Total_Pages")
-        .parse::<u32>()
-        .unwrap_or(1);
-    let page_results = extract_tag(xml, "Page_Results")
-        .parse::<u32>()
-        .unwrap_or(0);
-    let page = extract_tag(xml, "Page")
-        .parse::<u32>()
-        .unwrap_or(1);
+    let total_pages = extract_tag(xml, "Total_Pages").parse::<u32>().unwrap_or(1);
+    let page_results = extract_tag(xml, "Page_Results").parse::<u32>().unwrap_or(0);
+    let page = extract_tag(xml, "Page").parse::<u32>().unwrap_or(1);
 
     ResponseResults {
         total_results,
@@ -540,8 +532,7 @@ impl WorkdayHrisConnector {
         let mut total_pages: u32 = 1; // will be updated after first response
 
         loop {
-            let envelope =
-                build_get_workers_envelope(&self.config, &password, current_page);
+            let envelope = build_get_workers_envelope(&self.config, &password, current_page);
 
             tracing::info!(
                 endpoint = %endpoint,
@@ -720,9 +711,7 @@ mod tests {
 
     impl SoapClient for ErrorSoapClient {
         fn post_soap(&self, _endpoint: &str, _envelope: &str) -> Result<String> {
-            Err(Error::IngestionError(
-                "Connection refused".to_string(),
-            ))
+            Err(Error::IngestionError("Connection refused".to_string()))
         }
     }
 
@@ -1002,10 +991,24 @@ mod tests {
 
         // Verify column existence
         let expected_cols = [
-            "worker_id", "employee_id", "first_name", "last_name", "email",
-            "phone", "job_title", "business_title", "department", "location",
-            "hire_date", "worker_type", "worker_status", "manager_id",
-            "manager_name", "position_id", "compensation_grade", "pay_rate_type",
+            "worker_id",
+            "employee_id",
+            "first_name",
+            "last_name",
+            "email",
+            "phone",
+            "job_title",
+            "business_title",
+            "department",
+            "location",
+            "hire_date",
+            "worker_type",
+            "worker_status",
+            "manager_id",
+            "manager_name",
+            "position_id",
+            "compensation_grade",
+            "pay_rate_type",
         ];
         for col in &expected_cols {
             assert!(df.column(col).is_ok(), "missing column: {}", col);
@@ -1117,10 +1120,24 @@ mod tests {
         let ctx = connector.execute(initial).unwrap();
 
         let expected_fields = [
-            "worker_id", "employee_id", "first_name", "last_name", "email",
-            "phone", "job_title", "business_title", "department", "location",
-            "hire_date", "worker_type", "worker_status", "manager_id",
-            "manager_name", "position_id", "compensation_grade", "pay_rate_type",
+            "worker_id",
+            "employee_id",
+            "first_name",
+            "last_name",
+            "email",
+            "phone",
+            "job_title",
+            "business_title",
+            "department",
+            "location",
+            "hire_date",
+            "worker_type",
+            "worker_status",
+            "manager_id",
+            "manager_name",
+            "position_id",
+            "compensation_grade",
+            "pay_rate_type",
         ];
         for field in &expected_fields {
             assert!(
@@ -1216,7 +1233,8 @@ mod tests {
       </wd:Response_Data>
     </wd:Get_Workers_Response>
   </env:Body>
-</env:Envelope>"#.to_string()),
+</env:Envelope>"#
+                    .to_string()),
 
                 2 => Ok(r#"<?xml version="1.0" encoding="UTF-8"?>
 <env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/">
@@ -1241,7 +1259,8 @@ mod tests {
       </wd:Response_Data>
     </wd:Get_Workers_Response>
   </env:Body>
-</env:Envelope>"#.to_string()),
+</env:Envelope>"#
+                    .to_string()),
 
                 _ => unreachable!(),
             }
@@ -1263,9 +1282,10 @@ mod tests {
 
         let ids = df.column("worker_id").unwrap();
         let id_vec: Vec<Option<&str>> = ids.str().unwrap().into_iter().collect();
-        assert_eq!(id_vec, vec![
-            Some("WK-P1A"), Some("WK-P1B"), Some("WK-P2A"),
-        ]);
+        assert_eq!(
+            id_vec,
+            vec![Some("WK-P1A"), Some("WK-P1B"), Some("WK-P2A"),]
+        );
     }
 
     #[test]

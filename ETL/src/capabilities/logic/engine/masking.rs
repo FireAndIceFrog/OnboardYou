@@ -80,9 +80,9 @@ impl OnboardingAction for PIIMasking {
 
         // Collect eagerly for reliable column operations
         let lf = std::mem::replace(&mut context.data, LazyFrame::default());
-        let mut df = lf.collect().map_err(|e| {
-            Error::LogicError(format!("Failed to collect for masking: {}", e))
-        })?;
+        let mut df = lf
+            .collect()
+            .map_err(|e| Error::LogicError(format!("Failed to collect for masking: {}", e)))?;
 
         for col_mask in &self.config.columns {
             if !df.schema().contains(col_mask.name.as_str()) {
@@ -123,8 +123,12 @@ impl OnboardingAction for PIIMasking {
                     let dtype = col_ref.dtype().clone();
 
                     let zeros = match dtype {
-                        DataType::Int32 => Series::new(col_mask.name.as_str().into(), vec![0i32; n]),
-                        DataType::Int64 => Series::new(col_mask.name.as_str().into(), vec![0i64; n]),
+                        DataType::Int32 => {
+                            Series::new(col_mask.name.as_str().into(), vec![0i32; n])
+                        }
+                        DataType::Int64 => {
+                            Series::new(col_mask.name.as_str().into(), vec![0i64; n])
+                        }
                         DataType::Float32 => {
                             Series::new(col_mask.name.as_str().into(), vec![0.0f32; n])
                         }
@@ -216,11 +220,23 @@ mod tests {
         let df = result.data.collect().expect("collect");
 
         // SSN should be masked
-        let ssns: Vec<Option<&str>> = df.column("ssn").unwrap().str().unwrap().into_iter().collect();
+        let ssns: Vec<Option<&str>> = df
+            .column("ssn")
+            .unwrap()
+            .str()
+            .unwrap()
+            .into_iter()
+            .collect();
         assert_eq!(ssns[0], Some("***-**-6789"));
 
         // Salary should be untouched
-        let salaries: Vec<Option<i64>> = df.column("salary").unwrap().i64().unwrap().into_iter().collect();
+        let salaries: Vec<Option<i64>> = df
+            .column("salary")
+            .unwrap()
+            .i64()
+            .unwrap()
+            .into_iter()
+            .collect();
         assert_eq!(salaries[0], Some(75_000));
     }
 
@@ -238,11 +254,23 @@ mod tests {
         let df = result.data.collect().expect("collect");
 
         // SSN untouched
-        let ssns: Vec<Option<&str>> = df.column("ssn").unwrap().str().unwrap().into_iter().collect();
+        let ssns: Vec<Option<&str>> = df
+            .column("ssn")
+            .unwrap()
+            .str()
+            .unwrap()
+            .into_iter()
+            .collect();
         assert_eq!(ssns[0], Some("123-45-6789"));
 
         // Salary masked
-        let salaries: Vec<Option<i64>> = df.column("salary").unwrap().i64().unwrap().into_iter().collect();
+        let salaries: Vec<Option<i64>> = df
+            .column("salary")
+            .unwrap()
+            .i64()
+            .unwrap()
+            .into_iter()
+            .collect();
         assert!(salaries.iter().all(|s| *s == Some(0)));
     }
 
@@ -271,14 +299,19 @@ mod tests {
         assert_eq!(ssn_meta.source, "LOGIC_ACTION");
         assert_eq!(ssn_meta.modified_by.as_deref(), Some("pii_masking"));
 
-        let sal_meta = result.field_metadata.get("salary").expect("salary metadata");
+        let sal_meta = result
+            .field_metadata
+            .get("salary")
+            .expect("salary metadata");
         assert_eq!(sal_meta.source, "LOGIC_ACTION");
         assert_eq!(sal_meta.modified_by.as_deref(), Some("pii_masking"));
     }
 
     #[test]
     fn test_from_action_config_legacy() {
-        let cfg: PIIMaskingConfig = serde_json::from_value(serde_json::json!({ "mask_ssn": false, "mask_salary": true })).unwrap();
+        let cfg: PIIMaskingConfig =
+            serde_json::from_value(serde_json::json!({ "mask_ssn": false, "mask_salary": true }))
+                .unwrap();
         let action = PIIMasking::from_action_config(&cfg).unwrap();
         assert_eq!(action.config.columns.len(), 1);
         assert_eq!(action.config.columns[0].name, "salary");
@@ -291,7 +324,8 @@ mod tests {
                 { "name": "phone", "strategy": "redact", "keep_last": 4, "mask_prefix": "***-" },
                 { "name": "bonus", "strategy": "zero" }
             ]
-        })).unwrap();
+        }))
+        .unwrap();
         let action = PIIMasking::from_action_config(&cfg).unwrap();
         assert_eq!(action.config.columns.len(), 2);
         assert_eq!(action.config.columns[0].name, "phone");
@@ -319,7 +353,13 @@ mod tests {
         let result = action.execute(ctx).expect("execute");
         let df = result.data.collect().expect("collect");
 
-        let phones: Vec<Option<&str>> = df.column("phone").unwrap().str().unwrap().into_iter().collect();
+        let phones: Vec<Option<&str>> = df
+            .column("phone")
+            .unwrap()
+            .str()
+            .unwrap()
+            .into_iter()
+            .collect();
         assert_eq!(phones[0], Some("***-***-4567"));
     }
 
@@ -341,7 +381,13 @@ mod tests {
         let result = action.execute(ctx).expect("execute");
         let df = result.data.collect().expect("collect");
 
-        let bonuses: Vec<Option<i64>> = df.column("bonus").unwrap().i64().unwrap().into_iter().collect();
+        let bonuses: Vec<Option<i64>> = df
+            .column("bonus")
+            .unwrap()
+            .i64()
+            .unwrap()
+            .into_iter()
+            .collect();
         assert_eq!(bonuses[0], Some(0));
     }
 }

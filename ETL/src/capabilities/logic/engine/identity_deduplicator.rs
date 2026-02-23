@@ -95,9 +95,9 @@ impl OnboardingAction for IdentityDeduplicator {
 
         // Collect eagerly — dedup logic requires grouped iteration
         let lf = std::mem::replace(&mut context.data, LazyFrame::default());
-        let df = lf.collect().map_err(|e| {
-            Error::LogicError(format!("Failed to collect for dedup: {}", e))
-        })?;
+        let df = lf
+            .collect()
+            .map_err(|e| Error::LogicError(format!("Failed to collect for dedup: {}", e)))?;
 
         let schema = df.schema();
 
@@ -236,12 +236,17 @@ mod tests {
         let df = result.data.collect().expect("collect");
 
         let is_dup: Vec<Option<bool>> = df
-            .column("is_duplicate").unwrap()
-            .bool().unwrap()
+            .column("is_duplicate")
+            .unwrap()
+            .bool()
+            .unwrap()
             .into_iter()
             .collect();
 
-        assert_eq!(is_dup, vec![Some(false), Some(true), Some(false), Some(false)]);
+        assert_eq!(
+            is_dup,
+            vec![Some(false), Some(true), Some(false), Some(false)]
+        );
     }
 
     #[test]
@@ -256,8 +261,10 @@ mod tests {
         let df = result.data.collect().expect("collect");
 
         let canonical: Vec<Option<&str>> = df
-            .column("canonical_id").unwrap()
-            .str().unwrap()
+            .column("canonical_id")
+            .unwrap()
+            .str()
+            .unwrap()
             .into_iter()
             .collect();
 
@@ -280,8 +287,10 @@ mod tests {
         let df = result.data.collect().expect("collect");
 
         let is_dup: Vec<Option<bool>> = df
-            .column("is_duplicate").unwrap()
-            .bool().unwrap()
+            .column("is_duplicate")
+            .unwrap()
+            .bool()
+            .unwrap()
             .into_iter()
             .collect();
 
@@ -323,7 +332,9 @@ mod tests {
         let result = action.execute(ctx).expect("execute");
 
         for col_name in ["canonical_id", "is_duplicate"] {
-            let meta = result.field_metadata.get(col_name)
+            let meta = result
+                .field_metadata
+                .get(col_name)
                 .unwrap_or_else(|| panic!("metadata for '{}'", col_name));
             assert_eq!(meta.source, "LOGIC_ACTION");
             assert_eq!(meta.modified_by.as_deref(), Some("identity_deduplicator"));
@@ -366,8 +377,10 @@ mod tests {
         let df = result.data.collect().expect("collect");
 
         let canonical: Vec<Option<&str>> = df
-            .column("canonical_id").unwrap()
-            .str().unwrap()
+            .column("canonical_id")
+            .unwrap()
+            .str()
+            .unwrap()
             .into_iter()
             .collect();
         assert_eq!(canonical[0], Some("A1"));

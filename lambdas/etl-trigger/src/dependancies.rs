@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
 use crate::repositories::{
-    config_repository::{self, DynamoConfigRepo}, etl_repository::{EtlRepository, IEtlRepo}, pipeline_repository::{IPipelineRepo, PipelineRepository}, settings_repository::{self, DynamoSettingsRepo}
+    config_repository::{self, DynamoConfigRepo},
+    etl_repository::{EtlRepository, IEtlRepo},
+    pipeline_repository::{IPipelineRepo, PipelineRepository},
+    settings_repository::{self, DynamoSettingsRepo},
 };
 use config_repository::IConfigRepo;
 use onboard_you::ActionFactoryTrait;

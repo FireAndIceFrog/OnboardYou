@@ -31,16 +31,20 @@ pub struct Dependancies {
     pub etl_repo: Arc<dyn EtlRepo>,
 }
 
-
 impl Dependancies {
     pub fn create_env() -> Env {
         Env {
-            config_table_name: std::env::var("CONFIG_TABLE_NAME").unwrap_or_else(|_| "PipelineConfigs".into()),
-            settings_table_name: std::env::var("SETTINGS_TABLE_NAME").unwrap_or_else(|_| "OrgSettings".into()),
+            config_table_name: std::env::var("CONFIG_TABLE_NAME")
+                .unwrap_or_else(|_| "PipelineConfigs".into()),
+            settings_table_name: std::env::var("SETTINGS_TABLE_NAME")
+                .unwrap_or_else(|_| "OrgSettings".into()),
             etl_lambda_arn: std::env::var("ETL_LAMBDA_ARN").expect("ETL_LAMBDA_ARN must be set"),
-            scheduler_role_arn: std::env::var("SCHEDULER_ROLE_ARN").expect("SCHEDULER_ROLE_ARN must be set"),
-            csv_upload_bucket: std::env::var("CSV_UPLOAD_BUCKET").expect("CSV_UPLOAD_BUCKET must be set"),
-            cognito_client_id: std::env::var("COGNITO_CLIENT_ID").expect("COGNITO_CLIENT_ID must be set"),
+            scheduler_role_arn: std::env::var("SCHEDULER_ROLE_ARN")
+                .expect("SCHEDULER_ROLE_ARN must be set"),
+            csv_upload_bucket: std::env::var("CSV_UPLOAD_BUCKET")
+                .expect("CSV_UPLOAD_BUCKET must be set"),
+            cognito_client_id: std::env::var("COGNITO_CLIENT_ID")
+                .expect("COGNITO_CLIENT_ID must be set"),
         }
     }
 
@@ -48,7 +52,7 @@ impl Dependancies {
         let aws_config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
 
         let dynamo = aws_sdk_dynamodb::Client::new(&aws_config);
- 
+
         Self {
             config_repo: Arc::new(DynamoConfigRepo {
                 dynamo: dynamo.clone(),

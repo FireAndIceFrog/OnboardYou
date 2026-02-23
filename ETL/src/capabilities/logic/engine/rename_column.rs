@@ -102,7 +102,9 @@ mod tests {
 
     #[test]
     fn test_id() {
-        let config = RenameConfig { mapping: HashMap::new() };
+        let config = RenameConfig {
+            mapping: HashMap::new(),
+        };
         let act = RenameColumn::new(config);
         assert_eq!(act.id(), "rename_column");
     }
@@ -128,7 +130,8 @@ mod tests {
     fn test_duplicate_targets_rejected_at_construction() {
         let cfg: RenameConfig = serde_json::from_value(serde_json::json!({
             "mapping": { "first_name": "name", "last_name": "name" }
-        })).unwrap();
+        }))
+        .unwrap();
         assert!(RenameColumn::from_action_config(&cfg).is_err());
     }
 
@@ -148,7 +151,9 @@ mod tests {
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).expect("execute");
 
-        let meta = result.field_metadata.get("given_name")
+        let meta = result
+            .field_metadata
+            .get("given_name")
             .expect("metadata for 'given_name'");
         assert_eq!(meta.source, "LOGIC_ACTION");
         assert_eq!(meta.modified_by.as_deref(), Some("rename_column"));
@@ -167,10 +172,7 @@ mod tests {
     #[test]
     fn test_validate_ok() {
         let config = RenameConfig {
-            mapping: HashMap::from([
-                ("a".into(), "b".into()),
-                ("c".into(), "d".into()),
-            ]),
+            mapping: HashMap::from([("a".into(), "b".into()), ("c".into(), "d".into())]),
         };
         assert!(config.validate().is_ok());
     }
@@ -178,10 +180,7 @@ mod tests {
     #[test]
     fn test_validate_duplicate_targets() {
         let config = RenameConfig {
-            mapping: HashMap::from([
-                ("a".into(), "z".into()),
-                ("b".into(), "z".into()),
-            ]),
+            mapping: HashMap::from([("a".into(), "z".into()), ("b".into(), "z".into())]),
         };
         assert!(config.validate().is_err());
     }

@@ -27,16 +27,14 @@ impl S3Repo for S3Repository {
     /// Generate a presigned PUT URL so the frontend can upload a CSV directly to S3.
     ///
     /// The S3 key follows the convention: `{organization_id}/{customer_company_id}/{filename}`.
-    async fn presigned_put_url(
-        &self,
-        key: &str,
-    ) -> Result<String, ApiError> {
+    async fn presigned_put_url(&self, key: &str) -> Result<String, ApiError> {
         let presign_config = PresigningConfig::builder()
             .expires_in(PRESIGN_TTL)
             .build()
             .map_err(|e| ApiError::Repository(format!("Presigning config error: {e}")))?;
 
-        let presign_output: aws_sdk_s3::presigning::PresignedRequest = self.s3
+        let presign_output: aws_sdk_s3::presigning::PresignedRequest = self
+            .s3
             .put_object()
             .bucket(&self.bucket)
             .key(key)
@@ -52,12 +50,10 @@ impl S3Repo for S3Repository {
     ///
     /// Returns the column names parsed from the first line. This is called after
     /// the frontend successfully uploads the file.
-    async fn read_csv_headers(
-        &self,
-        key: &str,
-    ) -> Result<Vec<String>, ApiError> {
+    async fn read_csv_headers(&self, key: &str) -> Result<Vec<String>, ApiError> {
         // Fetch only the first 8KB — plenty for the header row.
-        let resp = self.s3
+        let resp = self
+            .s3
             .get_object()
             .bucket(&self.bucket)
             .key(key)

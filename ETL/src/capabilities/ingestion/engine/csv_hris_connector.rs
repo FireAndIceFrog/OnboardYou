@@ -71,9 +71,7 @@ impl CsvHrisConnectorConfig {
     /// Build from the raw `serde_json::Value` stored in `ActionConfig.config`.
     pub fn from_json(value: &serde_json::Value) -> Result<Self> {
         serde_json::from_value(value.clone()).map_err(|e| {
-            Error::ConfigurationError(format!(
-                "CsvHrisConnector config parse error: {e}"
-            ))
+            Error::ConfigurationError(format!("CsvHrisConnector config parse error: {e}"))
         })
     }
 
@@ -137,7 +135,10 @@ impl CsvHrisConnector {
             ));
         }
 
-        if config.filename.contains("/") || config.filename.contains("\\") || config.filename.contains("..") {
+        if config.filename.contains("/")
+            || config.filename.contains("\\")
+            || config.filename.contains("..")
+        {
             return Err(Error::ConfigurationError(
                 "CsvHrisConnector filename must not contain path separators or '..'".into(),
             ));
@@ -159,18 +160,14 @@ impl CsvHrisConnector {
         let s3_key = self.config.s3_key()?;
 
         let bucket = std::env::var("CSV_UPLOAD_BUCKET").map_err(|_| {
-            Error::ConfigurationError(
-                "CSV_UPLOAD_BUCKET environment variable is not set".into(),
-            )
+            Error::ConfigurationError("CSV_UPLOAD_BUCKET environment variable is not set".into())
         })?;
 
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            Error::IngestionError(format!("Failed to create tokio runtime: {e}"))
-        })?;
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| Error::IngestionError(format!("Failed to create tokio runtime: {e}")))?;
 
         rt.block_on(async {
-            let aws_config =
-                aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
+            let aws_config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
             let client = aws_sdk_s3::Client::new(&aws_config);
 
             let resp = client
@@ -186,9 +183,11 @@ impl CsvHrisConnector {
                     ))
                 })?;
 
-            let bytes = resp.body.collect().await.map_err(|e| {
-                Error::IngestionError(format!("Failed to read S3 body: {e}"))
-            })?;
+            let bytes = resp
+                .body
+                .collect()
+                .await
+                .map_err(|e| Error::IngestionError(format!("Failed to read S3 body: {e}")))?;
 
             Ok(bytes.into_bytes().to_vec())
         })
@@ -200,14 +199,12 @@ impl HrisConnector for CsvHrisConnector {
         let csv_bytes = self.download_from_s3()?;
 
         let cursor = std::io::Cursor::new(csv_bytes);
-        let df = CsvReader::new(cursor)
-            .finish()
-            .map_err(|e| {
-                Error::IngestionError(format!(
-                    "Failed to parse CSV '{}': {e}",
-                    self.config.filename
-                ))
-            })?;
+        let df = CsvReader::new(cursor).finish().map_err(|e| {
+            Error::IngestionError(format!(
+                "Failed to parse CSV '{}': {e}",
+                self.config.filename
+            ))
+        })?;
 
         Ok(df.lazy())
     }
@@ -224,9 +221,8 @@ impl ColumnCalculator for CsvHrisConnector {
             .map(|name| Column::new(name.into(), Vec::<&str>::new()))
             .collect();
 
-        let empty_df = DataFrame::new(0, columns).map_err(|e| {
-            Error::IngestionError(format!("Failed to build CSV schema: {e}"))
-        })?;
+        let empty_df = DataFrame::new(0, columns)
+            .map_err(|e| Error::IngestionError(format!("Failed to build CSV schema: {e}")))?;
 
         let mut ctx = RosterContext::new(empty_df.lazy());
         for col_name in &self.config.columns {
@@ -254,9 +250,9 @@ impl OnboardingAction for CsvHrisConnector {
         let mut lf = self.fetch_data()?;
 
         // 2. Discover actual column names from the data
-        let schema = lf.collect_schema().map_err(|e| {
-            Error::IngestionError(format!("Failed to collect schema: {e}"))
-        })?;
+        let schema = lf
+            .collect_schema()
+            .map_err(|e| Error::IngestionError(format!("Failed to collect schema: {e}")))?;
 
         // 3. Build the RosterContext
         let mut ctx = RosterContext::new(lf);

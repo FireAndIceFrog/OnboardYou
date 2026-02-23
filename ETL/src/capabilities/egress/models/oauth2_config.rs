@@ -58,9 +58,7 @@ impl OAuth2RepoConfig {
     /// Deserialise from the raw `serde_json::Value` stored in `ActionConfig.config`.
     pub fn from_json(value: &serde_json::Value) -> crate::domain::Result<Self> {
         serde_json::from_value(value.clone()).map_err(|e| {
-            crate::domain::Error::ConfigurationError(format!(
-                "Invalid OAuth2RepoConfig: {e}"
-            ))
+            crate::domain::Error::ConfigurationError(format!("Invalid OAuth2RepoConfig: {e}"))
         })
     }
 }

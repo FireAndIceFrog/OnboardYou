@@ -143,9 +143,9 @@ impl SafeRegex {
     pub fn new(pattern: &str, context: &str) -> Result<Self> {
         // 1. Non-empty
         if pattern.is_empty() {
-            return Err(Error::ConfigurationError(
-                format!("{context}: 'pattern' must not be empty"),
-            ));
+            return Err(Error::ConfigurationError(format!(
+                "{context}: 'pattern' must not be empty"
+            )));
         }
 
         // 2. Length
@@ -177,9 +177,7 @@ impl SafeRegex {
             .size_limit(MAX_COMPILED_SIZE)
             .build()
             .map_err(|e| {
-                Error::ConfigurationError(format!(
-                    "{context}: invalid pattern '{pattern}': {e}"
-                ))
+                Error::ConfigurationError(format!("{context}: invalid pattern '{pattern}': {e}"))
             })?;
 
         Ok(Self {
@@ -332,7 +330,10 @@ mod tests {
     #[test]
     fn test_safe_regex_replace_first() {
         let re = SafeRegex::new("world", "test").unwrap();
-        assert_eq!(re.replace_first("hello world world", "rust"), "hello rust world");
+        assert_eq!(
+            re.replace_first("hello world world", "rust"),
+            "hello rust world"
+        );
     }
 
     #[test]

@@ -5,14 +5,13 @@
 
 mod common;
 
-use onboard_you::{ActionConfig, ActionConfigPayload, ActionFactory, ActionType, RosterContext};
 use onboard_you::capabilities::ingestion::engine::{
-    WorkdayConfig, WorkdayResponseGroup,
-    build_get_workers_envelope, parse_get_workers_response,
-    parse_response_results, workers_to_dataframe,
+    build_get_workers_envelope, parse_get_workers_response, parse_response_results,
+    workers_to_dataframe, WorkdayConfig, WorkdayResponseGroup,
 };
-use polars::prelude::*;
 use onboard_you::*;
+use onboard_you::{ActionConfig, ActionConfigPayload, ActionFactory, ActionType, RosterContext};
+use polars::prelude::*;
 
 // ── Sample Workday XML for integration tests ─────────────────────────────
 
@@ -79,14 +78,19 @@ fn test_factory_creates_workday_connector() {
     let config = ActionConfig {
         id: "ingest_workday".into(),
         action_type: ActionType::WorkdayHrisConnector,
-        config: ActionConfigPayload::WorkdayHrisConnector(serde_json::from_value(serde_json::json!({
-            "tenant_url": "https://wd3-impl-services1.workday.com",
-            "tenant_id": "integration_test_tenant",
-            "username": "ISU_Integration",
-            "password": "test_password"
-        })).unwrap()),
+        config: ActionConfigPayload::WorkdayHrisConnector(
+            serde_json::from_value(serde_json::json!({
+                "tenant_url": "https://wd3-impl-services1.workday.com",
+                "tenant_id": "integration_test_tenant",
+                "username": "ISU_Integration",
+                "password": "test_password"
+            }))
+            .unwrap(),
+        ),
     };
-    let action = ActionFactory::new().create(&config).expect("factory should create workday connector");
+    let action = ActionFactory::new()
+        .create(&config)
+        .expect("factory should create workday connector");
     assert_eq!(action.id(), "workday_hris_connector");
 }
 
@@ -95,22 +99,27 @@ fn test_factory_workday_with_full_config() {
     let config = ActionConfig {
         id: "ingest_workday_full".into(),
         action_type: ActionType::WorkdayHrisConnector,
-        config: ActionConfigPayload::WorkdayHrisConnector(serde_json::from_value(serde_json::json!({
-            "tenant_url": "https://wd5-impl-services1.workday.com",
-            "tenant_id": "checkout_corp",
-            "username": "ISU_Onboard",
-            "password": "env:WORKDAY_SECRET",
-            "worker_count_limit": 500,
-            "response_group": {
-                "include_personal_information": true,
-                "include_employment_information": true,
-                "include_compensation": true,
-                "include_organizations": true,
-                "include_roles": true
-            }
-        })).unwrap()),
+        config: ActionConfigPayload::WorkdayHrisConnector(
+            serde_json::from_value(serde_json::json!({
+                "tenant_url": "https://wd5-impl-services1.workday.com",
+                "tenant_id": "checkout_corp",
+                "username": "ISU_Onboard",
+                "password": "env:WORKDAY_SECRET",
+                "worker_count_limit": 500,
+                "response_group": {
+                    "include_personal_information": true,
+                    "include_employment_information": true,
+                    "include_compensation": true,
+                    "include_organizations": true,
+                    "include_roles": true
+                }
+            }))
+            .unwrap(),
+        ),
     };
-    let action = ActionFactory::new().create(&config).expect("factory should create workday connector");
+    let action = ActionFactory::new()
+        .create(&config)
+        .expect("factory should create workday connector");
     assert_eq!(action.id(), "workday_hris_connector");
 }
 
@@ -196,10 +205,24 @@ fn test_e2e_workday_pipeline_with_scd_type_2() {
     // Build a RosterContext as the Workday connector would
     let mut ctx = RosterContext::new(df.lazy());
     for col in [
-        "worker_id", "employee_id", "first_name", "last_name", "email",
-        "phone", "job_title", "business_title", "department", "location",
-        "hire_date", "worker_type", "worker_status", "manager_id",
-        "manager_name", "position_id", "compensation_grade", "pay_rate_type",
+        "worker_id",
+        "employee_id",
+        "first_name",
+        "last_name",
+        "email",
+        "phone",
+        "job_title",
+        "business_title",
+        "department",
+        "location",
+        "hire_date",
+        "worker_type",
+        "worker_status",
+        "manager_id",
+        "manager_name",
+        "position_id",
+        "compensation_grade",
+        "pay_rate_type",
     ] {
         ctx.set_field_source(col.to_string(), "WORKDAY_HRIS".into());
     }
@@ -208,13 +231,20 @@ fn test_e2e_workday_pipeline_with_scd_type_2() {
     let scd_config = ActionConfig {
         id: "scd".into(),
         action_type: ActionType::ScdType2,
-        config: ActionConfigPayload::ScdType2(serde_json::from_value(serde_json::json!({
-            "entity_column": "employee_id",
-            "date_column": "hire_date"
-        })).unwrap()),
+        config: ActionConfigPayload::ScdType2(
+            serde_json::from_value(serde_json::json!({
+                "entity_column": "employee_id",
+                "date_column": "hire_date"
+            }))
+            .unwrap(),
+        ),
     };
-    let scd_action = ActionFactory::new().create(&scd_config).expect("create scd_type_2");
-    let result = scd_action.execute(ctx).expect("scd should execute on Workday data");
+    let scd_action = ActionFactory::new()
+        .create(&scd_config)
+        .expect("create scd_type_2");
+    let result = scd_action
+        .execute(ctx)
+        .expect("scd should execute on Workday data");
     let result_df = result.data.collect().expect("collect");
 
     // SCD Type 2 should add effective_from, effective_to, is_current columns
@@ -233,17 +263,25 @@ fn test_e2e_workday_pipeline_with_deduplication() {
     let dedup_config = ActionConfig {
         id: "dedup".into(),
         action_type: ActionType::IdentityDeduplicator,
-        config: ActionConfigPayload::IdentityDeduplicator(serde_json::from_value(serde_json::json!({ "columns": ["email"] })).unwrap()),
+        config: ActionConfigPayload::IdentityDeduplicator(
+            serde_json::from_value(serde_json::json!({ "columns": ["email"] })).unwrap(),
+        ),
     };
-    let dedup_action = ActionFactory::new().create(&dedup_config).expect("create dedup");
-    let result = dedup_action.execute(ctx).expect("dedup should succeed on Workday data");
+    let dedup_action = ActionFactory::new()
+        .create(&dedup_config)
+        .expect("create dedup");
+    let result = dedup_action
+        .execute(ctx)
+        .expect("dedup should succeed on Workday data");
     let result_df = result.data.collect().expect("collect");
 
     // Both records have unique emails, so neither should be a duplicate
     assert_eq!(result_df.height(), 2);
     let is_dup: Vec<Option<bool>> = result_df
-        .column("is_duplicate").unwrap()
-        .bool().unwrap()
+        .column("is_duplicate")
+        .unwrap()
+        .bool()
+        .unwrap()
         .into_iter()
         .collect();
     assert_eq!(is_dup, vec![Some(false), Some(false)]);

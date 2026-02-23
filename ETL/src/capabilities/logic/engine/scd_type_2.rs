@@ -67,11 +67,7 @@ impl ColumnCalculator for SCDType2 {
         let lf = std::mem::replace(&mut context.data, LazyFrame::default());
 
         // Rename date_column → effective_from
-        let lf = lf.rename(
-            [self.config.date_column.as_str()],
-            ["effective_from"],
-            true,
-        );
+        let lf = lf.rename([self.config.date_column.as_str()], ["effective_from"], true);
 
         // Add effective_to and is_current columns
         let lf = lf
@@ -107,11 +103,7 @@ impl OnboardingAction for SCDType2 {
         );
 
         // 2. Rename date_column → effective_from
-        let lf = lf.rename(
-            [self.config.date_column.as_str()],
-            ["effective_from"],
-            true,
-        );
+        let lf = lf.rename([self.config.date_column.as_str()], ["effective_from"], true);
 
         // 3. Compute effective_to = next record's effective_from within the
         //    same entity partition (shift -1 brings the *next* row's value).
@@ -123,11 +115,7 @@ impl OnboardingAction for SCDType2 {
         );
 
         // 4. is_current = effective_to IS NULL (i.e. latest record)
-        let lf = lf.with_column(
-            col("effective_to")
-                .is_null()
-                .alias("is_current"),
-        );
+        let lf = lf.with_column(col("effective_to").is_null().alias("is_current"));
 
         // 5. Update field metadata
         for col_name in ["effective_from", "effective_to", "is_current"] {
@@ -172,11 +160,20 @@ mod tests {
         let result = action.execute(ctx).expect("execute");
 
         let df = result.data.collect().expect("collect");
-        assert!(df.column("effective_from").is_ok(), "should have effective_from");
-        assert!(df.column("effective_to").is_ok(), "should have effective_to");
+        assert!(
+            df.column("effective_from").is_ok(),
+            "should have effective_from"
+        );
+        assert!(
+            df.column("effective_to").is_ok(),
+            "should have effective_to"
+        );
         assert!(df.column("is_current").is_ok(), "should have is_current");
         // start_date was renamed, should no longer exist
-        assert!(df.column("start_date").is_err(), "start_date should be renamed");
+        assert!(
+            df.column("start_date").is_err(),
+            "start_date should be renamed"
+        );
     }
 
     #[test]
@@ -188,13 +185,12 @@ mod tests {
         let df = result.data.collect().expect("collect");
 
         let is_current = df.column("is_current").unwrap();
-        let bools: Vec<Option<bool>> = is_current
-            .bool()
-            .unwrap()
-            .into_iter()
-            .collect();
+        let bools: Vec<Option<bool>> = is_current.bool().unwrap().into_iter().collect();
 
-        assert_eq!(bools, vec![Some(false), Some(true), Some(false), Some(true)]);
+        assert_eq!(
+            bools,
+            vec![Some(false), Some(true), Some(false), Some(true)]
+        );
     }
 
     #[test]
@@ -220,7 +216,9 @@ mod tests {
         let result = action.execute(ctx).expect("execute");
 
         for col_name in ["effective_from", "effective_to", "is_current"] {
-            let meta = result.field_metadata.get(col_name)
+            let meta = result
+                .field_metadata
+                .get(col_name)
                 .unwrap_or_else(|| panic!("metadata for '{}'", col_name));
             assert_eq!(meta.source, "LOGIC_ACTION");
             assert_eq!(meta.modified_by.as_deref(), Some("scd_type_2"));
@@ -243,8 +241,10 @@ mod tests {
         let df = result.data.collect().expect("collect");
 
         let is_current: Vec<Option<bool>> = df
-            .column("is_current").unwrap()
-            .bool().unwrap()
+            .column("is_current")
+            .unwrap()
+            .bool()
+            .unwrap()
             .into_iter()
             .collect();
         assert!(is_current.iter().all(|v| *v == Some(true)));
@@ -292,8 +292,10 @@ mod tests {
         assert!(df.column("hire_date").is_err());
 
         let is_current: Vec<Option<bool>> = df
-            .column("is_current").unwrap()
-            .bool().unwrap()
+            .column("is_current")
+            .unwrap()
+            .bool()
+            .unwrap()
             .into_iter()
             .collect();
         // W1 has 2 records: first not current, second current

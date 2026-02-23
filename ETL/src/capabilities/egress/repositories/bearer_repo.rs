@@ -41,9 +41,8 @@ impl EgressRepository for BearerRepo {
     fn send_data(
         &self,
         payload: &str,
-    ) -> std::pin::Pin<
-        Box<dyn std::future::Future<Output = Result<DispatchResponse>> + Send + '_>,
-    > {
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<DispatchResponse>> + Send + '_>>
+    {
         let destination_url = self.config.destination_url.clone();
         let placement = self.config.placement.clone();
         let token = self.config.token.clone();
@@ -81,9 +80,10 @@ impl EgressRepository for BearerRepo {
                 .header("Content-Type", "application/json")
                 .body(payload.clone());
 
-            let response = request.send().await.map_err(|e| {
-                Error::EgressError(format!("Bearer dispatch failed: {e}"))
-            })?;
+            let response = request
+                .send()
+                .await
+                .map_err(|e| Error::EgressError(format!("Bearer dispatch failed: {e}")))?;
 
             let status_code = response.status().as_u16();
             let body = response.text().await.unwrap_or_default();
@@ -99,4 +99,3 @@ impl EgressRepository for BearerRepo {
         })
     }
 }
-

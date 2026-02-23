@@ -33,24 +33,80 @@ pub fn write_sample_csv() -> (tempfile::NamedTempFile, PathBuf) {
 
 /// First names — includes diacritics so `handle_diacritics` has real work to do.
 const FIRST_NAMES: &[&str] = &[
-    "John", "Jane", "Alice", "José", "François", "Müller", "Siobhán",
-    "Björk", "André", "Zoë", "Chloë", "Renée", "László", "Søren",
-    "Jürgen", "Conceição", "Yağız", "Håkon", "Stéphane", "Noël",
-    "Daniël", "Léa", "Maëlle", "Raphaël", "Anaïs", "Ángel", "Héctor",
-    "Inés", "Tomáš", "Lukáš", "Jiří", "Věra", "Gábor", "Ádám",
+    "John",
+    "Jane",
+    "Alice",
+    "José",
+    "François",
+    "Müller",
+    "Siobhán",
+    "Björk",
+    "André",
+    "Zoë",
+    "Chloë",
+    "Renée",
+    "László",
+    "Søren",
+    "Jürgen",
+    "Conceição",
+    "Yağız",
+    "Håkon",
+    "Stéphane",
+    "Noël",
+    "Daniël",
+    "Léa",
+    "Maëlle",
+    "Raphaël",
+    "Anaïs",
+    "Ángel",
+    "Héctor",
+    "Inés",
+    "Tomáš",
+    "Lukáš",
+    "Jiří",
+    "Věra",
+    "Gábor",
+    "Ádám",
 ];
 
 const LAST_NAMES: &[&str] = &[
-    "Doe", "Smith", "Johnson", "García", "Müller", "Ó'Brien", "Nakamura",
-    "Johansson", "Lefèvre", "Hernández", "Bošković", "Čermák", "Dvořák",
-    "Šimůnek", "Kováč", "Šťastný", "Łuczak", "Wiśniewski", "Górski",
-    "Petrović", "Đorđević", "Nikolić", "Jørgensen", "Ødegård", "Grünwald",
-    "Böhm", "Strauß", "Weiß", "Kühn", "Schäfer", "Núñez", "López",
+    "Doe",
+    "Smith",
+    "Johnson",
+    "García",
+    "Müller",
+    "Ó'Brien",
+    "Nakamura",
+    "Johansson",
+    "Lefèvre",
+    "Hernández",
+    "Bošković",
+    "Čermák",
+    "Dvořák",
+    "Šimůnek",
+    "Kováč",
+    "Šťastný",
+    "Łuczak",
+    "Wiśniewski",
+    "Górski",
+    "Petrović",
+    "Đorđević",
+    "Nikolić",
+    "Jørgensen",
+    "Ødegård",
+    "Grünwald",
+    "Böhm",
+    "Strauß",
+    "Weiß",
+    "Kühn",
+    "Schäfer",
+    "Núñez",
+    "López",
 ];
 
 const COUNTRIES: &[&str] = &[
-    "US", "GB", "DE", "FR", "JP", "AU", "CA", "NL", "SE", "NO",
-    "ES", "IT", "BR", "MX", "IN", "ZA", "NZ", "IE", "AT", "CH",
+    "US", "GB", "DE", "FR", "JP", "AU", "CA", "NL", "SE", "NO", "ES", "IT", "BR", "MX", "IN", "ZA",
+    "NZ", "IE", "AT", "CH",
 ];
 
 /// Generates a CSV string with `n` employee rows.
@@ -142,7 +198,7 @@ pub fn write_generated_csv(n: usize) -> (tempfile::NamedTempFile, PathBuf) {
 
 /// Manifest that uses the CSV connector with S3 URI and declared columns.
 pub fn sample_csv_manifest(s3_uri: &str, columns: &[&str]) -> String {
-    let cols_json: Vec<String> = columns.iter().map(|c| format!("\"{}\"" , c)).collect();
+    let cols_json: Vec<String> = columns.iter().map(|c| format!("\"{}\"", c)).collect();
     format!(
         r#"{{
   "version": "1.0",

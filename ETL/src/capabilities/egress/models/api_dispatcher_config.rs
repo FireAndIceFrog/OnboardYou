@@ -236,9 +236,9 @@ impl PartialSchema for ApiDispatcherConfig {
                  Uses `auth_type` as the discriminator field. The `Default` variant \
                  is a meta-type resolved to the organisation's stored settings at runtime.",
             ))
-            .discriminator(Some(
-                utoipa::openapi::schema::Discriminator::new("auth_type"),
-            ))
+            .discriminator(Some(utoipa::openapi::schema::Discriminator::new(
+                "auth_type",
+            )))
             .build();
 
         RefOr::T(Schema::OneOf(schema))

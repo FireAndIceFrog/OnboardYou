@@ -136,9 +136,9 @@ fn dataframe_to_json_payload(df: &DataFrame) -> Result<String> {
         let mut map = serde_json::Map::with_capacity(col_names.len());
 
         for &name in &col_names {
-            let series = df.column(name).map_err(|e| {
-                Error::EgressError(format!("Column '{name}' not found: {e}"))
-            })?;
+            let series = df
+                .column(name)
+                .map_err(|e| Error::EgressError(format!("Column '{name}' not found: {e}")))?;
             let av = series.get(row_idx).map_err(|e| {
                 Error::EgressError(format!(
                     "Failed to read row {row_idx}, column '{name}': {e}"
@@ -202,7 +202,8 @@ mod tests {
             "auth_type": "bearer",
             "destination_url": "https://api.example.com/employees",
             "token": "test-token"
-        })).unwrap();
+        }))
+        .unwrap();
 
         let dispatcher = ApiDispatcher::from_action_config(&cfg);
         assert!(dispatcher.is_ok());

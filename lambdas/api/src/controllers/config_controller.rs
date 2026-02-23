@@ -7,8 +7,8 @@ use axum::{
     Json,
 };
 
-use crate::{dependancies::Dependancies, engine, models::ValidationResult};
 use crate::models::{ApiError, Claims, ConfigRequest, ErrorResponse};
+use crate::{dependancies::Dependancies, engine, models::ValidationResult};
 use onboard_you::PipelineConfig;
 
 /// GET /config
@@ -92,9 +92,13 @@ pub async fn create_config(
 ) -> Result<impl IntoResponse, ApiError> {
     engine::validation_engine::validate_pipeline(&state, &body.pipeline)?;
     let config = body.into_config();
-    let saved =
-        engine::config_engine::upsert(&state, &claims.organization_id, &customer_company_id, config)
-            .await?;
+    let saved = engine::config_engine::upsert(
+        &state,
+        &claims.organization_id,
+        &customer_company_id,
+        config,
+    )
+    .await?;
     Ok((StatusCode::OK, Json(saved)))
 }
 
@@ -129,9 +133,13 @@ pub async fn update_config(
 ) -> Result<impl IntoResponse, ApiError> {
     engine::validation_engine::validate_pipeline(&state, &body.pipeline)?;
     let config = body.into_config();
-    let saved =
-        engine::config_engine::upsert(&state, &claims.organization_id, &customer_company_id, config)
-            .await?;
+    let saved = engine::config_engine::upsert(
+        &state,
+        &claims.organization_id,
+        &customer_company_id,
+        config,
+    )
+    .await?;
     Ok((StatusCode::OK, Json(saved)))
 }
 

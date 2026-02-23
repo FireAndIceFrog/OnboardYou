@@ -18,18 +18,20 @@ pub async fn login(state: &Dependancies, req: &LoginRequest) -> Result<LoginResp
         return Err(ApiError::Validation("password is required".into()));
     }
 
-    let response = state.auth_repo.authenticate(&req.email, &req.password).await?;
+    let response = state
+        .auth_repo
+        .authenticate(&req.email, &req.password)
+        .await?;
 
     tracing::info!(email = %req.email, "User authenticated successfully");
 
     Ok(response)
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::models::{LoginRequest, LoginResponse, ApiError};
     use crate::dependancies::{Dependancies, Env};
+    use crate::models::{ApiError, LoginRequest, LoginResponse};
     use crate::repositories::cognito_repository::AuthRepo;
     use async_trait::async_trait;
     use std::sync::Arc;
@@ -41,7 +43,11 @@ mod tests {
 
     #[async_trait]
     impl AuthRepo for FakeAuthRepo {
-        async fn authenticate(&self, _email: &str, _password: &str) -> Result<LoginResponse, ApiError> {
+        async fn authenticate(
+            &self,
+            _email: &str,
+            _password: &str,
+        ) -> Result<LoginResponse, ApiError> {
             if let Some(r) = &self.success_resp {
                 Ok(LoginResponse {
                     id_token: r.id_token.clone(),
@@ -58,9 +64,15 @@ mod tests {
         }
     }
 
-    async fn build_state_with_auth(success: Option<LoginResponse>, err_msg: Option<String>) -> Dependancies {
+    async fn build_state_with_auth(
+        success: Option<LoginResponse>,
+        err_msg: Option<String>,
+    ) -> Dependancies {
         let mut deps = Dependancies::new(Env::default()).await;
-        deps.auth_repo = Arc::new(FakeAuthRepo { success_resp: success.map(Arc::new), err_msg });
+        deps.auth_repo = Arc::new(FakeAuthRepo {
+            success_resp: success.map(Arc::new),
+            err_msg,
+        });
         deps
     }
 
@@ -76,9 +88,14 @@ mod tests {
 
         let state = build_state_with_auth(Some(resp.clone()), None).await;
 
-        let req = LoginRequest { email: "user@example.com".into(), password: "secret".into() };
+        let req = LoginRequest {
+            email: "user@example.com".into(),
+            password: "secret".into(),
+        };
 
-        let out = super::login(&state, &req).await.expect("login should succeed");
+        let out = super::login(&state, &req)
+            .await
+            .expect("login should succeed");
         assert_eq!(out.id_token, resp.id_token);
         assert_eq!(out.access_token, resp.access_token);
     }
@@ -87,12 +104,22 @@ mod tests {
     async fn login_validation_errors() {
         let state = build_state_with_auth(None, Some("no".into())).await;
 
-        let req = LoginRequest { email: "   ".into(), password: "p".into() };
-        let err = super::login(&state, &req).await.expect_err("should error on empty email");
+        let req = LoginRequest {
+            email: "   ".into(),
+            password: "p".into(),
+        };
+        let err = super::login(&state, &req)
+            .await
+            .expect_err("should error on empty email");
         assert!(matches!(err, ApiError::Validation(_)));
 
-        let req2 = LoginRequest { email: "a@b.com".into(), password: "".into() };
-        let err2 = super::login(&state, &req2).await.expect_err("should error on empty password");
+        let req2 = LoginRequest {
+            email: "a@b.com".into(),
+            password: "".into(),
+        };
+        let err2 = super::login(&state, &req2)
+            .await
+            .expect_err("should error on empty password");
         assert!(matches!(err2, ApiError::Validation(_)));
     }
 
@@ -100,8 +127,13 @@ mod tests {
     async fn login_propagates_auth_repo_error() {
         let state = build_state_with_auth(None, Some("bad creds".into())).await;
 
-        let req = LoginRequest { email: "user@example.com".into(), password: "wrong".into() };
-        let err = super::login(&state, &req).await.expect_err("should propagate auth error");
+        let req = LoginRequest {
+            email: "user@example.com".into(),
+            password: "wrong".into(),
+        };
+        let err = super::login(&state, &req)
+            .await
+            .expect_err("should propagate auth error");
         assert!(matches!(err, ApiError::Unauthorized(_)));
     }
 }

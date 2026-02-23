@@ -6,7 +6,7 @@
 use async_trait::async_trait;
 use aws_sdk_scheduler::types::{FlexibleTimeWindow, FlexibleTimeWindowMode, Target};
 
-use crate::models::{ApiError};
+use crate::models::ApiError;
 use onboard_you::PipelineConfig;
 
 /// Abstract schedule management for pipeline configs.
@@ -81,9 +81,7 @@ impl ScheduleRepo for EventBridgeScheduleRepo {
                     .flexible_time_window(flex_window)
                     .send()
                     .await
-                    .map_err(|e| {
-                        ApiError::Repository(format!("Failed to create schedule: {e}"))
-                    })?;
+                    .map_err(|e| ApiError::Repository(format!("Failed to create schedule: {e}")))?;
 
                 tracing::info!(schedule = %name, cron = %config.cron, "Schedule created");
             }

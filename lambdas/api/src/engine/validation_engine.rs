@@ -4,15 +4,20 @@
 //! `calculate_columns` through the pipeline without executing any real
 //! transformations or touching external data sources.
 
-use crate::{dependancies::Dependancies, models::{ApiError, StepValidation, ValidationResult}};
+use crate::{
+    dependancies::Dependancies,
+    models::{ApiError, StepValidation, ValidationResult},
+};
 use onboard_you::{ActionFactoryTrait, Manifest, RosterContext};
 use polars::prelude::*;
-
 
 /// Validate a pipeline manifest by propagating columns through every step.
 ///
 /// Returns the column set at each step, or an `ApiError` on the first failure.
-pub fn validate_pipeline(state: &Dependancies, pipeline_json: &Manifest) -> Result<ValidationResult, ApiError> {
+pub fn validate_pipeline(
+    state: &Dependancies,
+    pipeline_json: &Manifest,
+) -> Result<ValidationResult, ApiError> {
     let manifest: Manifest = pipeline_json.clone();
 
     if manifest.actions.is_empty() {
@@ -50,10 +55,7 @@ pub fn validate_pipeline(state: &Dependancies, pipeline_json: &Manifest) -> Resu
 
         // Collect the schema from the lazy frame (cheap — no data)
         let schema = context.data.collect_schema().map_err(|e| {
-            ApiError::Validation(format!(
-                "Schema resolution failed at '{}': {e}",
-                ac.id
-            ))
+            ApiError::Validation(format!("Schema resolution failed at '{}': {e}", ac.id))
         })?;
 
         let columns_after: Vec<String> = schema.iter_names().map(|n| n.to_string()).collect();
@@ -76,7 +78,6 @@ pub fn validate_pipeline(state: &Dependancies, pipeline_json: &Manifest) -> Resu
     })
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -85,7 +86,10 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn validate_empty_manifest_returns_empty() {
         let state = Dependancies::new(Env::default()).await;
-        let manifest = Manifest { version: "1.0".into(), actions: vec![] };
+        let manifest = Manifest {
+            version: "1.0".into(),
+            actions: vec![],
+        };
 
         let res = validate_pipeline(&state, &manifest).expect("should succeed");
         assert!(res.steps.is_empty());

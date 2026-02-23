@@ -1,5 +1,5 @@
-mod schedule_event;
 mod pipeline_result;
+mod schedule_event;
 
-pub use schedule_event::ScheduleEvent;
 pub use pipeline_result::PipelineResult;
+pub use schedule_event::ScheduleEvent;

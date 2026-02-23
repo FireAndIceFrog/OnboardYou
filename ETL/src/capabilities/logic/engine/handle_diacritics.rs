@@ -103,7 +103,9 @@ pub struct HandleDiacritics {
 impl HandleDiacritics {
     /// Construct from a deserialised config.
     pub fn from_action_config(config: &HandleDiacriticsConfig) -> Result<Self> {
-        Ok(Self { config: config.clone() })
+        Ok(Self {
+            config: config.clone(),
+        })
     }
 }
 
@@ -149,9 +151,9 @@ impl OnboardingAction for HandleDiacritics {
         let mut result_df = df.clone();
 
         for col_name in &self.config.columns {
-            let col = df.column(col_name).map_err(|e| {
-                Error::LogicError(format!("Missing column '{col_name}': {e}"))
-            })?;
+            let col = df
+                .column(col_name)
+                .map_err(|e| Error::LogicError(format!("Missing column '{col_name}': {e}")))?;
             let ca = col.str().map_err(|e| {
                 Error::LogicError(format!("Column '{col_name}' is not string: {e}"))
             })?;
@@ -166,7 +168,9 @@ impl OnboardingAction for HandleDiacritics {
                 None => col_name.clone(),
             };
 
-            let new_col = transliterated.into_column().with_name(out_name.clone().into());
+            let new_col = transliterated
+                .into_column()
+                .with_name(out_name.clone().into());
 
             if self.config.output_suffix.is_some() {
                 result_df = result_df.hstack(&[new_col]).map_err(|e| {
@@ -174,9 +178,7 @@ impl OnboardingAction for HandleDiacritics {
                 })?;
             } else {
                 result_df.replace(col_name.as_str(), new_col).map_err(|e| {
-                    Error::LogicError(format!(
-                        "Failed to replace column '{col_name}': {e}"
-                    ))
+                    Error::LogicError(format!("Failed to replace column '{col_name}': {e}"))
                 })?;
             }
 
@@ -207,7 +209,10 @@ mod tests {
 
     #[test]
     fn test_id() {
-        let action = HandleDiacritics::from_action_config(&serde_json::from_value(serde_json::json!({})).unwrap()).unwrap();
+        let action = HandleDiacritics::from_action_config(
+            &serde_json::from_value(serde_json::json!({})).unwrap(),
+        )
+        .unwrap();
         assert_eq!(action.id(), "handle_diacritics");
     }
 
@@ -225,7 +230,8 @@ mod tests {
     fn test_in_place_replacement() {
         let cfg: HandleDiacriticsConfig = serde_json::from_value(serde_json::json!({
             "columns": ["first_name", "last_name"]
-        })).unwrap();
+        }))
+        .unwrap();
         let action = HandleDiacritics::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).expect("execute");
@@ -244,7 +250,8 @@ mod tests {
         let cfg: HandleDiacriticsConfig = serde_json::from_value(serde_json::json!({
             "columns": ["first_name"],
             "output_suffix": "_ascii"
-        })).unwrap();
+        }))
+        .unwrap();
         let action = HandleDiacritics::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).expect("execute");
@@ -259,7 +266,10 @@ mod tests {
 
     #[test]
     fn test_empty_columns_noop() {
-        let action = HandleDiacritics::from_action_config(&serde_json::from_value(serde_json::json!({})).unwrap()).unwrap();
+        let action = HandleDiacritics::from_action_config(
+            &serde_json::from_value(serde_json::json!({})).unwrap(),
+        )
+        .unwrap();
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).expect("execute");
         let df = result.data.collect().expect("collect");
@@ -270,20 +280,19 @@ mod tests {
 
     #[test]
     fn test_field_metadata_provenance() {
-        let cfg: HandleDiacriticsConfig = serde_json::from_value(serde_json::json!({ "columns": ["first_name"] })).unwrap();
+        let cfg: HandleDiacriticsConfig =
+            serde_json::from_value(serde_json::json!({ "columns": ["first_name"] })).unwrap();
         let action = HandleDiacritics::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).expect("execute");
-        let meta = result
-            .field_metadata
-            .get("first_name")
-            .expect("metadata");
+        let meta = result.field_metadata.get("first_name").expect("metadata");
         assert_eq!(meta.source, "handle_diacritics");
     }
 
     #[test]
     fn test_missing_column_errors() {
-        let cfg: HandleDiacriticsConfig = serde_json::from_value(serde_json::json!({ "columns": ["nonexistent"] })).unwrap();
+        let cfg: HandleDiacriticsConfig =
+            serde_json::from_value(serde_json::json!({ "columns": ["nonexistent"] })).unwrap();
         let action = HandleDiacritics::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(sample_df().lazy());
         assert!(action.execute(ctx).is_err());

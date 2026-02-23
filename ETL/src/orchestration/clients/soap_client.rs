@@ -66,10 +66,7 @@ impl SoapClient for ReqwestSoapClient {
             .body(envelope.to_owned())
             .send()
             .map_err(|e| {
-                Error::IngestionError(format!(
-                    "SOAP request to '{}' failed: {}",
-                    endpoint, e
-                ))
+                Error::IngestionError(format!("SOAP request to '{}' failed: {}", endpoint, e))
             })?;
 
         let status = response.status();

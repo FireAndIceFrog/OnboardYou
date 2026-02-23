@@ -4,10 +4,10 @@
 //! in production it validates a Cognito JWT and injects the verified
 //! `organizationId` into the API Gateway request context.
 
+mod dependancies;
 mod engine;
 mod models;
 mod repositories;
-mod dependancies;
 
 use lambda_runtime::{service_fn, Error, LambdaEvent};
 use models::{AuthEvent, AuthResponse};
@@ -41,7 +41,11 @@ async fn handler(
 ) -> Result<AuthResponse, Error> {
     let (payload, _ctx) = event.into_parts();
 
-    match dependancies.auth_engine.authorize(&dependancies, &payload).await {
+    match dependancies
+        .auth_engine
+        .authorize(&dependancies, &payload)
+        .await
+    {
         Ok(response) => Ok(response),
         Err(e) => {
             tracing::warn!(error = %e, "Authorization denied");

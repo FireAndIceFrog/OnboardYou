@@ -4,24 +4,24 @@
 //! - masking: PII protection (SSN/Salary) based on residency rules
 //! - scd_type_2: Effective dating logic for historical tracking
 
-mod identity_deduplicator;
-mod masking;
-mod scd_type_2;
-mod rename_column;
-mod drop_column;
-mod regex_replace;
-mod iso_country_sanitizer;
 mod cellphone_sanitizer;
-mod handle_diacritics;
+mod drop_column;
 mod filter_by_value;
+mod handle_diacritics;
+mod identity_deduplicator;
+mod iso_country_sanitizer;
+mod masking;
+mod regex_replace;
+mod rename_column;
+mod scd_type_2;
 
-pub use identity_deduplicator::*;
-pub use masking::*;
-pub use scd_type_2::*;
-pub use rename_column::*;
-pub use drop_column::*;
-pub use regex_replace::*;
-pub use iso_country_sanitizer::*;
 pub use cellphone_sanitizer::*;
-pub use handle_diacritics::*;
+pub use drop_column::*;
 pub use filter_by_value::*;
+pub use handle_diacritics::*;
+pub use identity_deduplicator::*;
+pub use iso_country_sanitizer::*;
+pub use masking::*;
+pub use regex_replace::*;
+pub use rename_column::*;
+pub use scd_type_2::*;

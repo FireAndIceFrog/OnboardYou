@@ -7,7 +7,10 @@ pub mod models;
 pub mod traits;
 
 // Re-export for ergonomic imports: `use crate::domain::{...}`
-pub use models::{ActionConfig, ActionType, Error, FieldMetadata, Manifest, Result, RosterContext, PipelineConfig, OrgSettings};
+pub use models::{
+    ActionConfig, ActionType, Error, FieldMetadata, Manifest, OrgSettings, PipelineConfig, Result,
+    RosterContext,
+};
 pub use traits::OnboardingAction;
 
 // Re-export the ColumnCalculator trait so consumers can reach it from `crate::domain`

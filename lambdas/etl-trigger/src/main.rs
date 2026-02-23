@@ -2,10 +2,10 @@
 //!
 //! Bootstrap only. Read engine/pipeline_engine.rs for what the pipeline does.
 
+mod dependancies;
 mod engine;
 mod models;
 mod repositories;
-mod dependancies;
 
 use std::sync::Arc;
 
@@ -26,7 +26,14 @@ async fn main() -> Result<(), Error> {
 
     lambda_runtime::run(service_fn(|event: LambdaEvent<ScheduleEvent>| {
         let deps = deps.clone();
-        async move { engine::pipeline_engine::run(deps, &event.payload.organization_id, &event.payload.customer_company_id).await }
+        async move {
+            engine::pipeline_engine::run(
+                deps,
+                &event.payload.organization_id,
+                &event.payload.customer_company_id,
+            )
+            .await
+        }
     }))
     .await
 }

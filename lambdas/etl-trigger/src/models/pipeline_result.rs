@@ -22,7 +22,11 @@ impl PipelineResult {
         }
     }
 
-    pub fn failure(organization_id: &str, customer_company_id: &str, error: impl std::fmt::Display) -> Self {
+    pub fn failure(
+        organization_id: &str,
+        customer_company_id: &str,
+        error: impl std::fmt::Display,
+    ) -> Self {
         Self {
             organization_id: organization_id.to_string(),
             customer_company_id: customer_company_id.to_string(),

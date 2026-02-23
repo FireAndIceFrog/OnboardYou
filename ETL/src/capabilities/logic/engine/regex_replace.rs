@@ -54,7 +54,10 @@ impl RegexReplace {
     /// Deserialise and construct from manifest JSON.
     pub fn from_action_config(config: &RegexReplaceConfig) -> Result<Self> {
         let regex = config.validate()?;
-        Ok(Self { config: config.clone(), regex })
+        Ok(Self {
+            config: config.clone(),
+            regex,
+        })
     }
 
     /// Apply the replacement to a single string value.
@@ -113,12 +116,14 @@ impl OnboardingAction for RegexReplace {
             .with_name(self.config.column.clone().into());
 
         let mut result_df = df.clone();
-        let _ = result_df.replace(&self.config.column, replaced.into_column()).map_err(|e| {
-            Error::LogicError(format!(
-                "regex_replace: failed to replace column '{}': {e}",
-                self.config.column
-            ))
-        })?;
+        let _ = result_df
+            .replace(&self.config.column, replaced.into_column())
+            .map_err(|e| {
+                Error::LogicError(format!(
+                    "regex_replace: failed to replace column '{}': {e}",
+                    self.config.column
+                ))
+            })?;
 
         context.set_field_source(self.config.column.clone(), "LOGIC_ACTION".into());
         context.mark_field_modified(self.config.column.clone(), "regex_replace".into());
@@ -156,7 +161,8 @@ mod tests {
             "column": "phone",
             "pattern": "x",
             "replacement": "y"
-        })).unwrap();
+        }))
+        .unwrap();
         let action = RegexReplace::from_action_config(&cfg).unwrap();
         assert_eq!(action.id(), "regex_replace");
     }
@@ -167,7 +173,8 @@ mod tests {
             "column": "phone",
             "pattern": "\\+44\\s?",
             "replacement": "0"
-        })).unwrap();
+        }))
+        .unwrap();
         let action = RegexReplace::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).unwrap();
@@ -188,7 +195,8 @@ mod tests {
             "column": "postcode",
             "pattern": "\\s+[0-9][A-Z]{2}$",
             "replacement": ""
-        })).unwrap();
+        }))
+        .unwrap();
         let action = RegexReplace::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).unwrap();
@@ -210,7 +218,8 @@ mod tests {
             "column": "val",
             "pattern": "a",
             "replacement": "X"
-        })).unwrap();
+        }))
+        .unwrap();
         let action = RegexReplace::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(df.lazy());
         let result = action.execute(ctx).unwrap();
@@ -226,7 +235,8 @@ mod tests {
             "column": "phone",
             "pattern": "NOMATCH",
             "replacement": "X"
-        })).unwrap();
+        }))
+        .unwrap();
         let action = RegexReplace::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).unwrap();
@@ -241,12 +251,16 @@ mod tests {
             "column": "phone",
             "pattern": "\\+44",
             "replacement": "0"
-        })).unwrap();
+        }))
+        .unwrap();
         let action = RegexReplace::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx).unwrap();
 
-        let meta = result.field_metadata.get("phone").expect("metadata for 'phone'");
+        let meta = result
+            .field_metadata
+            .get("phone")
+            .expect("metadata for 'phone'");
         assert_eq!(meta.source, "LOGIC_ACTION");
         assert_eq!(meta.modified_by.as_deref(), Some("regex_replace"));
     }
@@ -258,28 +272,37 @@ mod tests {
     #[test]
     fn test_missing_column_field() {
         // Missing required 'column' field is now caught at deserialization
-        assert!(serde_json::from_value::<RegexReplaceConfig>(serde_json::json!({
-            "pattern": "x",
-            "replacement": "y"
-        })).is_err());
+        assert!(
+            serde_json::from_value::<RegexReplaceConfig>(serde_json::json!({
+                "pattern": "x",
+                "replacement": "y"
+            }))
+            .is_err()
+        );
     }
 
     #[test]
     fn test_missing_pattern_field() {
         // Missing required 'pattern' field is now caught at deserialization
-        assert!(serde_json::from_value::<RegexReplaceConfig>(serde_json::json!({
-            "column": "phone",
-            "replacement": "y"
-        })).is_err());
+        assert!(
+            serde_json::from_value::<RegexReplaceConfig>(serde_json::json!({
+                "column": "phone",
+                "replacement": "y"
+            }))
+            .is_err()
+        );
     }
 
     #[test]
     fn test_missing_replacement_field() {
         // Missing required 'replacement' field is now caught at deserialization
-        assert!(serde_json::from_value::<RegexReplaceConfig>(serde_json::json!({
-            "column": "phone",
-            "pattern": "x"
-        })).is_err());
+        assert!(
+            serde_json::from_value::<RegexReplaceConfig>(serde_json::json!({
+                "column": "phone",
+                "pattern": "x"
+            }))
+            .is_err()
+        );
     }
 
     #[test]
@@ -288,7 +311,8 @@ mod tests {
             "column": "phone",
             "pattern": "",
             "replacement": "y"
-        })).unwrap();
+        }))
+        .unwrap();
         assert!(RegexReplace::from_action_config(&cfg).is_err());
     }
 
@@ -298,7 +322,8 @@ mod tests {
             "column": "",
             "pattern": "x",
             "replacement": "y"
-        })).unwrap();
+        }))
+        .unwrap();
         assert!(RegexReplace::from_action_config(&cfg).is_err());
     }
 
@@ -313,7 +338,8 @@ mod tests {
             "column": "phone",
             "pattern": long_pattern,
             "replacement": "x"
-        })).unwrap();
+        }))
+        .unwrap();
         let result = RegexReplace::from_action_config(&cfg);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
@@ -327,11 +353,15 @@ mod tests {
             "column": "phone",
             "pattern": "a",
             "replacement": long_replacement
-        })).unwrap();
+        }))
+        .unwrap();
         let result = RegexReplace::from_action_config(&cfg);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
-        assert!(err.contains("replacement length"), "unexpected error: {err}");
+        assert!(
+            err.contains("replacement length"),
+            "unexpected error: {err}"
+        );
     }
 
     #[test]
@@ -341,7 +371,8 @@ mod tests {
             "column": "phone",
             "pattern": "((((a))))",
             "replacement": "x"
-        })).unwrap();
+        }))
+        .unwrap();
         let result = RegexReplace::from_action_config(&cfg);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
@@ -354,7 +385,8 @@ mod tests {
             "column": "phone",
             "pattern": "(a)(b)",
             "replacement": "x"
-        })).unwrap();
+        }))
+        .unwrap();
         let result = RegexReplace::from_action_config(&cfg);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
@@ -368,7 +400,8 @@ mod tests {
             "column": "phone",
             "pattern": "(?:a)(?:b)(?:c)",
             "replacement": "x"
-        })).unwrap();
+        }))
+        .unwrap();
         assert!(RegexReplace::from_action_config(&cfg).is_ok());
     }
 
@@ -383,7 +416,8 @@ mod tests {
             "column": "val",
             "pattern": "(hello)",
             "replacement": "$1_expanded"
-        })).unwrap();
+        }))
+        .unwrap();
         let action = RegexReplace::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(df.lazy());
         let result = action.execute(ctx).unwrap();
@@ -399,7 +433,8 @@ mod tests {
             "column": "phone",
             "pattern": "[invalid",
             "replacement": "x"
-        })).unwrap();
+        }))
+        .unwrap();
         let result = RegexReplace::from_action_config(&cfg);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
@@ -412,7 +447,8 @@ mod tests {
             "column": "nonexistent",
             "pattern": "a",
             "replacement": "b"
-        })).unwrap();
+        }))
+        .unwrap();
         let action = RegexReplace::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(sample_df().lazy());
         let result = action.execute(ctx);
@@ -433,7 +469,8 @@ mod tests {
             "column": "val",
             "pattern": "b",
             "replacement": "X"
-        })).unwrap();
+        }))
+        .unwrap();
         let action = RegexReplace::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(df.lazy());
         let result = action.execute(ctx).unwrap();
@@ -454,7 +491,8 @@ mod tests {
             "column": "val",
             "pattern": "a",
             "replacement": "X"
-        })).unwrap();
+        }))
+        .unwrap();
         let action = RegexReplace::from_action_config(&cfg).unwrap();
         let ctx = RosterContext::new(df.lazy());
         let result = action.execute(ctx).unwrap();

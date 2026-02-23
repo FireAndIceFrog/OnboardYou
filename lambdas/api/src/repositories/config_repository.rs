@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use aws_sdk_dynamodb::types::AttributeValue;
 use serde_dynamo::aws_sdk_dynamodb_1 as dynamo_serde;
 
-use crate::models::{ApiError};
+use crate::models::ApiError;
 
 use onboard_you::PipelineConfig;
 /// Abstract persistence for pipeline configurations.
@@ -131,9 +131,7 @@ impl ConfigRepo for DynamoConfigRepo {
             .into_iter()
             .map(|item| {
                 dynamo_serde::from_item(item)
-                    .map_err(|e| {
-                        ApiError::Repository(format!("Failed to deserialize config: {e}"))
-                    })
+                    .map_err(|e| ApiError::Repository(format!("Failed to deserialize config: {e}")))
             })
             .collect()
     }

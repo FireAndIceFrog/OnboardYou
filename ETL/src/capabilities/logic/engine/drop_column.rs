@@ -42,7 +42,13 @@ impl ColumnCalculator for DropColumn {
     fn calculate_columns(&self, mut context: RosterContext) -> Result<RosterContext> {
         let lf = std::mem::replace(&mut context.data, LazyFrame::default());
         let selector = Selector::ByName {
-            names: self.config.columns.iter().map(|s| PlSmallStr::from(s.as_str())).collect::<Vec<_>>().into(),
+            names: self
+                .config
+                .columns
+                .iter()
+                .map(|s| PlSmallStr::from(s.as_str()))
+                .collect::<Vec<_>>()
+                .into(),
             strict: true,
         };
         context.data = lf.drop(selector);
@@ -60,7 +66,13 @@ impl OnboardingAction for DropColumn {
 
         let lf = std::mem::replace(&mut context.data, LazyFrame::default());
         let selector = Selector::ByName {
-            names: self.config.columns.iter().map(|s| PlSmallStr::from(s.as_str())).collect::<Vec<_>>().into(),
+            names: self
+                .config
+                .columns
+                .iter()
+                .map(|s| PlSmallStr::from(s.as_str()))
+                .collect::<Vec<_>>()
+                .into(),
             strict: true,
         };
         let lf = lf.drop(selector);
@@ -119,7 +131,8 @@ mod tests {
     fn test_duplicate_columns_rejected_at_construction() {
         let cfg: DropConfig = serde_json::from_value(serde_json::json!({
             "columns": ["first_name", "first_name"]
-        })).unwrap();
+        }))
+        .unwrap();
         assert!(DropColumn::from_action_config(&cfg).is_err());
     }
 

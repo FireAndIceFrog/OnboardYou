@@ -2,8 +2,8 @@
 
 mod common;
 
-use polars::prelude::*;
 use onboard_you::*;
+use polars::prelude::*;
 
 #[test]
 fn test_identity_resolution_basic() {
@@ -21,9 +21,13 @@ fn test_identity_resolution_basic() {
     let config = ActionConfig {
         id: "dedup".into(),
         action_type: ActionType::IdentityDeduplicator,
-        config: ActionConfigPayload::IdentityDeduplicator(serde_json::from_value(serde_json::json!({ "columns": ["email"] })).unwrap()),
+        config: ActionConfigPayload::IdentityDeduplicator(
+            serde_json::from_value(serde_json::json!({ "columns": ["email"] })).unwrap(),
+        ),
     };
-    let action = ActionFactory::new().create(&config).expect("create deduplicator");
+    let action = ActionFactory::new()
+        .create(&config)
+        .expect("create deduplicator");
     assert_eq!(action.id(), "identity_deduplicator");
 
     let ctx = RosterContext::new(df.lazy());
@@ -32,16 +36,23 @@ fn test_identity_resolution_basic() {
 
     // 001 and 002 share email → 002 is duplicate
     let is_dup: Vec<Option<bool>> = df
-        .column("is_duplicate").unwrap()
-        .bool().unwrap()
+        .column("is_duplicate")
+        .unwrap()
+        .bool()
+        .unwrap()
         .into_iter()
         .collect();
-    assert_eq!(is_dup, vec![Some(false), Some(true), Some(false), Some(false)]);
+    assert_eq!(
+        is_dup,
+        vec![Some(false), Some(true), Some(false), Some(false)]
+    );
 
     // canonical_id for 001 and 002 should both be "001"
     let canonical: Vec<Option<&str>> = df
-        .column("canonical_id").unwrap()
-        .str().unwrap()
+        .column("canonical_id")
+        .unwrap()
+        .str()
+        .unwrap()
         .into_iter()
         .collect();
     assert_eq!(canonical[0], Some("001"));

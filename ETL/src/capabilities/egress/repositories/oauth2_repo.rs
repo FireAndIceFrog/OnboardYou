@@ -89,21 +89,18 @@ impl OAuth2Repo {
                 params.push(("grant_type", "client_credentials".into()));
             }
             OAuth2GrantType::AuthorizationCode => {
-                let initial_refresh = self.config.refresh_token.as_ref()
-                    .ok_or_else(|| Error::ConfigurationError(
+                let initial_refresh = self.config.refresh_token.as_ref().ok_or_else(|| {
+                    Error::ConfigurationError(
                         "authorization_code grant requires a 'refresh_token'".into(),
-                    ))?;
+                    )
+                })?;
 
                 // Use the latest refresh token (may have been rotated).
                 let current_refresh = self
                     .token_cache
                     .lock()
                     .ok()
-                    .and_then(|cache| {
-                        cache
-                            .as_ref()
-                            .and_then(|c| c.refresh_token.clone())
-                    })
+                    .and_then(|cache| cache.as_ref().and_then(|c| c.refresh_token.clone()))
                     .unwrap_or_else(|| initial_refresh.clone());
 
                 params.push(("grant_type", "refresh_token".into()));
@@ -134,14 +131,13 @@ impl OAuth2Repo {
         let access_token = body
             .get("access_token")
             .and_then(|v| v.as_str())
-            .ok_or_else(|| {
-                Error::EgressError("Token response missing 'access_token'".into())
-            })?
+            .ok_or_else(|| Error::EgressError("Token response missing 'access_token'".into()))?
             .to_string();
 
-        let expires_at = body.get("expires_in").and_then(|v| v.as_u64()).map(|secs| {
-            Instant::now() + std::time::Duration::from_secs(secs)
-        });
+        let expires_at = body
+            .get("expires_in")
+            .and_then(|v| v.as_u64())
+            .map(|secs| Instant::now() + std::time::Duration::from_secs(secs));
 
         let refresh_token = body
             .get("refresh_token")
@@ -192,9 +188,8 @@ impl EgressRepository for OAuth2Repo {
     fn send_data(
         &self,
         payload: &str,
-    ) -> std::pin::Pin<
-        Box<dyn std::future::Future<Output = Result<DispatchResponse>> + Send + '_>,
-    > {
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<DispatchResponse>> + Send + '_>>
+    {
         let destination_url = self.config.destination_url.clone();
         let payload = payload.to_string();
 

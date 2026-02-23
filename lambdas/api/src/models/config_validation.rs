@@ -1,6 +1,5 @@
 use utoipa::ToSchema;
 
-
 /// Result of validating a single step in the pipeline.
 #[derive(Debug, Clone, serde::Serialize, ToSchema)]
 pub struct StepValidation {

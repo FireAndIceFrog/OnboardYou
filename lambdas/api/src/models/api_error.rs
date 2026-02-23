@@ -23,9 +23,10 @@ impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let (status, message) = match &self {
             ApiError::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, msg.clone()),
-            ApiError::NotFound(id) => {
-                (StatusCode::NOT_FOUND, format!("Config not found for org: {id}"))
-            }
+            ApiError::NotFound(id) => (
+                StatusCode::NOT_FOUND,
+                format!("Config not found for org: {id}"),
+            ),
             ApiError::Validation(msg) => (StatusCode::BAD_REQUEST, msg.clone()),
             ApiError::Repository(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg.clone()),
         };

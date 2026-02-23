@@ -79,14 +79,18 @@ fn run_full_pipeline(n: usize) -> RunMetrics {
     // 3. Parse the manifest — the connector config must be valid JSON even
     //    though we never call its execute().
     let generated_columns: &[&str] = &[
-        "employee_id", "first_name", "last_name", "email",
-        "national_id", "ssn", "salary", "start_date",
-        "country_raw", "mobile_phone",
+        "employee_id",
+        "first_name",
+        "last_name",
+        "email",
+        "national_id",
+        "ssn",
+        "salary",
+        "start_date",
+        "country_raw",
+        "mobile_phone",
     ];
-    let manifest_json = full_pipeline_manifest(
-        "data.csv",
-        generated_columns,
-    );
+    let manifest_json = full_pipeline_manifest("data.csv", generated_columns);
     let manifest = Manifest::from_json(&manifest_json).expect("parse manifest");
 
     // 4. Resolve all actions via the factory, but skip the first (csv_hris_connector)
@@ -94,7 +98,11 @@ fn run_full_pipeline(n: usize) -> RunMetrics {
         .actions
         .iter()
         .skip(1)
-        .map(|ac| ActionFactory::new().create(ac).expect(&format!("create action '{}'", ac.action_type)))
+        .map(|ac| {
+            ActionFactory::new()
+                .create(ac)
+                .expect(&format!("create action '{}'", ac.action_type))
+        })
         .collect();
 
     // 5. Run the pipeline, timing each action individually
@@ -160,7 +168,11 @@ fn run_full_pipeline(n: usize) -> RunMetrics {
 
 /// Pretty-print metrics for one run.
 fn print_metrics(m: &RunMetrics) {
-    let status = if m.success { "✓ SUCCESS" } else { "✗ FAILED" };
+    let status = if m.success {
+        "✓ SUCCESS"
+    } else {
+        "✗ FAILED"
+    };
     println!("\n╔══════════════════════════════════════════════════════════════════╗");
     println!(
         "║  {} — {:>6} input rows → {:>6} output rows × {} cols",
@@ -178,7 +190,10 @@ fn print_metrics(m: &RunMetrics) {
     );
     println!("╠══════════════════════════════════════════════════════════════════╣");
     println!("║  {:<45} {:>10}", "Action", "Time (ms)");
-    println!("║  {:<45} {:>10}", "─────────────────────────────────────────────", "─────────");
+    println!(
+        "║  {:<45} {:>10}",
+        "─────────────────────────────────────────────", "─────────"
+    );
 
     for (name, ms) in &m.action_timings {
         let bar_len = (*ms / m.total_ms * 40.0).round() as usize;
@@ -188,7 +203,10 @@ fn print_metrics(m: &RunMetrics) {
 
     let accounted: f64 = m.action_timings.iter().map(|(_, ms)| ms).sum();
     let overhead = m.total_ms - accounted;
-    println!("║  {:<45} {:>8.2}", "overhead (collect / framework)", overhead);
+    println!(
+        "║  {:<45} {:>8.2}",
+        "overhead (collect / framework)", overhead
+    );
     println!("╚══════════════════════════════════════════════════════════════════╝");
 }
 
@@ -404,11 +422,7 @@ fn test_benchmark_1k_5k_10k() {
     for &n in &sizes {
         println!("\n>>> Generating and running pipeline for {} rows …", n);
         let m = run_full_pipeline(n);
-        assert!(
-            m.success,
-            "pipeline should succeed for {} rows",
-            n
-        );
+        assert!(m.success, "pipeline should succeed for {} rows", n);
         all_metrics.push(m);
     }
 
@@ -448,11 +462,7 @@ fn test_csv_generator_correctness() {
         "mobile_phone",
     ];
     for col in &expected_cols {
-        assert!(
-            header.contains(col),
-            "header should contain '{}'",
-            col
-        );
+        assert!(header.contains(col), "header should contain '{}'", col);
     }
 
     // Spot-check: first data row starts with E000001

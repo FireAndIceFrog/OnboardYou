@@ -3,15 +3,11 @@
 
 use aws_sdk_cognitoidentityprovider::types::AuthFlowType;
 
-use crate::{models::{ApiError, LoginResponse}};
+use crate::models::{ApiError, LoginResponse};
 
 #[async_trait::async_trait]
 pub trait AuthRepo: Send + Sync {
-    async fn authenticate(
-        &self,
-        email: &str,
-        password: &str,
-    ) -> Result<LoginResponse, ApiError>;
+    async fn authenticate(&self, email: &str, password: &str) -> Result<LoginResponse, ApiError>;
 }
 
 pub struct CognitoAuthRepo {
@@ -26,24 +22,20 @@ pub struct CognitoAuthRepo {
 /// `ALLOW_USER_PASSWORD_AUTH`.
 #[async_trait::async_trait]
 impl AuthRepo for CognitoAuthRepo {
-    async fn authenticate(
-        &self,
-        email: &str,
-        password: &str,
-    ) -> Result<LoginResponse, ApiError> {
+    async fn authenticate(&self, email: &str, password: &str) -> Result<LoginResponse, ApiError> {
         let result = self
-        .cognito
-        .initiate_auth()
-        .auth_flow(AuthFlowType::UserPasswordAuth)
-        .client_id(&self.client_id)
-        .auth_parameters("USERNAME", email)
-        .auth_parameters("PASSWORD", password)
-        .send()
-        .await
-        .map_err(|e| {
-            tracing::warn!(error = %e, "Cognito InitiateAuth failed");
-            ApiError::Unauthorized("Invalid email or password".into())
-        })?;
+            .cognito
+            .initiate_auth()
+            .auth_flow(AuthFlowType::UserPasswordAuth)
+            .client_id(&self.client_id)
+            .auth_parameters("USERNAME", email)
+            .auth_parameters("PASSWORD", password)
+            .send()
+            .await
+            .map_err(|e| {
+                tracing::warn!(error = %e, "Cognito InitiateAuth failed");
+                ApiError::Unauthorized("Invalid email or password".into())
+            })?;
 
         let auth = result.authentication_result().ok_or_else(|| {
             ApiError::Unauthorized("Authentication challenge required — not yet supported".into())

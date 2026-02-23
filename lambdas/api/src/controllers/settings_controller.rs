@@ -1,11 +1,6 @@
 //! HTTP handlers for organization settings endpoints.
 
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
-    Json,
-};
+use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 
 use crate::dependancies::Dependancies;
 use crate::engine;

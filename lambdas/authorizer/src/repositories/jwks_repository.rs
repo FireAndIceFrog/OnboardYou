@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use crate::{models::AuthError};
+use crate::models::AuthError;
 use async_trait::async_trait;
 use serde_json::Value;
 
