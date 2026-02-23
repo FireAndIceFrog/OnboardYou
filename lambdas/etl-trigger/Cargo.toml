@@ -21,3 +21,4 @@ aws-config = { workspace = true }
 aws-sdk-dynamodb = { workspace = true }
 serde_dynamo = { workspace = true }
 chrono = { workspace = true }
+async-trait = { workspace = true }

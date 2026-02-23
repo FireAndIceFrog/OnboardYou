@@ -3,7 +3,9 @@
 //! Validates inputs, stamps server-controlled fields,
 //! then delegates to repository trait objects for persistence and scheduling.
 
-use crate::{dependancies::Dependancies, models::{ApiError, PipelineConfig}};
+use crate::{dependancies::Dependancies, models::{ApiError}};
+
+use onboard_you::PipelineConfig;
 
 /// Fetch a pipeline config by organization ID and customer company ID.
 pub async fn get(

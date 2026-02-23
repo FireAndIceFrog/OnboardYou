@@ -14,7 +14,7 @@ use crate::capabilities::logic::engine::{
     RenameColumn, SCDType2,
 };
 use crate::domain::{ActionType, OnboardingAction, Result, Error};
-use crate::domain::engine::manifest::{ActionConfig, ActionConfigPayload};
+use crate::domain::models::manifest::{ActionConfig, ActionConfigPayload};
 use std::sync::Arc;
 
 /// Factory for creating OnboardingAction instances from manifest action configs.

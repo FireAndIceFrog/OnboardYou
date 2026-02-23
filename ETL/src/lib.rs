@@ -21,10 +21,13 @@ pub mod capabilities;
 pub mod domain;
 pub mod orchestration;
 
-pub use domain::{ActionConfig, ActionType, ColumnCalculator, Error, Manifest, OnboardingAction, Result, RosterContext};
-pub use domain::engine::manifest::ActionConfigPayload;
-pub use orchestration::{ActionFactory, ActionFactoryTrait, PipelineRunner};
 pub use capabilities::egress::models::{
-    ApiDispatcherConfig, AuthType, BearerPlacement, BearerRepoConfig,
-    OAuth2GrantType, OAuth2RepoConfig, OAuthRepoConfig,
+    ApiDispatcherConfig, AuthType, BearerPlacement, BearerRepoConfig, OAuth2GrantType,
+    OAuth2RepoConfig, OAuthRepoConfig,
 };
+pub use domain::models::manifest::ActionConfigPayload;
+pub use domain::{
+    ActionConfig, ActionType, ColumnCalculator, Error, Manifest, OnboardingAction, OrgSettings,
+    PipelineConfig, Result, RosterContext,
+};
+pub use orchestration::{ActionFactory, ActionFactoryTrait, PipelineRunner};

@@ -4,30 +4,35 @@
 //! Serves an OpenAPI specification at `/swagger-ui` for interactive API documentation.
 
 mod controllers;
+mod dependancies;
 mod engine;
 mod models;
 mod repositories;
-mod dependancies;
 
-use dependancies::Dependancies;
 use axum::{
     routing::{get, post},
     Router,
 };
-use tower_http::cors::{Any, CorsLayer};
-use controllers::{create_config, delete_config, get_config, list_configs, update_config, validate_config};
+use controllers::login;
+use controllers::{
+    create_config, delete_config, get_config, list_configs, update_config, validate_config,
+};
 use controllers::{csv_columns, csv_presigned_upload};
 use controllers::{get_settings, upsert_settings};
-use controllers::login;
-use models::{CsvColumnsResponse, PresignedUploadResponse, StepValidation, ValidationResult, ConfigRequest, ErrorResponse, LoginRequest, LoginResponse, OrgSettings, PipelineConfig, SettingsRequest};
+use dependancies::Dependancies;
+use models::{
+    ConfigRequest, CsvColumnsResponse, ErrorResponse, LoginRequest, LoginResponse,
+    PresignedUploadResponse, SettingsRequest, StepValidation, ValidationResult,
+};
+use onboard_you::{
+    ActionConfig, ActionConfigPayload, ActionType, ApiDispatcherConfig, BearerPlacement,
+    BearerRepoConfig, Manifest, OAuth2GrantType, OAuth2RepoConfig, OAuthRepoConfig, OrgSettings,
+    PipelineConfig,
+};
+use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::{fmt, EnvFilter};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
-use onboard_you::{
-    ActionConfig, ActionConfigPayload, ActionType, ApiDispatcherConfig,
-    BearerPlacement, BearerRepoConfig, Manifest, OAuth2GrantType,
-    OAuth2RepoConfig, OAuthRepoConfig,
-};
 
 /// OpenAPI documentation for the OnboardYou Config API.
 #[derive(OpenApi)]
@@ -162,8 +167,5 @@ fn router(state: Dependancies) -> Router {
         .route("/settings", get(get_settings).put(upsert_settings))
         .with_state(state)
         .layer(cors)
-        .merge(
-            SwaggerUi::new("/swagger-ui")
-                .url("/api-docs/openapi.json", ApiDoc::openapi()),
-        )
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
 }

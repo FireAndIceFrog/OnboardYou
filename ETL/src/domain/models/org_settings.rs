@@ -1,6 +1,6 @@
 //! Organization-level settings for login / authentication defaults.
 
-use onboard_you::ApiDispatcherConfig;
+use crate::ApiDispatcherConfig;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 

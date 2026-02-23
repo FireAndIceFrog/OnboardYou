@@ -7,8 +7,9 @@ use async_trait::async_trait;
 use aws_sdk_dynamodb::types::AttributeValue;
 use serde_dynamo::aws_sdk_dynamodb_1 as dynamo_serde;
 
-use crate::models::{ApiError, PipelineConfig};
+use crate::models::{ApiError};
 
+use onboard_you::PipelineConfig;
 /// Abstract persistence for pipeline configurations.
 #[async_trait]
 pub trait ConfigRepo: Send + Sync + 'static {

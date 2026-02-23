@@ -9,7 +9,8 @@ use axum::{
 
 use crate::dependancies::Dependancies;
 use crate::engine;
-use crate::models::{ApiError, Claims, ErrorResponse, OrgSettings, SettingsRequest};
+use crate::models::{ApiError, Claims, ErrorResponse, SettingsRequest};
+use onboard_you::OrgSettings;
 
 /// GET /settings
 ///

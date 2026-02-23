@@ -7,7 +7,7 @@ use onboard_you::Manifest;
 use serde::Deserialize;
 use utoipa::ToSchema;
 
-use super::PipelineConfig;
+use onboard_you::PipelineConfig;
 
 /// Request body for `POST /config/{id}` and `PUT /config/{id}`.
 ///

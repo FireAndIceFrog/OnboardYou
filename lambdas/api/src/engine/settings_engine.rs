@@ -8,12 +8,15 @@
 //! execution time. If the config is invalid, the save is rejected.
 
 use crate::dependancies::Dependancies;
-use crate::models::{ApiError, OrgSettings};
+use crate::models::ApiError;
 use onboard_you::capabilities::egress::engine::api_engine::ApiEngine;
+use onboard_you::OrgSettings;
 
 /// Fetch settings for an organization. Returns `NotFound` if no settings exist.
 pub async fn get(state: &Dependancies, organization_id: &str) -> Result<OrgSettings, ApiError> {
-    state.settings_repo.get(organization_id)
+    state
+        .settings_repo
+        .get(organization_id)
         .await?
         .ok_or_else(|| ApiError::NotFound(format!("{organization_id}")))
 }
@@ -57,12 +60,10 @@ fn validate(settings: &OrgSettings) -> Result<(), ApiError> {
         ));
     }
 
-    ApiEngine::from_action_config(&settings.default_auth).map_err(|e| {
-        ApiError::Validation(format!("Invalid default_auth config: {e}"))
-    })?;
+    ApiEngine::from_action_config(&settings.default_auth)
+        .map_err(|e| ApiError::Validation(format!("Invalid default_auth config: {e}")))?;
     Ok(())
 }
-
 
 #[cfg(test)]
 mod tests {

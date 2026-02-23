@@ -8,7 +8,8 @@ use axum::{
 };
 
 use crate::{dependancies::Dependancies, engine, models::ValidationResult};
-use crate::models::{ApiError, Claims, ConfigRequest, ErrorResponse, PipelineConfig};
+use crate::models::{ApiError, Claims, ConfigRequest, ErrorResponse};
+use onboard_you::PipelineConfig;
 
 /// GET /config
 ///

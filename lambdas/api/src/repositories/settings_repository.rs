@@ -7,15 +7,13 @@ use async_trait::async_trait;
 use aws_sdk_dynamodb::types::AttributeValue;
 use serde_dynamo::aws_sdk_dynamodb_1 as dynamo_serde;
 
-use crate::models::{ApiError, OrgSettings};
+use crate::models::ApiError;
+use onboard_you::OrgSettings;
 
 #[async_trait]
 pub trait SettingsRepo: Send + Sync {
     async fn put(&self, settings: &OrgSettings) -> Result<(), ApiError>;
-    async fn get(
-        &self,
-        organization_id: &str,
-    ) -> Result<Option<OrgSettings>, ApiError>;
+    async fn get(&self, organization_id: &str) -> Result<Option<OrgSettings>, ApiError>;
 }
 
 /// DynamoDB-backed implementation.
@@ -31,8 +29,7 @@ impl SettingsRepo for DynamoSettingsRepo {
         let item = dynamo_serde::to_item(settings)
             .map_err(|e| ApiError::Repository(format!("Failed to serialize settings: {e}")))?;
 
-        self
-            .dynamo
+        self.dynamo
             .put_item()
             .table_name(&self.table_name)
             .set_item(Some(item))
@@ -48,10 +45,7 @@ impl SettingsRepo for DynamoSettingsRepo {
     }
 
     /// Retrieve OrgSettings by organizationId (PK).
-    async fn get(
-        &self,
-        organization_id: &str,
-    ) -> Result<Option<OrgSettings>, ApiError> {
+    async fn get(&self, organization_id: &str) -> Result<Option<OrgSettings>, ApiError> {
         let result = self
             .dynamo
             .get_item()

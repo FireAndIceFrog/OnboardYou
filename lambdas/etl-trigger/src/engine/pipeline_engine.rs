@@ -6,30 +6,32 @@
 
 use lambda_runtime::Error;
 use onboard_you::{ActionFactory, ActionFactoryTrait, ActionConfigPayload, Manifest, PipelineRunner, RosterContext};
+use std::sync::Arc;
+
+use crate::dependancies::Dependancies;
 use polars::prelude::LazyFrame;
 
 use crate::models::PipelineResult;
-use crate::repositories::{config_repository, settings_repository};
 
 /// Load config from DynamoDB, build the pipeline, and execute it.
 pub async fn run(
-    dynamo: &aws_sdk_dynamodb::Client,
-    table_name: &str,
-    settings_table_name: &str,
+    deps: Arc<Dependancies>,
     organization_id: &str,
     customer_company_id: &str,
 ) -> Result<PipelineResult, Error> {
     tracing::info!(%organization_id, %customer_company_id, "ETL trigger fired");
 
-    // 1. Fetch config
-    let config = config_repository::get(dynamo, table_name, organization_id, customer_company_id).await?;
+    // 1. Fetch config via injected repository
+    let config = deps
+        .config_repo
+        .get(organization_id, customer_company_id)
+        .await?;
 
     // 2. Deserialize the Manifest
-    let mut manifest: Manifest = serde_json::from_value(config.pipeline)
-        .map_err(|e| Error::from(format!("Failed to parse manifest: {e}")))?;
+    let mut manifest = config.pipeline;
 
-    // 3. Resolve any "default" auth types from the settings table
-    resolve_default_auth(dynamo, settings_table_name, organization_id, &mut manifest).await?;
+    // 3. Resolve any "default" auth types from the settings table via injected repo
+    resolve_default_auth(&deps, organization_id, &mut manifest).await?;
 
     // 3b. Resolve CSV S3 keys from org_id / company_id / filename
     resolve_csv_s3_keys(organization_id, customer_company_id, &mut manifest);
@@ -64,8 +66,7 @@ pub async fn run(
 /// The settings lookup is lazy — only performed if at least one action
 /// actually uses `"default"`.
 async fn resolve_default_auth(
-    dynamo: &aws_sdk_dynamodb::Client,
-    settings_table_name: &str,
+    deps: &Dependancies,
     organization_id: &str,
     manifest: &mut Manifest,
 ) -> Result<(), Error> {
@@ -81,8 +82,10 @@ async fn resolve_default_auth(
         return Ok(());
     }
 
-    // Fetch org settings
-    let settings = settings_repository::get(dynamo, settings_table_name, organization_id)
+    // Fetch org settings via injected repo
+    let settings = deps
+        .settings_repo
+        .get(organization_id)
         .await?
         .ok_or_else(|| {
             Error::from(format!(

@@ -2,45 +2,58 @@
 //!
 //! Used to resolve `auth_type: "default"` before pipeline construction.
 
+use std::sync::Arc;
+
+use async_trait::async_trait;
 use aws_sdk_dynamodb::types::AttributeValue;
 use lambda_runtime::Error;
-use onboard_you::ApiDispatcherConfig;
-use serde::Deserialize;
 use serde_dynamo::aws_sdk_dynamodb_1 as dynamo_serde;
 
-/// Lightweight projection of the stored org settings — only the field the ETL trigger needs.
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct StoredSettings {
-    /// Full auth configuration — typed `ApiDispatcherConfig`.
-    pub default_auth: ApiDispatcherConfig,
+use onboard_you::OrgSettings;
+
+/// Repository trait used by the pipeline engine to fetch org settings.
+#[async_trait]
+pub trait ISettingsRepo: Send + Sync {
+    async fn get(&self, organization_id: &str) -> Result<Option<OrgSettings>, Error>;
 }
 
-/// Fetch organisation settings by organizationId.
-///
-/// Returns `None` if no settings row exists for the organisation.
-pub async fn get(
-    dynamo: &aws_sdk_dynamodb::Client,
-    table_name: &str,
-    organization_id: &str,
-) -> Result<Option<StoredSettings>, Error> {
-    let result = dynamo
-        .get_item()
-        .table_name(table_name)
-        .key(
-            "organizationId",
-            AttributeValue::S(organization_id.to_string()),
-        )
-        .send()
-        .await
-        .map_err(|e| Error::from(format!("get_item (settings) failed: {e}")))?;
+/// Dynamo-backed implementation of `ISettingsRepo`.
+pub struct DynamoSettingsRepo {
+    pub dynamo: aws_sdk_dynamodb::Client,
+    pub table_name: String,
+}
 
-    let Some(item) = result.item else {
-        return Ok(None);
-    };
+impl DynamoSettingsRepo {
+    pub fn new(dynamo: aws_sdk_dynamodb::Client, table_name: String) -> Arc<Self> {
+        Arc::new(Self { dynamo, table_name })
+    }
+}
 
-    let settings: StoredSettings = dynamo_serde::from_item(item)
-        .map_err(|e| Error::from(format!("Failed to deserialize settings: {e}")))?;
+#[async_trait]
+impl ISettingsRepo for DynamoSettingsRepo {
+    /// Fetch organisation settings by organizationId.
+    ///
+    /// Returns `None` if no settings row exists for the organisation.
+    async fn get(&self, organization_id: &str) -> Result<Option<OrgSettings>, Error> {
+        let result = self
+            .dynamo
+            .get_item()
+            .table_name(&self.table_name)
+            .key(
+                "organizationId",
+                AttributeValue::S(organization_id.to_string()),
+            )
+            .send()
+            .await
+            .map_err(|e| Error::from(format!("get_item (settings) failed: {e}")))?;
 
-    Ok(Some(settings))
+        let Some(item) = result.item else {
+            return Ok(None);
+        };
+
+        let settings: OrgSettings = dynamo_serde::from_item(item)
+            .map_err(|e| Error::from(format!("Failed to deserialize settings: {e}")))?;
+
+        Ok(Some(settings))
+    }
 }

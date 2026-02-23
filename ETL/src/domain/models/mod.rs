@@ -7,7 +7,11 @@
 pub mod errors;
 pub mod manifest;
 pub mod roster;
+pub mod pipeline_config;
+pub mod org_settings;
 
+pub use org_settings::OrgSettings;
 pub use errors::{Error, Result};
 pub use manifest::{ActionConfig, ActionType, Manifest};
 pub use roster::{FieldMetadata, RosterContext};
+pub use pipeline_config::PipelineConfig;

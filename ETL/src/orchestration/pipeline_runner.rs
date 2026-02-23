@@ -31,7 +31,7 @@ impl PipelineRunner {
 mod tests {
     use super::*;
     use crate::capabilities::logic::traits::ColumnCalculator;
-    use crate::domain::engine::manifest::{ActionConfig, ActionConfigPayload};
+    use crate::domain::models::manifest::{ActionConfig, ActionConfigPayload};
     use crate::domain::ActionType;
     use polars::prelude::*;
 

@@ -1,4 +1,4 @@
-use onboard_you::Manifest;
+use crate::Manifest;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 

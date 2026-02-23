@@ -6,7 +6,7 @@ use onboard_you::ApiDispatcherConfig;
 use serde::Deserialize;
 use utoipa::ToSchema;
 
-use super::OrgSettings;
+use onboard_you::OrgSettings;
 
 /// Request body for `PUT /settings`.
 #[derive(Debug, Deserialize, ToSchema)]
