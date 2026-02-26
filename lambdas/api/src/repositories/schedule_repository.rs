@@ -13,7 +13,7 @@ use onboard_you::{PipelineConfig, ScheduledEtlEvent, ScheduledEvent};
 #[async_trait]
 pub trait ScheduleRepo: Send + Sync {
     async fn upsert_schedule(&self, config: &PipelineConfig) -> Result<(), ApiError>;
-    async fn delete(
+    async fn delete_schedule(
         &self,
         organization_id: &str,
         customer_company_id: &str,
@@ -91,7 +91,7 @@ impl ScheduleRepo for EventBridgeScheduleRepo {
         Ok(())
     }
 
-    async fn delete(
+    async fn delete_schedule(
         &self,
         organization_id: &str,
         customer_company_id: &str,

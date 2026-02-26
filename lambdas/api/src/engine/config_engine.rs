@@ -68,7 +68,7 @@ pub async fn delete(
     // Best-effort schedule cleanup — don't fail the delete if it's missing
     if let Err(e) = deps
         .schedule_repo
-        .delete(organization_id, customer_company_id)
+        .delete_schedule(organization_id, customer_company_id)
         .await
     {
         tracing::warn!(
@@ -156,7 +156,7 @@ mod tests {
         async fn upsert_schedule(&self, _config: &PipelineConfig) -> Result<(), ApiError> {
             Ok(())
         }
-        async fn delete(&self, _org: &str, _company: &str) -> Result<(), ApiError> {
+        async fn delete_schedule(&self, _org: &str, _company: &str) -> Result<(), ApiError> {
             Ok(())
         }
     }
