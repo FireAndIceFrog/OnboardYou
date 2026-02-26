@@ -9,7 +9,7 @@ pub mod traits;
 // Re-export for ergonomic imports: `use crate::domain::{...}`
 pub use models::{
     ActionConfig, ActionType, Error, FieldMetadata, Manifest, OrgSettings, PipelineConfig, Result,
-    RosterContext,
+    RosterContext, ScheduledDynamicApiEvent, ScheduledEtlEvent, ScheduledEvent,
 };
 pub use traits::OnboardingAction;
 

@@ -7,12 +7,12 @@ use async_trait::async_trait;
 use aws_sdk_scheduler::types::{FlexibleTimeWindow, FlexibleTimeWindowMode, Target};
 
 use crate::models::ApiError;
-use onboard_you::PipelineConfig;
+use onboard_you::{PipelineConfig, ScheduledEtlEvent, ScheduledEvent};
 
 /// Abstract schedule management for pipeline configs.
 #[async_trait]
 pub trait ScheduleRepo: Send + Sync {
-    async fn upsert(&self, config: &PipelineConfig) -> Result<(), ApiError>;
+    async fn upsert_schedule(&self, config: &PipelineConfig) -> Result<(), ApiError>;
     async fn delete(
         &self,
         organization_id: &str,
@@ -34,14 +34,15 @@ fn schedule_name(organization_id: &str, customer_company_id: &str) -> String {
 
 #[async_trait]
 impl ScheduleRepo for EventBridgeScheduleRepo {
-    async fn upsert(&self, config: &PipelineConfig) -> Result<(), ApiError> {
+    async fn upsert_schedule(&self, config: &PipelineConfig) -> Result<(), ApiError> {
         let name = schedule_name(&config.organization_id, &config.customer_company_id);
 
-        let input_payload = serde_json::json!({
-            "organizationId": config.organization_id,
-            "customerCompanyId": config.customer_company_id
-        })
-        .to_string();
+        let input_payload = serde_json::to_string(&ScheduledEvent::Etl(ScheduledEtlEvent {
+            event_type: "ScheduledEtlEvent".to_string(),
+            organization_id: config.organization_id.clone(),
+            customer_company_id: config.customer_company_id.clone(),
+        }))
+        .map_err(|e| ApiError::Repository(format!("Failed to serialize event payload: {e}")))?;
 
         let target = Target::builder()
             .arn(&self.etl_lambda_arn)

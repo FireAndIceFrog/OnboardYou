@@ -9,7 +9,9 @@ pub mod manifest;
 pub mod org_settings;
 pub mod pipeline_config;
 pub mod roster;
+pub mod scheduled_event;
 
+pub use scheduled_event::{ScheduledEtlEvent, ScheduledEvent, ScheduledDynamicApiEvent};
 pub use errors::{Error, Result};
 pub use manifest::{ActionConfig, ActionType, Manifest};
 pub use org_settings::OrgSettings;

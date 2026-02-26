@@ -43,7 +43,7 @@ pub async fn upsert(
     validate(&config)?;
 
     deps.config_repo.put(&config).await?;
-    deps.schedule_repo.upsert(&config).await?;
+    deps.schedule_repo.upsert_schedule(&config).await?;
 
     tracing::info!(
         organization_id = %config.organization_id,
@@ -153,7 +153,7 @@ mod tests {
 
     #[async_trait]
     impl ScheduleRepo for NoOpScheduleRepo {
-        async fn upsert(&self, _config: &PipelineConfig) -> Result<(), ApiError> {
+        async fn upsert_schedule(&self, _config: &PipelineConfig) -> Result<(), ApiError> {
             Ok(())
         }
         async fn delete(&self, _org: &str, _company: &str) -> Result<(), ApiError> {

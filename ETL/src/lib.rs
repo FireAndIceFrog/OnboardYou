@@ -29,6 +29,6 @@ pub use capabilities::ingestion::CsvHrisConnectorConfig;
 pub use domain::models::manifest::ActionConfigPayload;
 pub use domain::{
     ActionConfig, ActionType, ColumnCalculator, Error, Manifest, OnboardingAction, OrgSettings,
-    PipelineConfig, Result, RosterContext,
+    PipelineConfig, Result, RosterContext, ScheduledDynamicApiEvent, ScheduledEtlEvent, ScheduledEvent,
 };
 pub use orchestration::{ActionFactory, ActionFactoryTrait};
