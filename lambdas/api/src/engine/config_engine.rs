@@ -159,6 +159,9 @@ mod tests {
         async fn delete_schedule(&self, _org: &str, _company: &str) -> Result<(), ApiError> {
             Ok(())
         }
+        async fn trigger_dynamic_api_event(&self, _org: &str, _company: &str) -> Result<(), ApiError> {
+            Ok(())
+        }
     }
 
     // ---- Helpers ----

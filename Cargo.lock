@@ -73,6 +73,7 @@ dependencies = [
  "aws-config",
  "aws-sdk-cognitoidentityprovider",
  "aws-sdk-dynamodb",
+ "aws-sdk-eventbridge",
  "aws-sdk-s3",
  "aws-sdk-scheduler",
  "axum",
@@ -339,6 +340,30 @@ name = "aws-sdk-dynamodb"
 version = "1.104.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f04c47115cc8d46dcc94a9a81e7a3384cea859283c1a737729691d4221f11584"
+dependencies = [
+ "aws-credential-types",
+ "aws-runtime",
+ "aws-smithy-async",
+ "aws-smithy-http",
+ "aws-smithy-json",
+ "aws-smithy-observability",
+ "aws-smithy-runtime",
+ "aws-smithy-runtime-api",
+ "aws-smithy-types",
+ "aws-types",
+ "bytes",
+ "fastrand",
+ "http 0.2.12",
+ "http 1.4.0",
+ "regex-lite",
+ "tracing",
+]
+
+[[package]]
+name = "aws-sdk-eventbridge"
+version = "1.100.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad5c004fabadc9781c4d66c213af954e88f7a3b648f638f7987d3a9fe723123f"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",

@@ -36,6 +36,7 @@ pub async fn upsert(
     validate(&settings)?;
 
     deps.settings_repo.put(&settings).await?;
+    deps.schedule_repo.trigger_dynamic_api_event(organization_id, "").await?;
 
     tracing::info!(
         organization_id = %settings.organization_id,
@@ -69,11 +70,32 @@ fn validate(settings: &OrgSettings) -> Result<(), ApiError> {
 mod tests {
     use super::*;
     use crate::dependancies::{Dependancies, Env};
+    use crate::repositories::schedule_repository::ScheduleRepo;
     use crate::repositories::settings_repository::SettingsRepo;
     use async_trait::async_trait;
-    use onboard_you::ApiDispatcherConfig;
+    use onboard_you::{ApiDispatcherConfig, PipelineConfig};
     use std::sync::Arc;
     use tokio::sync::RwLock;
+    
+    #[derive(Default)]
+    struct NoOpScheduleRepo {
+        trigger_dynamic_api_event_calls: RwLock<i64>,
+    }
+
+    #[async_trait]
+    impl ScheduleRepo for NoOpScheduleRepo {
+        async fn upsert_schedule(&self, _config: &PipelineConfig) -> Result<(), ApiError> {
+            Ok(())
+        }
+        async fn delete_schedule(&self, _org: &str, _company: &str) -> Result<(), ApiError> {
+            Ok(())
+        }
+        async fn trigger_dynamic_api_event(&self, _org: &str, _company: &str) -> Result<(), ApiError> {
+            let mut calls = self.trigger_dynamic_api_event_calls.write().await;
+            *calls += 1;
+            Ok(())
+        }
+    }
 
     #[derive(Default)]
     struct InMemorySettingsRepo {
@@ -93,10 +115,12 @@ mod tests {
         }
     }
 
-    async fn test_state() -> Dependancies {
+    async fn test_state() -> (Dependancies, Arc<NoOpScheduleRepo>) {
+        let schedule_repository = Arc::new(NoOpScheduleRepo::default());
         let mut deps = Dependancies::new(Env::default()).await;
         deps.settings_repo = Arc::new(InMemorySettingsRepo::default());
-        deps
+        deps.schedule_repo = schedule_repository.clone();
+        (deps, schedule_repository)
     }
 
     fn bearer_config() -> ApiDispatcherConfig {
@@ -110,7 +134,7 @@ mod tests {
 
     #[tokio::test]
     async fn upsert_persists_and_stamps_org_id() {
-        let state = test_state().await;
+        let (state, schedule_repository) = test_state().await;
 
         let settings = OrgSettings {
             organization_id: String::new(),
@@ -122,11 +146,14 @@ mod tests {
 
         let fetched = super::get(&state, "org-1").await.unwrap();
         assert_eq!(fetched.organization_id, "org-1");
+
+        let calls = schedule_repository.trigger_dynamic_api_event_calls.read().await;
+        assert_eq!(*calls, 1, "Expected trigger_dynamic_api_event to be called once");
     }
 
     #[tokio::test]
     async fn upsert_rejects_default_variant() {
-        let state = test_state().await;
+        let (state, _) = test_state().await;
 
         let cfg = serde_json::json!({ "auth_type": "default" });
         let settings = OrgSettings {
@@ -140,7 +167,7 @@ mod tests {
 
     #[tokio::test]
     async fn get_not_found_returns_notfound() {
-        let state = test_state().await;
+        let (state, _) = test_state().await;
         let err = super::get(&state, "missing").await.unwrap_err();
         assert!(matches!(err, ApiError::NotFound(_)));
     }

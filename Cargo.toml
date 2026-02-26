@@ -19,6 +19,7 @@ lambda_http = "0.10"
 async-trait = "0.1"
 aws-config = "1"
 aws-sdk-cognitoidentityprovider = "1"
+aws-sdk-eventbridge = "1"
 aws-sdk-dynamodb = "1"
 aws-sdk-s3 = { version = "1", features = ["behavior-version-latest"] }
 aws-sdk-scheduler = "1"

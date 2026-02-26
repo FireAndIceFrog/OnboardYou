@@ -15,6 +15,7 @@ pub struct Env {
     pub scheduler_role_arn: String,
     pub csv_upload_bucket: String,
     pub cognito_client_id: String,
+    pub dynamic_api_event_stream_name: String,
 }
 
 /// Shared application state, injected via axum's State extractor.
@@ -45,6 +46,8 @@ impl Dependancies {
                 .expect("CSV_UPLOAD_BUCKET must be set"),
             cognito_client_id: std::env::var("COGNITO_CLIENT_ID")
                 .expect("COGNITO_CLIENT_ID must be set"),
+            dynamic_api_event_stream_name: std::env::var("DYNAMIC_API_EVENT_STREAM_NAME")
+                .unwrap_or_else(|_| "DynamicApiEvents".into()),
         }
     }
 
@@ -63,9 +66,9 @@ impl Dependancies {
                 table_name: env.settings_table_name.clone(),
             }),
             schedule_repo: Arc::new(EventBridgeScheduleRepo {
+                eventbridge: aws_sdk_eventbridge::Client::new(&aws_config),
                 scheduler: aws_sdk_scheduler::Client::new(&aws_config),
-                etl_lambda_arn: env.etl_lambda_arn.clone(),
-                scheduler_role_arn: env.scheduler_role_arn.clone(),
+                env: env.clone(),
             }),
             s3_repo: Arc::new(S3Repository {
                 s3: aws_sdk_s3::Client::new(&aws_config),

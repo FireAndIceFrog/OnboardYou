@@ -7,7 +7,7 @@ This has to be async, triggering an sqs queue that pulls the openapi schema and 
 This schema generation is agentic in nature; we try parsing a working json with errors attached in runtime and we send that to the agent so it can resolve them.
 
 # Functional: Creating + saving the output schema of a default pipeline.
-0. when settings credentials are saved, send a message to trigger this lambda
+0. when settings credentials are saved, send a message to trigger this lambda. 
 1. We save an org settings. We return a status for schema_generation_status
 2. When we get settings, schema_generation_status is there. 
 
