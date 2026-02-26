@@ -42,6 +42,10 @@ provider "aws" {
 
 data "aws_caller_identity" "current" {}
 
+locals {
+  dynamic_api_event_stream_name = "${var.environment}-DynamicApiEvents"
+}
+
 # ══════════════════════════════════════════════════════════════
 # DynamoDB
 # ══════════════════════════════════════════════════════════════
@@ -172,6 +176,7 @@ module "config_api" {
     CSV_UPLOAD_BUCKET                     = module.csv_upload_bucket.bucket_name
     AWS_LAMBDA_HTTP_IGNORE_STAGE_IN_PATH  = "true"
     RUST_LOG                              = "info"
+    DYNAMIC_API_EVENT_STREAM_NAME        = local.dynamic_api_event_stream_name
   }
 
   iam_policy_statements = [
@@ -195,8 +200,45 @@ module "config_api" {
       actions   = ["s3:PutObject", "s3:GetObject"]
       resources = ["${module.csv_upload_bucket.bucket_arn}/*"]
     },
+    {
+      # allow publishing custom events (used by schedule_repository)
+      actions   = ["events:PutEvents"]
+      resources = [
+        # if the bus is custom the module will emit an ARN; fall back to
+        # wildcard when using the default bus (the module returns empty
+        # string in that case).
+        module.eventbridge.event_bus_arn != "" ? module.eventbridge.event_bus_arn : "*"
+      ]
+    },
   ]
 }
+
+# ───────────────────────────────────────────────────────────────────────────
+# EventBridge rules & targets (used by the API to trigger ETL on demand)
+# ───────────────────────────────────────────────────────────────────────────
+
+module "eventbridge" {
+  source             = "./modules/eventbridge"
+  create_event_bus   = true
+  event_bus_name     = local.dynamic_api_event_stream_name
+
+  rules = [
+    {
+      name          = "etl-on-dynamic-event"
+      description   = "forward ScheduledDynamicApiEvent events from the config API bus to the ETL lambda"
+      event_pattern = {
+        "detail-type" = ["ScheduledDynamicApiEvent"]
+      }
+      targets = [
+        {
+          arn = module.etl_trigger.arn
+          id  = "etl-lambda"
+        }
+      ]
+    }
+  ]
+}
+
 
 # ══════════════════════════════════════════════════════════════
 # Frontend Hosting (S3 + CloudFront)

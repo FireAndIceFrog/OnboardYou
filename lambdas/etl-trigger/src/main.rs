@@ -39,11 +39,11 @@ async fn main() -> Result<(), Error> {
                     .await {
                         Ok(result) => {
                             tracing::info!("Pipeline executed successfully: {:?}", result);
-                            Ok(())
+                            Ok::<(), Error>(())
                         }
                         Err(e) => {
                             tracing::error!("Pipeline execution failed: {e}");
-                            Ok(())
+                            Ok::<(), Error>(())
                         }
                     }
                 },
@@ -51,6 +51,7 @@ async fn main() -> Result<(), Error> {
                     tracing::info!("Received Dynamic API event: {:?}", payload);
                     Ok::<(), Error>(())
                 },
+
             }
         }
     }))
