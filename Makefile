@@ -4,10 +4,10 @@ VENV := .venv/bin/activate
 #
 # You can override any of these by exporting them in your shell, e.g.: 
 #
-#   export OPENSSL_DIR=/home/mathew/tmp/openssl-headers
-#   export OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu
-#   export OPENSSL_STATIC=1
-#   export RUSTFLAGS='-C linker=gcc'
+  export OPENSSL_DIR=/home/mathew/tmp/openssl-headers
+  export OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu
+  export OPENSSL_STATIC=1
+  export RUSTFLAGS='-C linker=gcc'
 #
 # or prepend them to the make command:
 #
@@ -76,37 +76,38 @@ apply:
 ##──────────────────────────────────────────────────────────────
 ## Frontend build & deploy
 ##──────────────────────────────────────────────────────────────
-
+sync-env:
+	@echo "▸ Syncing frontend .env from Terraform outputs…"
+	cd onboard-you-frontend && npm run sync-env
+	@echo "✓ Frontend .env synced"
 # build the monorepo and copy the artifacts to the Terraform‑provisioned bucket
-upload-frontend:
+upload-frontend: sync-env
+	
 	@echo "▸ Building frontend packages…"
 	cd onboard-you-frontend && pnpm build
 
-	@echo "▸ Looking up bucket name from Terraform outputs…"
-	bucket=$$(cd infra && tofu output -raw frontend_bucket_name)
-
-	@echo "▸ Syncing platform app → s3://$$bucket/ …"
+	@echo "▸ Looking up bucket and CloudFront distribution from Terraform outputs…"
+	@bucket=$$(cd infra && tofu output -raw frontend_bucket_name) && \
+	distro=$$(cd infra && tofu output -raw frontend_cloudfront_id) && \
+	echo "▸ Syncing platform app → s3://$$bucket/ …" && \
 	aws s3 sync onboard-you-frontend/packages/platform/dist \
-				s3://$$bucket/ --delete
-
-	@echo "▸ Syncing config bundle → s3://$$bucket/config/ …"
+			s3://$$bucket/ --delete && \
+	echo "▸ Syncing config bundle → s3://$$bucket/config/ …" && \
 	aws s3 sync onboard-you-frontend/packages/config/dist \
-				s3://$$bucket/config/ --delete
+			s3://$$bucket/config/ --delete && \
+	echo "✓ Frontend artifacts uploaded" && \
+	aws cloudfront create-invalidation --distribution-id $$distro --paths "/*" && \
+	echo "✓ Invalidation submitted"
 
-	@echo "✓ Frontend artifacts uploaded"
-
-# optional helper for invalidating CloudFront after a deploy
-invalidate-frontend:
-	@echo "▸ Invalidating CloudFront cache…"
-	distro=$$(cd infra && tofu output -raw frontend_cloudfront_id)
-	aws cloudfront create-invalidation --distribution-id $$distro --paths "/*"
-	@echo "✓ Invalidation submitted"
+frontend-url:
+	@echo "▸ Fetching frontend URL from Terraform outputs…"
+	cd infra && tofu output -raw frontend_url
 
 ##──────────────────────────────────────────────────────────────
 ## All-in-one
 ##──────────────────────────────────────────────────────────────
 
-deploy: plan apply upload-frontend invalidate-frontend
+deploy: plan apply upload-frontend
 
 ##──────────────────────────────────────────────────────────────
 ## OpenAPI spec — build the API binary and dump the spec to JSON

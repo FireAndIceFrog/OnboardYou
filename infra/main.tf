@@ -129,6 +129,18 @@ module "etl_trigger" {
       actions   = ["s3:GetObject"]
       resources = ["${module.csv_upload_bucket.bucket_arn}/*"]
     },
+    # Required so the Lambda can poll the SQS queue configured below. The
+    # event source mapping will fail with InvalidParameterValueException if the
+    # execution role can't call ReceiveMessage (and related) on the queue.
+    {
+      actions = [
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:GetQueueAttributes",
+        "sqs:ChangeMessageVisibility",
+      ]
+      resources = [aws_sqs_queue.etl_events.arn]
+    },
   ]
 }
 
@@ -212,7 +224,7 @@ module "config_api" {
 # ───────────────────────────────────────────────────────────────────────────
 # SQS queue for dynamic API events (replaces EventBridge)
 resource "aws_sqs_queue" "etl_events" {
-  name                       = "${var.environment}-dynamic-api-events"
+  name                       = "${var.environment}-dynamic-api-events-${var.env_postfix}"
   visibility_timeout_seconds = 300
   # retention, encryption, DLQ etc. can be added as needed
 }
