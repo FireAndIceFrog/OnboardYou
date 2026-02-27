@@ -18,18 +18,45 @@ pub async fn run(
     deps: Arc<Dependancies>,
     organization_id: &str,
     customer_company_id: &str,
-
 ) -> Result<(), Error> {
     tracing::info!(%organization_id, %customer_company_id, "DynamicApi event received");
     //get settings model
 
-    let settings = match deps.settings_repo.get(organization_id).await? {
+    let mut settings = match deps.settings_repo.get(organization_id).await? {
         Some(s) => s,
         None => {
             tracing::warn!(%organization_id, "No settings found for org, using defaults");
             return Err(Error::from("No settings found for org"));
         }
     };
+
+    match settings.default_auth.clone() {
+        ApiDispatcherConfig::Bearer(cfg) => {
+            let mut new_cfg = cfg.clone();
+            new_cfg.schema_generation_status =
+                Some(onboard_you::SchemaGenerationStatus::InProgress);
+            settings.default_auth = ApiDispatcherConfig::Bearer(new_cfg);
+        }
+        ApiDispatcherConfig::OAuth(cfg) => {
+            let mut new_cfg = cfg.clone();
+            new_cfg.schema_generation_status =
+                Some(onboard_you::SchemaGenerationStatus::InProgress);
+            settings.default_auth = ApiDispatcherConfig::OAuth(new_cfg);
+        }
+        ApiDispatcherConfig::OAuth2(cfg) => {
+            let mut new_cfg = cfg.clone();
+            new_cfg.schema_generation_status =
+                Some(onboard_you::SchemaGenerationStatus::InProgress);
+            settings.default_auth = ApiDispatcherConfig::OAuth2(new_cfg);
+        }
+
+        ApiDispatcherConfig::Default => {
+            tracing::warn!(%organization_id, "Default auth type found in settings, cannot proceed with Dynamic API workflow");
+            return Err(Error::from("Default auth type found in settings"));
+        }
+    };
+    deps.settings_repo.save(&settings).await?;
+
     let url = match settings.default_auth.clone() {
         ApiDispatcherConfig::Bearer(cfg) => cfg.output_schema_openapi_url,
         ApiDispatcherConfig::OAuth(cfg) => cfg.output_schema_openapi_url,
@@ -48,8 +75,10 @@ pub async fn run(
 
     // parse openapi schema and generate manifest
 
-    
-    let dynamic_api = deps.gh_models_repo.generate_dynamic_body(&openapi_json).await?;
+    let dynamic_api = deps
+        .gh_models_repo
+        .generate_dynamic_body(&openapi_json)
+        .await?;
 
     let modified_schema: ApiDispatcherConfig = match settings.default_auth.clone() {
         ApiDispatcherConfig::Bearer(cfg) => {
@@ -57,30 +86,30 @@ pub async fn run(
             new_cfg.output_schema = Some(dynamic_api.output_schema);
             new_cfg.output_schema_body_path = Some(dynamic_api.output_schema_body_path);
             onboard_you::ApiDispatcherConfig::Bearer(new_cfg)
-        },
+        }
         ApiDispatcherConfig::OAuth(cfg) => {
             let mut new_cfg = cfg.clone();
             new_cfg.output_schema = Some(dynamic_api.output_schema);
             new_cfg.output_schema_body_path = Some(dynamic_api.output_schema_body_path);
             onboard_you::ApiDispatcherConfig::OAuth(new_cfg)
-        },
+        }
         ApiDispatcherConfig::OAuth2(cfg) => {
             let mut new_cfg = cfg.clone();
             new_cfg.output_schema = Some(dynamic_api.output_schema);
             new_cfg.output_schema_body_path = Some(dynamic_api.output_schema_body_path);
             onboard_you::ApiDispatcherConfig::OAuth2(new_cfg)
-        },
+        }
         _ => {
             tracing::warn!(%organization_id, "Default auth type found in settings, cannot proceed with Dynamic API workflow");
             return Err(Error::from("Default auth type found in settings"));
-        },
+        }
     };
 
     let mut settings = settings.clone();
     settings.default_auth = modified_schema.clone();
 
     deps.settings_repo.save(&settings).await?;
-    
+
     Ok(())
 }
 
@@ -93,16 +122,15 @@ mod tests {
     use super::*;
     use crate::dependancies::Dependancies;
     use crate::repositories::{
+        gh_models_repository::GhModelsRepo, openapi_repository::OpenApiRepo,
         settings_repository::ISettingsRepo,
-        openapi_repository::OpenApiRepo,
-        gh_models_repository::GhModelsRepo,
     };
 
     // keep async_trait import for fake repos below
     use async_trait::async_trait;
     use lambda_runtime::Error;
-    use std::sync::{Arc, Mutex};
     use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::{Arc, Mutex};
 
     /// A trivial settings repo that lets us control the return value and
     /// observe what gets saved.
@@ -151,7 +179,10 @@ mod tests {
     struct DummyGhRepo;
     #[async_trait]
     impl GhModelsRepo for DummyGhRepo {
-        async fn generate_dynamic_body(&self, _input: &str) -> Result<crate::models::OpenapiDynamicApiResponse, Error> {
+        async fn generate_dynamic_body(
+            &self,
+            _input: &str,
+        ) -> Result<crate::models::OpenapiDynamicApiResponse, Error> {
             Ok(crate::models::OpenapiDynamicApiResponse {
                 output_schema: serde_json::json!({"foo": "bar"}),
                 output_schema_body_path: "data.items".to_string(),
@@ -163,19 +194,17 @@ mod tests {
     fn bearer_settings_with_url(url: &str) -> onboard_you::OrgSettings {
         onboard_you::OrgSettings {
             organization_id: "org-1".into(),
-            default_auth: onboard_you::ApiDispatcherConfig::Bearer(
-                onboard_you::BearerRepoConfig {
-                    destination_url: "https://example.com".into(),
-                    token: Some("tok".into()),
-                    placement: onboard_you::BearerPlacement::AuthorizationHeader,
-                    placement_key: None,
-                    extra_headers: Default::default(),
-                    schema_generation_status: None,
-                    output_schema: None,
-                    output_schema_body_path: None,
-                    output_schema_openapi_url: Some(url.into()),
-                },
-            ),
+            default_auth: onboard_you::ApiDispatcherConfig::Bearer(onboard_you::BearerRepoConfig {
+                destination_url: "https://example.com".into(),
+                token: Some("tok".into()),
+                placement: onboard_you::BearerPlacement::AuthorizationHeader,
+                placement_key: None,
+                extra_headers: Default::default(),
+                schema_generation_status: None,
+                output_schema: None,
+                output_schema_body_path: None,
+                output_schema_openapi_url: Some(url.into()),
+            }),
         }
     }
 
@@ -214,7 +243,10 @@ mod tests {
 
         assert!(get_called.load(Ordering::SeqCst));
         assert!(openapi_called.load(Ordering::SeqCst));
-        assert_eq!(openapi_url.lock().unwrap().as_deref(), Some("http://schema.url"));
+        assert_eq!(
+            openapi_url.lock().unwrap().as_deref(),
+            Some("http://schema.url")
+        );
         assert!(save_called.load(Ordering::SeqCst));
 
         // ensure the saved settings contain the generated schema
@@ -251,5 +283,4 @@ mod tests {
         assert!(err.to_string().contains("No settings found"));
         assert!(get_called.load(Ordering::SeqCst));
     }
-
 }

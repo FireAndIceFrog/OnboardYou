@@ -42,9 +42,7 @@ provider "aws" {
 
 data "aws_caller_identity" "current" {}
 
-locals {
-  dynamic_api_event_stream_name = "${var.environment}-DynamicApiEvents"
-}
+
 
 # ══════════════════════════════════════════════════════════════
 # DynamoDB
@@ -177,7 +175,7 @@ module "config_api" {
     CSV_UPLOAD_BUCKET                     = module.csv_upload_bucket.bucket_name
     AWS_LAMBDA_HTTP_IGNORE_STAGE_IN_PATH  = "true"
     RUST_LOG                              = "info"
-    DYNAMIC_API_EVENT_STREAM_NAME        = local.dynamic_api_event_stream_name
+    SQS_QUEUE_URL = aws_sqs_queue.etl_events.id
   }
 
   iam_policy_statements = [
@@ -202,42 +200,28 @@ module "config_api" {
       resources = ["${module.csv_upload_bucket.bucket_arn}/*"]
     },
     {
-      # allow publishing custom events (used by schedule_repository)
-      actions   = ["events:PutEvents"]
-      resources = [
-        # if the bus is custom the module will emit an ARN; fall back to
-        # wildcard when using the default bus (the module returns empty
-        # string in that case).
-        module.eventbridge.event_bus_arn != "" ? module.eventbridge.event_bus_arn : "*"
-      ]
+      actions   = ["sqs:SendMessage"]
+      resources = [aws_sqs_queue.etl_events.arn]
     },
   ]
 }
 
 # ───────────────────────────────────────────────────────────────────────────
-# EventBridge rules & targets (used by the API to trigger ETL on demand)
+# SQS event source mapping (API will send messages to the queue, ETL lambda
+# polls the queue directly)
 # ───────────────────────────────────────────────────────────────────────────
+# SQS queue for dynamic API events (replaces EventBridge)
+resource "aws_sqs_queue" "etl_events" {
+  name                       = "${var.environment}-dynamic-api-events"
+  visibility_timeout_seconds = 300
+  # retention, encryption, DLQ etc. can be added as needed
+}
 
-module "eventbridge" {
-  source             = "./modules/eventbridge"
-  create_event_bus   = true
-  event_bus_name     = local.dynamic_api_event_stream_name
-
-  rules = [
-    {
-      name          = "etl-on-dynamic-event"
-      description   = "forward ScheduledDynamicApiEvent events from the config API bus to the ETL lambda"
-      event_pattern = {
-        "detail-type" = ["ScheduledDynamicApiEvent"]
-      }
-      targets = [
-        {
-          arn = module.etl_trigger.arn
-          id  = "etl-lambda"
-        }
-      ]
-    }
-  ]
+resource "aws_lambda_event_source_mapping" "etl_sqs" {
+  event_source_arn = aws_sqs_queue.etl_events.arn
+  function_name    = module.etl_trigger.arn
+  batch_size       = 1
+  enabled          = true
 }
 
 

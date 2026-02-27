@@ -24,6 +24,7 @@ aws-sdk-eventbridge = "1"
 aws-sdk-dynamodb = "1"
 aws-sdk-s3 = { version = "1", features = ["behavior-version-latest"] }
 aws-sdk-scheduler = "1"
+aws-sdk-sqs = "1"
 serde_dynamo = { version = "4", features = ["aws-sdk-dynamodb+1"] }
 chrono = "0.4"
 thiserror = "1.0"

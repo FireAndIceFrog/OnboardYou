@@ -4,8 +4,8 @@
 //! on the cron defined in the pipeline config.
 
 use async_trait::async_trait;
-use aws_sdk_eventbridge::types::PutEventsRequestEntry;
 use aws_sdk_scheduler::types::{FlexibleTimeWindow, FlexibleTimeWindowMode, Target};
+use aws_sdk_sqs::Client as SqsClient;
 
 use crate::{dependancies::Env, models::ApiError};
 use onboard_you::{PipelineConfig, ScheduledDynamicApiEvent, ScheduledEtlEvent, ScheduledEvent};
@@ -31,7 +31,7 @@ pub trait ScheduleRepo: Send + Sync {
 /// EventBridge Scheduler backed implementation.
 pub struct EventBridgeScheduleRepo {
     pub scheduler: aws_sdk_scheduler::Client,
-    pub eventbridge: aws_sdk_eventbridge::Client,
+    pub sqs: SqsClient,
     pub env: Env,
 }
 
@@ -56,19 +56,14 @@ impl ScheduleRepo for EventBridgeScheduleRepo {
         ))
         .map_err(|e| ApiError::Repository(format!("Failed to serialize event payload: {e}")))?;
 
-        let event = PutEventsRequestEntry::builder()
-            .source("onboardyou.scheduler")
-            .detail_type("ScheduledDynamicApiEvent")
-            .detail(input_payload)
-            .event_bus_name(self.env.dynamic_api_event_stream_name.clone())
-            .build();
-
-        self.eventbridge
-            .put_events()
-            .entries(event)
+        // send message to SQS queue instead of EventBridge
+        self.sqs
+            .send_message()
+            .queue_url(&self.env.sqs_queue_url)
+            .message_body(input_payload)
             .send()
             .await
-            .map_err(|e| ApiError::Repository(format!("Failed to put event: {e}")))?;
+            .map_err(|e| ApiError::Repository(format!("Failed to send SQS message: {e}")))?;
 
         tracing::info!(
             organization_id = %organization_id,
