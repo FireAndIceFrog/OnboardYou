@@ -2,7 +2,7 @@
 //!
 //! Omits `organizationId` which the controller fills from Claims.
 
-use onboard_you::ApiDispatcherConfig;
+use onboard_you::{ApiDispatcherConfig};
 use serde::Deserialize;
 use utoipa::ToSchema;
 
@@ -22,7 +22,7 @@ impl SettingsRequest {
     pub fn into_settings(self) -> OrgSettings {
         OrgSettings {
             organization_id: String::new(),
-            default_auth: self.default_auth,
+            default_auth: self.default_auth
         }
     }
 }

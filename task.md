@@ -88,6 +88,36 @@ impl Dependancies {
 }
 ```
 
+```gh_models example
+
+use gh_models::{GHModels, types::ChatMessage};
+use std::env;
+
+#[tokio::main]
+async fn main() {
+    let token = env::var("GITHUB_TOKEN").expect("Missing GITHUB_TOKEN");
+    let client = GHModels::new(token);
+
+    let messages = vec![
+        ChatMessage {
+            role: "system".into(),
+            content: "You are a helpful assistant.".into(),
+        },
+        ChatMessage {
+            role: "user".into(),
+            content: "What is the capital of France?".into(),
+        },
+    ];
+
+    let response = client
+        .chat_completion("openai/gpt-4o", &messages, 1.0, 4096, 1.0)
+        .await
+        .unwrap();
+
+    println!("{}", response.choices[0].message.content);
+}
+```
+
 # Use the engine -> repository pattern
 
 Engines define HOW we deal with information and repositories handle WHERE we get information from 
@@ -95,7 +125,6 @@ Engines define HOW we deal with information and repositories handle WHERE we get
 We will need a repository for:
 1. github access (gh_models crate - runs the agentic loop, contains the conversation points. Takes a string & responds with the next ai response)
 2. Settings dynamodb access (see lambdas/api/src/repositories/settings_repository.rs)
-3. validation repo (validating the model output compiles)
 4. openapi repo - constructs the openapi json schema (stored as string) from the url given
 
 We will need an engine:

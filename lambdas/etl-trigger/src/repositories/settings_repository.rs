@@ -15,6 +15,9 @@ use onboard_you::OrgSettings;
 #[async_trait]
 pub trait ISettingsRepo: Send + Sync {
     async fn get(&self, organization_id: &str) -> Result<Option<OrgSettings>, Error>;
+
+    /// Persist updated settings back to DynamoDB.
+    async fn save(&self, settings: &OrgSettings) -> Result<(), Error>;
 }
 
 /// Dynamo-backed implementation of `ISettingsRepo`.
@@ -55,5 +58,20 @@ impl ISettingsRepo for DynamoSettingsRepo {
             .map_err(|e| Error::from(format!("Failed to deserialize settings: {e}")))?;
 
         Ok(Some(settings))
+    }
+
+    async fn save(&self, settings: &OrgSettings) -> Result<(), Error> {
+        let item = dynamo_serde::to_item(settings)
+            .map_err(|e| Error::from(format!("Failed to serialize settings: {e}")))?;
+
+        self.dynamo
+            .put_item()
+            .table_name(&self.table_name)
+            .set_item(Some(item))
+            .send()
+            .await
+            .map_err(|e| Error::from(format!("put_item (settings) failed: {e}")))?;
+
+        Ok(())
     }
 }

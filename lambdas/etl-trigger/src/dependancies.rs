@@ -1,10 +1,14 @@
 use std::sync::Arc;
+use reqwest::Client;
 
+use gh_models::GHModels;
 use crate::repositories::{
     config_repository::{self, DynamoConfigRepo},
     etl_repository::{EtlRepository, IEtlRepo},
     pipeline_repository::{IPipelineRepo, PipelineRepository},
     settings_repository::{self, DynamoSettingsRepo},
+    gh_models_repository::{GhModelsRepo, GhModelsRepoImpl},
+    openapi_repository::{OpenApiRepo, SimpleOpenApiRepo},
 };
 use config_repository::IConfigRepo;
 use onboard_you::ActionFactoryTrait;
@@ -15,6 +19,7 @@ use settings_repository::ISettingsRepo;
 pub struct Env {
     pub table_name: String,
     pub settings_table_name: String,
+    pub gh_token: String,
 }
 
 impl Env {
@@ -24,6 +29,7 @@ impl Env {
                 .unwrap_or_else(|_| "PipelineConfigs".to_string()),
             settings_table_name: std::env::var("SETTINGS_TABLE_NAME")
                 .unwrap_or_else(|_| "OrgSettings".to_string()),
+            gh_token: std::env::var("GITHUB_TOKEN").expect("Missing GITHUB_TOKEN"),
         })
     }
 }
@@ -36,6 +42,8 @@ pub struct Dependancies {
     pub settings_repo: Arc<dyn ISettingsRepo>,
     pub etl_repo: Arc<dyn IEtlRepo>,
     pub pipeline_repo: Arc<dyn IPipelineRepo>,
+    pub gh_models_repo: Arc<dyn GhModelsRepo>,
+    pub openapi_repo: Arc<dyn OpenApiRepo>,
     pub action_factory: Arc<dyn ActionFactoryTrait>,
 }
 
@@ -47,12 +55,15 @@ impl Dependancies {
         let dynamo = aws_sdk_dynamodb::Client::new(&aws_config);
 
         // Construct concrete Dynamo-backed repo implementations from their modules
-
+        let gh_client = Arc::new(GHModels::new(cfg.gh_token.clone()));
+        let http_client = Client::new();
         Self {
             config_repo: DynamoConfigRepo::new(dynamo.clone(), cfg.table_name.clone()),
             settings_repo: DynamoSettingsRepo::new(dynamo.clone(), cfg.settings_table_name.clone()),
             etl_repo: EtlRepository::new(),
             pipeline_repo: PipelineRepository::new(),
+            gh_models_repo: GhModelsRepoImpl::new(gh_client),
+            openapi_repo: SimpleOpenApiRepo::new(http_client.clone()),
             action_factory: Arc::new(onboard_you::ActionFactory::new()),
         }
     }

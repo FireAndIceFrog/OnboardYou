@@ -22,3 +22,11 @@ aws-sdk-dynamodb = { workspace = true }
 serde_dynamo = { workspace = true }
 chrono = { workspace = true }
 async-trait = { workspace = true }
+gh_models = { workspace = true }
+
+# HTTP client used by the OpenAPI repository
+reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls"] }
+
+[dev-dependencies]
+# lightweight HTTP server for testing network calls
+mockito = "0.31"

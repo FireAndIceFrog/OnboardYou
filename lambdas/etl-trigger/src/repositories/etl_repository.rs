@@ -143,12 +143,20 @@ mod tests {
                 placement: onboard_you::BearerPlacement::AuthorizationHeader,
                 placement_key: None,
                 extra_headers: std::collections::HashMap::new(),
+                schema_generation_status: None,
+                output_schema: None,
+                output_schema_body_path: None,
+                output_schema_openapi_url: None,
             });
 
             Ok(Some(onboard_you::OrgSettings {
                 organization_id: _organization_id.into(),
-                default_auth: bearer,
+                default_auth: bearer
             }))
+        }
+
+        async fn save(&self, _settings: &onboard_you::OrgSettings) -> Result<(), Error> {
+            Ok(())
         }
     }
 

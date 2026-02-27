@@ -158,7 +158,7 @@ mod tests {
         let cfg = serde_json::json!({ "auth_type": "default" });
         let settings = OrgSettings {
             organization_id: String::new(),
-            default_auth: serde_json::from_value(cfg).unwrap(),
+            default_auth: serde_json::from_value(cfg).unwrap()
         };
 
         let err = super::upsert(&state, "org-1", settings).await.unwrap_err();

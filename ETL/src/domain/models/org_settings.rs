@@ -46,6 +46,14 @@ pub struct OrgSettings {
     ///
     /// Must contain `"auth_type"` plus all fields required by the
     /// chosen strategy (bearer, oauth, oauth2).
-    #[schema(value_type = Object)]
     pub default_auth: ApiDispatcherConfig,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum SchemaGenerationStatus {
+    NotStarted,
+    InProgress,
+    Completed,
+    Failed(String), // include error message on failure
 }

@@ -48,7 +48,7 @@ mod tests {
             }),
         ];
 
-        for expected  in expected_types {
+        for expected in expected_types {
             let deserialized: ScheduledEvent =
                 serde_json::from_str(&serde_json::to_string(&expected).unwrap()).unwrap();
 
