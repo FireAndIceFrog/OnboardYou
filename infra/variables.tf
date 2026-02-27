@@ -39,3 +39,9 @@ variable "demo_users" {
   }))
   default = []
 }
+
+variable "gh_token" {
+  description = "GitHub token with access to GH Models API"
+  type        = string
+  sensitive = true
+}

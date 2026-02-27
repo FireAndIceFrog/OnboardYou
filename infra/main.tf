@@ -119,6 +119,7 @@ module "etl_trigger" {
     SETTINGS_TABLE_NAME  = module.org_settings_table.name
     CSV_UPLOAD_BUCKET    = module.csv_upload_bucket.bucket_name
     RUST_LOG             = "info"
+    GITHUB_TOKEN         = var.gh_token
   }
 
   iam_policy_statements = [
