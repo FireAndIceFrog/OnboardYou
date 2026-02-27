@@ -7,9 +7,9 @@
 use lambda_runtime::Error;
 use onboard_you::ApiDispatcherConfig;
 use std::sync::Arc;
+use onboard_you::domain::models::org_settings::SchemaGenerationStatus;
 
 use crate::dependancies::Dependancies;
-
 /// Execute the dynamic‑api workflow for a single organisation/company pair.
 ///
 /// The caller already knows which company triggered the event but we don’t use
@@ -34,19 +34,19 @@ pub async fn run(
         ApiDispatcherConfig::Bearer(cfg) => {
             let mut new_cfg = cfg.clone();
             new_cfg.schema_generation_status =
-                Some(onboard_you::SchemaGenerationStatus::InProgress);
+                Some(SchemaGenerationStatus::InProgress);
             settings.default_auth = ApiDispatcherConfig::Bearer(new_cfg);
         }
         ApiDispatcherConfig::OAuth(cfg) => {
             let mut new_cfg = cfg.clone();
             new_cfg.schema_generation_status =
-                Some(onboard_you::SchemaGenerationStatus::InProgress);
+                Some(SchemaGenerationStatus::InProgress);
             settings.default_auth = ApiDispatcherConfig::OAuth(new_cfg);
         }
         ApiDispatcherConfig::OAuth2(cfg) => {
             let mut new_cfg = cfg.clone();
             new_cfg.schema_generation_status =
-                Some(onboard_you::SchemaGenerationStatus::InProgress);
+                Some(SchemaGenerationStatus::InProgress);
             settings.default_auth = ApiDispatcherConfig::OAuth2(new_cfg);
         }
 

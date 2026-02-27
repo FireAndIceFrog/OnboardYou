@@ -1,5 +1,20 @@
 VENV := .venv/bin/activate
 
+# defaults for building Rust lambdas with OpenSSL
+#
+# You can override any of these by exporting them in your shell, e.g.: 
+#
+#   export OPENSSL_DIR=/home/mathew/tmp/openssl-headers
+#   export OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu
+#   export OPENSSL_STATIC=1
+#   export RUSTFLAGS='-C linker=gcc'
+#
+# or prepend them to the make command:
+#
+#   OPENSSL_DIR=/foo OPENSSL_LIB_DIR=/bar make deploy
+#
+
+
 .PHONY: setup build-lambdas build-config-api build-etl-trigger build-authorizer \
         plan apply deploy clean smoke-test
 
@@ -22,11 +37,21 @@ build-lambdas: build-config-api build-etl-trigger build-authorizer
 
 build-config-api:
 	@echo "▸ Building config-api Lambda..."
-	. $(VENV) && cargo lambda build --release -p api
+	. $(VENV) && \
+		OPENSSL_DIR=$(OPENSSL_DIR) \
+		OPENSSL_LIB_DIR=$(OPENSSL_LIB_DIR) \
+		OPENSSL_STATIC=$(OPENSSL_STATIC) \
+		RUSTFLAGS="$(RUSTFLAGS)" \
+		cargo lambda build --release -p api
 
 build-etl-trigger:
 	@echo "▸ Building etl-trigger Lambda..."
-	. $(VENV) && cargo lambda build --release -p etl-trigger
+	. $(VENV) && \
+		OPENSSL_DIR=$(OPENSSL_DIR) \
+		OPENSSL_LIB_DIR=$(OPENSSL_LIB_DIR) \
+		OPENSSL_STATIC=$(OPENSSL_STATIC) \
+		RUSTFLAGS="$(RUSTFLAGS)" \
+		cargo lambda build --release -p etl-trigger
 
 build-authorizer:
 	@echo "▸ Building authorizer Lambda..."
@@ -48,12 +73,40 @@ apply:
 	@echo "▸ Applying plan..."
 	cd infra && tofu apply plan.out
 	@echo "✓ Deployed!"
+##──────────────────────────────────────────────────────────────
+## Frontend build & deploy
+##──────────────────────────────────────────────────────────────
+
+# build the monorepo and copy the artifacts to the Terraform‑provisioned bucket
+upload-frontend:
+	@echo "▸ Building frontend packages…"
+	cd onboard-you-frontend && pnpm build
+
+	@echo "▸ Looking up bucket name from Terraform outputs…"
+	bucket=$$(cd infra && tofu output -raw frontend_bucket_name)
+
+	@echo "▸ Syncing platform app → s3://$$bucket/ …"
+	aws s3 sync onboard-you-frontend/packages/platform/dist \
+				s3://$$bucket/ --delete
+
+	@echo "▸ Syncing config bundle → s3://$$bucket/config/ …"
+	aws s3 sync onboard-you-frontend/packages/config/dist \
+				s3://$$bucket/config/ --delete
+
+	@echo "✓ Frontend artifacts uploaded"
+
+# optional helper for invalidating CloudFront after a deploy
+invalidate-frontend:
+	@echo "▸ Invalidating CloudFront cache…"
+	distro=$$(cd infra && tofu output -raw frontend_cloudfront_id)
+	aws cloudfront create-invalidation --distribution-id $$distro --paths "/*"
+	@echo "✓ Invalidation submitted"
 
 ##──────────────────────────────────────────────────────────────
 ## All-in-one
 ##──────────────────────────────────────────────────────────────
 
-deploy: plan apply
+deploy: plan apply upload-frontend invalidate-frontend
 
 ##──────────────────────────────────────────────────────────────
 ## OpenAPI spec — build the API binary and dump the spec to JSON
