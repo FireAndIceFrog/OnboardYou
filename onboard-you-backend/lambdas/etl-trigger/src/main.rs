@@ -9,7 +9,7 @@ mod repositories;
 use std::sync::Arc;
 
 use lambda_runtime::{service_fn, Error, LambdaEvent};
-use onboard_you::ScheduledEvent;
+use onboard_you_models::ScheduledEvent;
 use tracing_subscriber::{fmt, EnvFilter};
 
 #[tokio::main]

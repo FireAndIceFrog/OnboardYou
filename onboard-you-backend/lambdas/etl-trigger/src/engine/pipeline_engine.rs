@@ -67,19 +67,19 @@ mod tests {
             &self,
             _organization_id: &str,
             _customer_company_id: &str,
-        ) -> Result<onboard_you::PipelineConfig, Error> {
+        ) -> Result<onboard_you_models::PipelineConfig, Error> {
             self.called.store(true, Ordering::SeqCst);
-            let manifest = onboard_you::Manifest {
+            let manifest = onboard_you_models::Manifest {
                 version: "1.0".into(),
-                actions: vec![onboard_you::ActionConfig {
+                actions: vec![onboard_you_models::ActionConfig {
                     id: "egress".into(),
-                    action_type: onboard_you::ActionType::ApiDispatcher,
-                    config: onboard_you::ActionConfigPayload::ApiDispatcher(
-                        onboard_you::ApiDispatcherConfig::Default,
+                    action_type: onboard_you_models::ActionType::ApiDispatcher,
+                    config: onboard_you_models::ActionConfigPayload::ApiDispatcher(
+                        onboard_you_models::ApiDispatcherConfig::Default,
                     ),
                 }],
             };
-            Ok(onboard_you::PipelineConfig {
+            Ok(onboard_you_models::PipelineConfig {
                 name: "test".into(),
                 image: None,
                 cron: "rate(1 hour)".into(),
@@ -101,19 +101,19 @@ mod tests {
         async fn resolve_default_auth(
             &self,
             _deps: &Dependancies,
-            manifest: &mut onboard_you::Manifest,
+            manifest: &mut onboard_you_models::Manifest,
             _organization_id: &str,
-        ) -> Result<onboard_you::Manifest, Error> {
+        ) -> Result<onboard_you_models::Manifest, Error> {
             self.resolved_default.store(true, Ordering::SeqCst);
             Ok(manifest.clone())
         }
 
         fn resolve_csv_s3_keys(
             &self,
-            manifest: &mut onboard_you::Manifest,
+            manifest: &mut onboard_you_models::Manifest,
             _organization_id: &str,
             _customer_company_id: &str,
-        ) -> Result<onboard_you::Manifest, Error> {
+        ) -> Result<onboard_you_models::Manifest, Error> {
             self.resolved_csv.store(true, Ordering::SeqCst);
             Ok(manifest.clone())
         }
@@ -128,7 +128,7 @@ mod tests {
         async fn run_pipeline(
             &self,
             _deps: &Dependancies,
-            _manifest: onboard_you::Manifest,
+            _manifest: onboard_you_models::Manifest,
             _organization_id: &str,
             _customer_company_id: &str,
         ) -> Result<crate::models::PipelineResult, Error> {
@@ -147,7 +147,7 @@ mod tests {
         async fn get(
             &self,
             _organization_id: &str,
-        ) -> Result<Option<onboard_you::OrgSettings>, Error> {
+        ) -> Result<Option<onboard_you_models::OrgSettings>, Error> {
             Ok(None)
         }
     }

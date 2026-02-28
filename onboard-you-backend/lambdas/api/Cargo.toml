@@ -9,6 +9,7 @@ name = "config-api"
 path = "src/main.rs"
 
 [dependencies]
+onboard_you_models = { path = "../../shared/models" }
 onboard_you = { path = "../../shared/ETL" }
 polars = { workspace = true }
 serde = { workspace = true }

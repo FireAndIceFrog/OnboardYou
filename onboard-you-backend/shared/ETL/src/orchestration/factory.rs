@@ -14,7 +14,7 @@ use crate::capabilities::logic::engine::{
 };
 use onboard_you_models::{ActionConfig, ActionConfigPayload};
 use onboard_you_models::{ActionType, Error, OnboardingAction, Result};
-use crate::RosterContext;
+use onboard_you_models::RosterContext;
 use async_trait::async_trait;
 use std::sync::Arc;
 

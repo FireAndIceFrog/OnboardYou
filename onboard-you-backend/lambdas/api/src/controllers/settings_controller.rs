@@ -5,7 +5,7 @@ use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use crate::dependancies::Dependancies;
 use crate::engine;
 use crate::models::{ApiError, Claims, ErrorResponse, SettingsRequest};
-use onboard_you::OrgSettings;
+use onboard_you_models::OrgSettings;
 
 /// GET /settings
 ///

@@ -6,7 +6,7 @@ use lambda_runtime::Error;
 use serde_dynamo::aws_sdk_dynamodb_1 as dynamo_serde;
 use std::sync::Arc;
 
-use onboard_you::PipelineConfig;
+use onboard_you_models::PipelineConfig;
 
 /// Repository trait used by the pipeline engine to fetch pipeline configs.
 #[async_trait]

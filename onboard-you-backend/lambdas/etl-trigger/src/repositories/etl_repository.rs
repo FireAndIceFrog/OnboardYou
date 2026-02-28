@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use lambda_runtime::Error;
 use std::sync::Arc;
 
-use onboard_you::{ActionConfigPayload, Manifest};
+use onboard_you_models::{ActionConfigPayload, Manifest};
 
 use crate::dependancies::Dependancies;
 
@@ -136,17 +136,17 @@ mod tests {
         async fn get(
             &self,
             _organization_id: &str,
-        ) -> Result<Option<onboard_you::OrgSettings>, Error> {
-            let bearer = onboard_you::ApiDispatcherConfig::Bearer(onboard_you::BearerRepoConfig {
+        ) -> Result<Option<onboard_you_models::OrgSettings>, Error> {
+            let bearer = onboard_you_models::ApiDispatcherConfig::Bearer(onboard_you_models::BearerRepoConfig {
                 destination_url: "https://example.com".into(),
                 token: Some("tkn".into()),
-                placement: onboard_you::BearerPlacement::AuthorizationHeader,
+                placement: onboard_you_models::BearerPlacement::AuthorizationHeader,
                 placement_key: None,
                 extra_headers: std::collections::HashMap::new(),
                 schema: std::collections::HashMap::new(),
             });
 
-            Ok(Some(onboard_you::OrgSettings {
+            Ok(Some(onboard_you_models::OrgSettings {
                 organization_id: _organization_id.into(),
                 default_auth: bearer
             }))
@@ -158,13 +158,13 @@ mod tests {
         let etl_repo = EtlRepository::new();
 
         // Build a manifest with one ApiDispatcher(Default) action
-        let manifest = onboard_you::Manifest {
+        let manifest = onboard_you_models::Manifest {
             version: "1.0".into(),
-            actions: vec![onboard_you::ActionConfig {
+            actions: vec![onboard_you_models::ActionConfig {
                 id: "egress".into(),
-                action_type: onboard_you::ActionType::ApiDispatcher,
-                config: onboard_you::ActionConfigPayload::ApiDispatcher(
-                    onboard_you::ApiDispatcherConfig::Default,
+                action_type: onboard_you_models::ActionType::ApiDispatcher,
+                config: onboard_you_models::ActionConfigPayload::ApiDispatcher(
+                    onboard_you_models::ApiDispatcherConfig::Default,
                 ),
             }],
         };
@@ -180,7 +180,7 @@ mod tests {
 
         assert_eq!(resolved.actions.len(), 1);
         match &resolved.actions[0].config {
-            onboard_you::ActionConfigPayload::ApiDispatcher(cfg) => {
+            onboard_you_models::ActionConfigPayload::ApiDispatcher(cfg) => {
                 assert!(
                     !cfg.is_default(),
                     "expected default to be replaced with org settings"
@@ -195,13 +195,13 @@ mod tests {
         let etl_repo = EtlRepository::new();
 
         // Build a manifest with one CsvHrisConnector action
-        let mut manifest = onboard_you::Manifest {
+        let mut manifest = onboard_you_models::Manifest {
             version: "1.0".into(),
-            actions: vec![onboard_you::ActionConfig {
+            actions: vec![onboard_you_models::ActionConfig {
                 id: "csv".into(),
-                action_type: onboard_you::ActionType::CsvHrisConnector,
-                config: onboard_you::ActionConfigPayload::CsvHrisConnector(
-                    onboard_you::CsvHrisConnectorConfig {
+                action_type: onboard_you_models::ActionType::CsvHrisConnector,
+                config: onboard_you_models::ActionConfigPayload::CsvHrisConnector(
+                    onboard_you_models::CsvHrisConnectorConfig {
                         filename: "data.csv".into(),
                         resolved_s3_key: None,
                         columns: vec![],
@@ -216,7 +216,7 @@ mod tests {
 
         assert_eq!(resolved.actions.len(), 1);
         match &resolved.actions[0].config {
-            onboard_you::ActionConfigPayload::CsvHrisConnector(cfg) => {
+            onboard_you_models::ActionConfigPayload::CsvHrisConnector(cfg) => {
                 assert_eq!(
                     cfg.resolved_s3_key.as_deref(),
                     Some("org-1/comp-1/data.csv"),

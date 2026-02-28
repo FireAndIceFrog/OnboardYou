@@ -3,11 +3,11 @@
 //! Omits server-controlled fields (`organizationId`, `customerCompanyId`,
 //! `lastEdited`) that the controller fills from Claims + Path.
 
-use onboard_you::Manifest;
+use onboard_you_models::Manifest;
 use serde::Deserialize;
 use utoipa::ToSchema;
 
-use onboard_you::PipelineConfig;
+use onboard_you_models::PipelineConfig;
 
 /// Request body for `POST /config/{id}` and `PUT /config/{id}`.
 ///

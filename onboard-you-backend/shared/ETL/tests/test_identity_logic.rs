@@ -3,6 +3,7 @@
 mod common;
 
 use onboard_you::*;
+use onboard_you_models::{ActionConfig, ActionConfigPayload, ActionType, RosterContext};
 use polars::prelude::*;
 
 #[test]

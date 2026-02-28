@@ -9,7 +9,7 @@ use axum::{
 
 use crate::models::{ApiError, Claims, ConfigRequest, ErrorResponse};
 use crate::{dependancies::Dependancies, engine, models::ValidationResult};
-use onboard_you::PipelineConfig;
+use onboard_you_models::PipelineConfig;
 
 /// GET /config
 ///

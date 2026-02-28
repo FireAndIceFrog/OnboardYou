@@ -10,7 +10,7 @@
 use crate::dependancies::Dependancies;
 use crate::models::ApiError;
 use onboard_you::capabilities::egress::engine::api_engine::ApiEngine;
-use onboard_you::OrgSettings;
+use onboard_you_models::OrgSettings;
 
 /// Fetch settings for an organization. Returns `NotFound` if no settings exist.
 pub async fn get(deps: &Dependancies, organization_id: &str) -> Result<OrgSettings, ApiError> {
@@ -72,7 +72,7 @@ mod tests {
     use crate::repositories::schedule_repository::ScheduleRepo;
     use crate::repositories::settings_repository::SettingsRepo;
     use async_trait::async_trait;
-    use onboard_you::{ApiDispatcherConfig, PipelineConfig};
+    use onboard_you_models::{ApiDispatcherConfig, PipelineConfig};
     use std::sync::Arc;
     use tokio::sync::RwLock;
     

@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use aws_sdk_scheduler::types::{FlexibleTimeWindow, FlexibleTimeWindowMode, Target};
 
 use crate::{dependancies::Env, models::ApiError};
-use onboard_you::{PipelineConfig, ScheduledEtlEvent, ScheduledEvent};
+use onboard_you_models::{PipelineConfig, ScheduledEtlEvent, ScheduledEvent};
 
 /// Abstract schedule management for pipeline configs.
 #[async_trait]

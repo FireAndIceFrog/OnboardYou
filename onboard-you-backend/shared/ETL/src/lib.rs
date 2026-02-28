@@ -20,8 +20,3 @@
 pub mod capabilities;
 pub mod orchestration;
 pub use orchestration::{ActionFactory, ActionFactoryTrait};
-
-pub use ::onboard_you_models::*;
-
-#[macro_use]
-extern crate macro_rules_attribute;

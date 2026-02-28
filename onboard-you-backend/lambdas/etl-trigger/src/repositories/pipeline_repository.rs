@@ -5,7 +5,7 @@ use lambda_runtime::Error;
 use polars::prelude::LazyFrame;
 use std::sync::Arc;
 
-use onboard_you::{Manifest, RosterContext};
+use onboard_you_models::{Manifest, RosterContext};
 
 use crate::{dependancies::Dependancies, models::PipelineResult};
 
@@ -45,7 +45,7 @@ impl IPipelineRepo for PipelineRepository {
             .actions
             .iter()
             .map(|ac| action_factory.create(ac))
-            .collect::<onboard_you::Result<_>>()
+            .collect::<onboard_you_models::Result<_>>()
             .map_err(|e| Error::from(format!("Failed to build actions: {e}")))?;
 
         // 5. Execute the pipeline
@@ -83,7 +83,7 @@ mod tests {
     use crate::dependancies::{Dependancies, Env};
 
     use super::*;
-    use onboard_you::{
+    use onboard_you_models::{
         ActionConfig, ActionConfigPayload, ActionType, OnboardingAction, RosterContext,
     };
     use std::sync::{
@@ -92,8 +92,8 @@ mod tests {
     };
 
     struct NoopAction;
-    impl onboard_you::ColumnCalculator for NoopAction {
-        fn calculate_columns(&self, ctx: RosterContext) -> onboard_you::Result<RosterContext> {
+    impl onboard_you_models::ColumnCalculator for NoopAction {
+        fn calculate_columns(&self, ctx: RosterContext) -> onboard_you_models::Result<RosterContext> {
             Ok(ctx)
         }
     }
@@ -101,7 +101,7 @@ mod tests {
         fn id(&self) -> &str {
             "noop"
         }
-        fn execute(&self, ctx: RosterContext) -> onboard_you::Result<RosterContext> {
+        fn execute(&self, ctx: RosterContext) -> onboard_you_models::Result<RosterContext> {
             Ok(ctx)
         }
     }
@@ -124,7 +124,7 @@ mod tests {
         fn create(
             &self,
             _action_config: &ActionConfig,
-        ) -> onboard_you::Result<std::sync::Arc<dyn OnboardingAction>> {
+        ) -> onboard_you_models::Result<std::sync::Arc<dyn OnboardingAction>> {
             self.create_count.fetch_add(1, Ordering::SeqCst);
             Ok(std::sync::Arc::new(NoopAction))
         }
@@ -133,7 +133,7 @@ mod tests {
             &self,
             _actions: Vec<std::sync::Arc<dyn OnboardingAction>>,
             context: RosterContext,
-        ) -> onboard_you::Result<RosterContext> {
+        ) -> onboard_you_models::Result<RosterContext> {
             self.run_count.fetch_add(1, Ordering::SeqCst);
             Ok(context)
         }
@@ -145,13 +145,13 @@ mod tests {
         let mut deps = Dependancies::new(Arc::new(Env::default())).await;
         deps.action_factory = factory.clone();
 
-        let manifest = onboard_you::Manifest {
+        let manifest = onboard_you_models::Manifest {
             version: "1.0".into(),
             actions: vec![ActionConfig {
                 id: "a".into(),
                 action_type: ActionType::ApiDispatcher,
                 config: ActionConfigPayload::ApiDispatcher(
-                    onboard_you::ApiDispatcherConfig::Default,
+                    onboard_you_models::ApiDispatcherConfig::Default,
                 ),
             }],
         };

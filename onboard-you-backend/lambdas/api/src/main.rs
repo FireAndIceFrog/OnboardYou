@@ -25,7 +25,7 @@ use models::{
     ConfigRequest, CsvColumnsResponse, ErrorResponse, LoginRequest, LoginResponse,
     PresignedUploadResponse, SettingsRequest, StepValidation, ValidationResult,
 };
-use onboard_you::{
+use onboard_you_models::{
     ActionConfig, ActionConfigPayload, ActionType, ApiDispatcherConfig, BearerPlacement,
     BearerRepoConfig, Manifest, OAuth2GrantType, OAuth2RepoConfig, OAuthRepoConfig, OrgSettings,
     PipelineConfig,

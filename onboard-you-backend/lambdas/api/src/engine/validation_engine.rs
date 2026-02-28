@@ -8,7 +8,8 @@ use crate::{
     dependancies::Dependancies,
     models::{ApiError, StepValidation, ValidationResult},
 };
-use onboard_you::{ActionFactoryTrait, Manifest, RosterContext};
+use onboard_you::ActionFactoryTrait;
+use onboard_you_models::{Manifest, RosterContext};
 use polars::prelude::*;
 
 /// Validate a pipeline manifest by propagating columns through every step.

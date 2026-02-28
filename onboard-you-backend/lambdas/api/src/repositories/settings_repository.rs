@@ -8,7 +8,7 @@ use aws_sdk_dynamodb::types::AttributeValue;
 use serde_dynamo::aws_sdk_dynamodb_1 as dynamo_serde;
 
 use crate::models::ApiError;
-use onboard_you::OrgSettings;
+use onboard_you_models::OrgSettings;
 
 #[async_trait]
 pub trait SettingsRepo: Send + Sync {

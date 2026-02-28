@@ -2,11 +2,11 @@
 //!
 //! Omits `organizationId` which the controller fills from Claims.
 
-use onboard_you::{ApiDispatcherConfig};
+use onboard_you_models::{ApiDispatcherConfig};
 use serde::Deserialize;
 use utoipa::ToSchema;
 
-use onboard_you::OrgSettings;
+use onboard_you_models::OrgSettings;
 
 /// Request body for `PUT /settings`.
 #[derive(Debug, Deserialize, ToSchema)]

@@ -5,7 +5,7 @@
 
 use crate::{dependancies::Dependancies, models::ApiError};
 
-use onboard_you::PipelineConfig;
+use onboard_you_models::PipelineConfig;
 
 /// Fetch a pipeline config by organization ID and customer company ID.
 pub async fn get(
@@ -103,7 +103,7 @@ mod tests {
     use crate::repositories::config_repository::ConfigRepo;
     use crate::repositories::schedule_repository::ScheduleRepo;
     use async_trait::async_trait;
-    use onboard_you::Manifest;
+    use onboard_you_models::Manifest;
     use std::collections::HashMap;
     use std::sync::Arc;
     use tokio::sync::RwLock;

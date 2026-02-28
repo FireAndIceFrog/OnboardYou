@@ -9,7 +9,7 @@ use serde_dynamo::aws_sdk_dynamodb_1 as dynamo_serde;
 
 use crate::models::ApiError;
 
-use onboard_you::PipelineConfig;
+use onboard_you_models::PipelineConfig;
 /// Abstract persistence for pipeline configurations.
 #[async_trait]
 pub trait ConfigRepo: Send + Sync + 'static {
