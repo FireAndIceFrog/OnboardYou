@@ -23,6 +23,9 @@ async fn main() -> Result<(), Error> {
         .init();
 
     let dependancies = Dependancies::new(Dependancies::create_env());
+    if let Ok(url) = std::env::var("FRONTEND_URL") {
+        tracing::info!(frontend_url = %url, "frontend origin configured");
+    }
 
     lambda_runtime::run(service_fn(|event: LambdaEvent<AuthEvent>| {
         let dependancies = dependancies.clone();

@@ -10,6 +10,8 @@ mod models;
 mod repositories;
 
 use axum::{
+    http::HeaderValue,
+    middleware::map_response,
     routing::{get, post},
     Router,
 };
@@ -137,10 +139,22 @@ async fn main() -> Result<(), lambda_http::Error> {
 // ── Routes ──────────────────────────────────────────────────
 
 fn router(state: Dependancies) -> Router {
-    let cors = CorsLayer::new()
-        .allow_origin(Any)
+    // determine allowed origin from environment; fall back to Any (for local dev).
+    let allowed_origin = std::env::var("FRONTEND_URL").ok();
+    let mut cors_builder = CorsLayer::new()
         .allow_methods(Any)
         .allow_headers(Any);
+    if let Some(origin) = allowed_origin {
+        if let Ok(val) = origin.parse::<HeaderValue>() {
+            cors_builder = cors_builder.allow_origin(val);
+        } else {
+            // parsing failed, retain default Any
+            cors_builder = cors_builder.allow_origin(Any);
+        }
+    } else {
+        cors_builder = cors_builder.allow_origin(Any);
+    }
+    let cors = cors_builder;
 
     Router::new()
         .route("/auth/login", post(login))
@@ -167,5 +181,13 @@ fn router(state: Dependancies) -> Router {
         .route("/settings", get(get_settings).put(upsert_settings))
         .with_state(state)
         .layer(cors)
+        .layer(map_response(|mut res: axum::http::Response| {
+            if let Ok(origin) = std::env::var("FRONTEND_URL") {
+                if let Ok(val) = origin.parse::<HeaderValue>() {
+                    res.headers_mut().insert("access-control-allow-origin", val);
+                }
+            }
+            res
+        }))
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
 }

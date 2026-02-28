@@ -162,6 +162,7 @@ module "authorizer" {
     COGNITO_USER_POOL_ID = module.cognito.user_pool_id
     COGNITO_CLIENT_ID    = module.cognito.client_id
     RUST_LOG             = "info"
+    FRONTEND_URL = module.frontend.website_url
   }
 }
 
@@ -188,6 +189,8 @@ module "config_api" {
     AWS_LAMBDA_HTTP_IGNORE_STAGE_IN_PATH  = "true"
     RUST_LOG                              = "info"
     SQS_QUEUE_URL = aws_sqs_queue.etl_events.id
+    # frontend origin used by the Rust CORS layer
+    FRONTEND_URL = module.frontend.website_url
   }
 
   iam_policy_statements = [
@@ -274,6 +277,10 @@ module "api" {
   authorization            = "CUSTOM"
   authorizer_uri           = module.authorizer.invoke_arn
   authorizer_function_name = module.authorizer.function_name
+
+  # ── CORS ─────────────────────────────────────────────────────
+  # tighten origin to whatever frontend URL Terraform created
+  cors_allowed_origin = module.frontend.website_url
 
   # ── Routes ──────────────────────────────────────────────────
   routes = [
