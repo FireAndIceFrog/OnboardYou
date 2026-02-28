@@ -216,6 +216,7 @@ dependencies = [
  "async-trait",
  "jsonwebtoken",
  "lambda_runtime",
+ "onboard_you_models",
  "reqwest",
  "serde",
  "serde_json",
@@ -2647,20 +2648,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "models"
-version = "0.1.0"
-dependencies = [
- "macro_rules_attribute",
- "polars",
- "regex",
- "serde",
- "serde_json",
- "serde_yaml",
- "thiserror 1.0.69",
- "utoipa",
-]
-
-[[package]]
 name = "native-tls"
 version = "0.2.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2795,7 +2782,7 @@ dependencies = [
  "criterion",
  "lambda_runtime",
  "macro_rules_attribute",
- "models",
+ "onboard_you_models",
  "polars",
  "regex",
  "reqwest",
@@ -2807,6 +2794,20 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "utoipa",
+]
+
+[[package]]
+name = "onboard_you_models"
+version = "0.1.0"
+dependencies = [
+ "macro_rules_attribute",
+ "polars",
+ "regex",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "thiserror 1.0.69",
  "utoipa",
 ]
 

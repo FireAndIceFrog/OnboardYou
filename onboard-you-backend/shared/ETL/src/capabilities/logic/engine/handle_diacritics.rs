@@ -15,9 +15,9 @@
 //! in-place. When set, new columns with the suffix are created alongside
 //! the originals.
 
-use models::HandleDiacriticsConfig;
-use models::ColumnCalculator;
-use models::{Error, OnboardingAction, Result, RosterContext};
+use onboard_you_models::HandleDiacriticsConfig;
+use onboard_you_models::ColumnCalculator;
+use onboard_you_models::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 
 // ---------------------------------------------------------------------------

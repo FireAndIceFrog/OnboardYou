@@ -12,8 +12,8 @@ use crate::capabilities::logic::engine::{
     CellphoneSanitizer, DropColumn, FilterByValue, HandleDiacritics, IdentityDeduplicator,
     IsoCountrySanitizer, PIIMasking, RegexReplace, RenameColumn, SCDType2,
 };
-use models::{ActionConfig, ActionConfigPayload};
-use models::{ActionType, Error, OnboardingAction, Result};
+use onboard_you_models::{ActionConfig, ActionConfigPayload};
+use onboard_you_models::{ActionType, Error, OnboardingAction, Result};
 use crate::RosterContext;
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -132,8 +132,8 @@ impl ActionFactoryTrait for ActionFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use models::ColumnCalculator;
-    use models::manifest::{ActionConfig, ActionConfigPayload};
+    use onboard_you_models::ColumnCalculator;
+    use onboard_you_models::manifest::{ActionConfig, ActionConfigPayload};
     use ActionType;
     use polars::prelude::*;
 

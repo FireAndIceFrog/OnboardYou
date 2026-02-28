@@ -22,9 +22,9 @@
 //! | `country_columns`  | `[string]` | Priority-ordered list of columns holding ISO 2/3 codes  |
 //! | `output_column`    | string     | Column to write the internationalised number into       |
 
-use models::CellphoneSanitizerConfig;
-use models::ColumnCalculator;
-use models::{OnboardingAction, Result, RosterContext};
+use onboard_you_models::CellphoneSanitizerConfig;
+use onboard_you_models::ColumnCalculator;
+use onboard_you_models::{OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 use std::collections::HashMap;
 use std::sync::OnceLock;

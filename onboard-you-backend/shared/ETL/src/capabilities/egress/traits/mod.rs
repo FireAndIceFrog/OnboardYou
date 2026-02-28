@@ -5,6 +5,6 @@
 mod egress_repository;
 pub mod dynamic_egress_model;
 
-pub use models::DispatchResponse;
+pub use onboard_you_models::DispatchResponse;
 pub use egress_repository::*;
 pub use dynamic_egress_model::*;

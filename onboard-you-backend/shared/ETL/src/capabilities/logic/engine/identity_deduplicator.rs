@@ -18,9 +18,9 @@
 //! }
 //! ```
 
-use models::DedupConfig;
-use models::{ColumnCalculator};
-use models::{Error, OnboardingAction, Result, RosterContext};
+use onboard_you_models::DedupConfig;
+use onboard_you_models::{ColumnCalculator};
+use onboard_you_models::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 
 // ---------------------------------------------------------------------------

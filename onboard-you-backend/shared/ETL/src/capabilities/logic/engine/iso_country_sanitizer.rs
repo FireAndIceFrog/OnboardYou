@@ -20,9 +20,9 @@
 //! | `output_column` | string | Column to write the normalised code into          |
 //! | `output_format` | string | `"alpha2"` or `"alpha3"` — desired output format  |
 
-use models::{CountryOutputFormat, IsoCountrySanitizerConfig};
-use models::ColumnCalculator;
-use models::{OnboardingAction, Result, RosterContext};
+use onboard_you_models::{CountryOutputFormat, IsoCountrySanitizerConfig};
+use onboard_you_models::ColumnCalculator;
+use onboard_you_models::{OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 use std::collections::HashMap;
 use std::sync::OnceLock;

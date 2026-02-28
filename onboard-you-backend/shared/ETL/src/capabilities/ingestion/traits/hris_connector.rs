@@ -1,6 +1,6 @@
 //! Generic trait for external HRIS systems (Workday, BambooHR, etc)
 
-use models::Result;
+use onboard_you_models::Result;
 use polars::prelude::*;
 
 /// Generic trait for HRIS system connectors

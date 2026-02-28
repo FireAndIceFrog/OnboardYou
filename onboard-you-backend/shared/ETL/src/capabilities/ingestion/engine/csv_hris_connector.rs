@@ -19,9 +19,9 @@
 //! the `CSV_UPLOAD_BUCKET` environment variable.
 
 use crate::capabilities::ingestion::traits::HrisConnector;
-use models::ColumnCalculator;
-use models::{Error, OnboardingAction, Result, RosterContext};
-use models::CsvHrisConnectorConfig;
+use onboard_you_models::ColumnCalculator;
+use onboard_you_models::{Error, OnboardingAction, Result, RosterContext};
+use onboard_you_models::CsvHrisConnectorConfig;
 use polars::prelude::*;
 
 // ---------------------------------------------------------------------------

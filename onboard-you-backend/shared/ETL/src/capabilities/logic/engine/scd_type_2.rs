@@ -19,9 +19,9 @@
 //! }
 //! ```
 
-use models::ScdType2Config;
-use models::ColumnCalculator;
-use models::{OnboardingAction, Result, RosterContext};
+use onboard_you_models::ScdType2Config;
+use onboard_you_models::ColumnCalculator;
+use onboard_you_models::{OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 
 // ---------------------------------------------------------------------------

@@ -37,7 +37,7 @@ tokio = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 macro_rules_attribute.workspace = true
-models = { path = "../../shared/models" }
+onboard_you_models = { path = "../../shared/models" }
 
 [features]
 benchmark = []

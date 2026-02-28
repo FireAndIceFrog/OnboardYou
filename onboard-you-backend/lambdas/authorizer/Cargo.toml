@@ -18,3 +18,4 @@ lambda_runtime = { workspace = true }
 async-trait = { workspace = true }
 jsonwebtoken = "9"
 reqwest = { workspace = true }
+onboard_you_models = { path = "../../shared/models" }

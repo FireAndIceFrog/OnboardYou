@@ -20,10 +20,10 @@
 //! Polars `LazyFrame` suitable for the onboarding pipeline.
 
 use crate::capabilities::ingestion::traits::HrisConnector;
-use models::ColumnCalculator;
-use models::{Error, OnboardingAction, Result, RosterContext};
+use onboard_you_models::ColumnCalculator;
+use onboard_you_models::{Error, OnboardingAction, Result, RosterContext};
 use crate::orchestration::clients::soap_client::{ReqwestSoapClient, SoapClient};
-use models::{WORKDAY_API_VERSION, WorkdayConfig};
+use onboard_you_models::{WORKDAY_API_VERSION, WorkdayConfig};
 use polars::prelude::*;
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -557,7 +557,7 @@ impl OnboardingAction for WorkdayHrisConnector {
 
 #[cfg(test)]
 mod tests {
-    use models::WorkdayResponseGroup;
+    use onboard_you_models::WorkdayResponseGroup;
 
     use super::*;
 

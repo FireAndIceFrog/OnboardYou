@@ -20,12 +20,12 @@
 //!  EgressRepository impl (BearerRepo | OAuthRepo | OAuth2Repo)
 //! ```
 
-use models::{ApiDispatcherConfig, DispatchResponse, RetryPolicy};
+use onboard_you_models::{ApiDispatcherConfig, DispatchResponse, RetryPolicy};
 use crate::capabilities::egress::repositories::bearer_repo::BearerRepo;
 use crate::capabilities::egress::repositories::oauth2_repo::OAuth2Repo;
 use crate::capabilities::egress::repositories::oauth_repo::OAuthRepo;
 use crate::capabilities::egress::traits::EgressRepository;
-use models::{Error, Result};
+use onboard_you_models::{Error, Result};
 use tracing::{info, warn};
 
 // ---------------------------------------------------------------------------
@@ -147,7 +147,7 @@ impl ApiEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use models::AuthType;
+    use onboard_you_models::AuthType;
 
     #[test]
     fn test_auth_type_serde_parsing() {

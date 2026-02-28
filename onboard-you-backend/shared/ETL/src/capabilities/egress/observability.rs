@@ -1,7 +1,7 @@
 //! Real-time request/response logging and Root Cause Analysis (RCA)
 
-use models::ColumnCalculator;
-use models::{OnboardingAction, Result, RosterContext};
+use onboard_you_models::ColumnCalculator;
+use onboard_you_models::{OnboardingAction, Result, RosterContext};
 
 /// Observability and logging for the pipeline
 pub struct Observability;

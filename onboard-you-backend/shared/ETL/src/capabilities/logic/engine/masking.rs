@@ -22,9 +22,9 @@
 //! For backward compatibility, `{ "mask_ssn": true, "mask_salary": true }` is
 //! still accepted and converted to the column-based format.
 
-use models::{MaskStrategy, PIIMaskingConfig};
-use models::{ColumnCalculator};
-use models::{Error, OnboardingAction, Result, RosterContext};
+use onboard_you_models::{MaskStrategy, PIIMaskingConfig};
+use onboard_you_models::{ColumnCalculator};
+use onboard_you_models::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 
 // ---------------------------------------------------------------------------
@@ -151,7 +151,7 @@ impl OnboardingAction for PIIMasking {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use models::ColumnMask;
+    use onboard_you_models::ColumnMask;
 
     fn test_df() -> DataFrame {
         df! {

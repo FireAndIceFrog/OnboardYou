@@ -31,9 +31,9 @@
 //! }
 //! ```
 
-use models::{RegexReplaceConfig, SafeRegex};
-use models::ColumnCalculator;
-use models::{Error, OnboardingAction, Result, RosterContext};
+use onboard_you_models::{RegexReplaceConfig, SafeRegex};
+use onboard_you_models::ColumnCalculator;
+use onboard_you_models::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 
 // ---------------------------------------------------------------------------
@@ -140,7 +140,7 @@ impl OnboardingAction for RegexReplace {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use models::{MAX_PATTERN_LEN, MAX_REPLACEMENT_LEN};
+    use onboard_you_models::{MAX_PATTERN_LEN, MAX_REPLACEMENT_LEN};
 
     fn sample_df() -> DataFrame {
         df! {

@@ -26,9 +26,9 @@
 //! }
 //! ```
 
-use models::{FilterByValueConfig, SafeRegex};
-use models::ColumnCalculator;
-use models::{Error, OnboardingAction, Result, RosterContext};
+use onboard_you_models::{FilterByValueConfig, SafeRegex};
+use onboard_you_models::ColumnCalculator;
+use onboard_you_models::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 
 // ---------------------------------------------------------------------------
@@ -132,7 +132,7 @@ impl OnboardingAction for FilterByValue {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use models::MAX_PATTERN_LEN;
+    use onboard_you_models::MAX_PATTERN_LEN;
     use polars::df;
 
     fn sample_df() -> DataFrame {

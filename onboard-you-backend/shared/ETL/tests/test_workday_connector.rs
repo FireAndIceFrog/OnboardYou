@@ -9,7 +9,7 @@ use onboard_you::capabilities::ingestion::engine::{
     build_get_workers_envelope, parse_get_workers_response, parse_response_results,
     workers_to_dataframe
 };
-use ::models::{WorkdayConfig, WorkdayResponseGroup};
+use ::onboard_you_models::{WorkdayConfig, WorkdayResponseGroup};
 use onboard_you::*;
 use onboard_you::{ActionConfig, ActionConfigPayload, ActionFactory, ActionType, RosterContext};
 use polars::prelude::*;

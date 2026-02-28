@@ -14,7 +14,7 @@ mod common;
 
 use common::mock_data::{full_pipeline_manifest, generate_hris_csv};
 use onboard_you::{ActionFactory, ActionFactoryTrait };
-use models::{Manifest, RosterContext};
+use onboard_you_models::{Manifest, RosterContext};
 use polars::prelude::*;
 use std::time::Instant;
 

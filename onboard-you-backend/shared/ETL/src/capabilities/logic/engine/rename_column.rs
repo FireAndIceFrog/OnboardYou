@@ -10,9 +10,9 @@
 //! }
 //! ```
 
-use models::RenameConfig;
-use models::ColumnCalculator;
-use models::{OnboardingAction, Result, RosterContext};
+use onboard_you_models::RenameConfig;
+use onboard_you_models::ColumnCalculator;
+use onboard_you_models::{OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 
 // ---------------------------------------------------------------------------

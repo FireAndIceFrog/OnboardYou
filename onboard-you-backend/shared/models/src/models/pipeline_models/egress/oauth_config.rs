@@ -37,7 +37,7 @@ pub struct OAuthRepoConfig {
 
 impl OAuthRepoConfig {
     /// Deserialise from the raw `serde_json::Value` stored in `ActionConfig.config`.
-    pub fn from_json(value: &serde_json::Value) -> crate::Result<Self> {
+    pub fn from_json(value: &serde_json::Value) -> Result<Self, crate::Error> {
         serde_json::from_value(value.clone()).map_err(|e| {
             crate::Error::ConfigurationError(format!("Invalid OAuthRepoConfig: {e}"))
         })

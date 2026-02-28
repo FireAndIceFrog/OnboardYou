@@ -10,9 +10,9 @@
 //! Secrets (`consumer_secret`, `token_secret`) will be encrypted per-org in
 //! DynamoDB and decrypted at construction time via a `SecretProvider` trait.
 
-use models::{DispatchResponse, OAuthRepoConfig};
+use onboard_you_models::{DispatchResponse, OAuthRepoConfig};
 use crate::capabilities::egress::traits::EgressRepository;
-use models::{Error, Result};
+use onboard_you_models::{Error, Result};
 
 // ---------------------------------------------------------------------------
 // Repository

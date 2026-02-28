@@ -4,8 +4,8 @@
 //! The `ApiEngine` delegates to a concrete `EgressRepository` at runtime,
 //! allowing auth methods to be swapped via manifest config.
 
-use models::DispatchResponse;
-use models::Result;
+use onboard_you_models::DispatchResponse;
+use onboard_you_models::Result;
 
 /// Core contract for all egress authentication and dispatch strategies.
 ///
