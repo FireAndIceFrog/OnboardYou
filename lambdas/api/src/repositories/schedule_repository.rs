@@ -5,10 +5,9 @@
 
 use async_trait::async_trait;
 use aws_sdk_scheduler::types::{FlexibleTimeWindow, FlexibleTimeWindowMode, Target};
-use aws_sdk_sqs::Client as SqsClient;
 
 use crate::{dependancies::Env, models::ApiError};
-use onboard_you::{PipelineConfig, ScheduledDynamicApiEvent, ScheduledEtlEvent, ScheduledEvent};
+use onboard_you::{PipelineConfig, ScheduledEtlEvent, ScheduledEvent};
 
 /// Abstract schedule management for pipeline configs.
 #[async_trait]
@@ -20,18 +19,11 @@ pub trait ScheduleRepo: Send + Sync {
         organization_id: &str,
         customer_company_id: &str,
     ) -> Result<(), ApiError>;
-
-    async fn trigger_dynamic_api_event(
-        &self,
-        organization_id: &str,
-        customer_company_id: &str,
-    ) -> Result<(), ApiError>;
 }
 
 /// EventBridge Scheduler backed implementation.
 pub struct EventBridgeScheduleRepo {
     pub scheduler: aws_sdk_scheduler::Client,
-    pub sqs: SqsClient,
     pub env: Env,
 }
 
@@ -42,37 +34,6 @@ fn schedule_name(organization_id: &str, customer_company_id: &str) -> String {
 
 #[async_trait]
 impl ScheduleRepo for EventBridgeScheduleRepo {
-    async fn trigger_dynamic_api_event(
-        &self,
-        organization_id: &str,
-        customer_company_id: &str,
-    ) -> Result<(), ApiError> {
-        let input_payload = serde_json::to_string(&ScheduledEvent::DynamicApi(
-            ScheduledDynamicApiEvent {
-                event_type: "ScheduledDynamicApiEvent".to_string(),
-                organization_id: organization_id.to_string(),
-                customer_company_id: customer_company_id.to_string(),
-            },
-        ))
-        .map_err(|e| ApiError::Repository(format!("Failed to serialize event payload: {e}")))?;
-
-        // send message to SQS queue instead of EventBridge
-        self.sqs
-            .send_message()
-            .queue_url(&self.env.sqs_queue_url)
-            .message_body(input_payload)
-            .send()
-            .await
-            .map_err(|e| ApiError::Repository(format!("Failed to send SQS message: {e}")))?;
-
-        tracing::info!(
-            organization_id = %organization_id,
-            customer_company_id = %customer_company_id,
-            "Dynamic API event triggered"
-        );
-        Ok(())
-    }
-
     async fn upsert_schedule(&self, config: &PipelineConfig) -> Result<(), ApiError> {
         let name = schedule_name(&config.organization_id, &config.customer_company_id);
 

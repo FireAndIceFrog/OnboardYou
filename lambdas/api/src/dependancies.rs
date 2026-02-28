@@ -5,7 +5,6 @@ use crate::repositories::config_repository::{ConfigRepo, DynamoConfigRepo};
 use crate::repositories::etl_repository::{EtlRepo, EtlRepository};
 use crate::repositories::s3_repository::{S3Repo, S3Repository};
 use crate::repositories::schedule_repository::{EventBridgeScheduleRepo, ScheduleRepo};
-use aws_sdk_sqs::Client as SqsClient;
 use crate::repositories::settings_repository::{DynamoSettingsRepo, SettingsRepo};
 
 #[derive(Debug, Clone, Default)]
@@ -16,7 +15,6 @@ pub struct Env {
     pub scheduler_role_arn: String,
     pub csv_upload_bucket: String,
     pub cognito_client_id: String,
-    pub sqs_queue_url: String,
 }
 
 /// Shared application state, injected via axum's State extractor.
@@ -47,8 +45,6 @@ impl Dependancies {
                 .expect("CSV_UPLOAD_BUCKET must be set"),
             cognito_client_id: std::env::var("COGNITO_CLIENT_ID")
                 .expect("COGNITO_CLIENT_ID must be set"),
-            sqs_queue_url: std::env::var("SQS_QUEUE_URL")
-                .expect("SQS_QUEUE_URL must be set"),
         }
     }
 
@@ -68,7 +64,6 @@ impl Dependancies {
             }),
             schedule_repo: Arc::new(EventBridgeScheduleRepo {
                 scheduler: aws_sdk_scheduler::Client::new(&aws_config),
-                sqs: SqsClient::new(&aws_config),
                 env: env.clone(),
             }),
             s3_repo: Arc::new(S3Repository {

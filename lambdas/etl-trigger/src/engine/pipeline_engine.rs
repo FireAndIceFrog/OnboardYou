@@ -150,10 +150,6 @@ mod tests {
         ) -> Result<Option<onboard_you::OrgSettings>, Error> {
             Ok(None)
         }
-
-        async fn save(&self, _settings: &onboard_you::OrgSettings) -> Result<(), Error> {
-            Ok(())
-        }
     }
 
     #[tokio::test]
@@ -163,18 +159,6 @@ mod tests {
         let etl_csv = Arc::new(AtomicBool::new(false));
         let pipeline_called = Arc::new(AtomicBool::new(false));
 
-        // create a trivial gh models repo implementation that just returns a
-        // static response so we don't hit the network during the unit test.
-        struct DummyGhRepo;
-        #[async_trait]
-        impl crate::repositories::gh_models_repository::GhModelsRepo for DummyGhRepo {
-            async fn generate_dynamic_body(&self, _input: &str) -> Result<crate::models::OpenapiDynamicApiResponse, Error> {
-                Ok(crate::models::OpenapiDynamicApiResponse {
-                    output_schema: serde_json::json!({"test":true}),
-                    output_schema_body_path: "dummy".to_string(),
-                })
-            }
-        }
 
         let deps = Arc::new(Dependancies {
             config_repo: Arc::new(FakeConfigRepo {
@@ -188,9 +172,6 @@ mod tests {
             pipeline_repo: Arc::new(FakePipelineRepo {
                 called: pipeline_called.clone(),
             }),
-            // supply simple concrete instances for the new repo fields
-            gh_models_repo: Arc::new(DummyGhRepo),
-            openapi_repo: crate::repositories::openapi_repository::SimpleOpenApiRepo::new(reqwest::Client::new()),
             action_factory: Arc::new(onboard_you::ActionFactory::new()),
         });
 

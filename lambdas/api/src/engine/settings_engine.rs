@@ -36,7 +36,6 @@ pub async fn upsert(
     validate(&settings)?;
 
     deps.settings_repo.put(&settings).await?;
-    deps.schedule_repo.trigger_dynamic_api_event(organization_id, "").await?;
 
     tracing::info!(
         organization_id = %settings.organization_id,
@@ -78,9 +77,7 @@ mod tests {
     use tokio::sync::RwLock;
     
     #[derive(Default)]
-    struct NoOpScheduleRepo {
-        trigger_dynamic_api_event_calls: RwLock<i64>,
-    }
+    struct NoOpScheduleRepo ;
 
     #[async_trait]
     impl ScheduleRepo for NoOpScheduleRepo {
@@ -88,11 +85,6 @@ mod tests {
             Ok(())
         }
         async fn delete_schedule(&self, _org: &str, _company: &str) -> Result<(), ApiError> {
-            Ok(())
-        }
-        async fn trigger_dynamic_api_event(&self, _org: &str, _company: &str) -> Result<(), ApiError> {
-            let mut calls = self.trigger_dynamic_api_event_calls.write().await;
-            *calls += 1;
             Ok(())
         }
     }
@@ -134,7 +126,7 @@ mod tests {
 
     #[tokio::test]
     async fn upsert_persists_and_stamps_org_id() {
-        let (state, schedule_repository) = test_state().await;
+        let (state, _) = test_state().await;
 
         let settings = OrgSettings {
             organization_id: String::new(),
@@ -146,9 +138,6 @@ mod tests {
 
         let fetched = super::get(&state, "org-1").await.unwrap();
         assert_eq!(fetched.organization_id, "org-1");
-
-        let calls = schedule_repository.trigger_dynamic_api_event_calls.read().await;
-        assert_eq!(*calls, 1, "Expected trigger_dynamic_api_event to be called once");
     }
 
     #[tokio::test]

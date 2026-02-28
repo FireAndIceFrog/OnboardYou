@@ -6,8 +6,6 @@ mod dependancies;
 mod engine;
 mod models;
 mod repositories;
-
-use crate::engine::dynamic_api_engine;
 use std::sync::Arc;
 
 use lambda_runtime::{service_fn, Error, LambdaEvent};
@@ -47,20 +45,6 @@ async fn main() -> Result<(), Error> {
                             Ok::<(), Error>(())
                         }
                     }
-                },
-                ScheduledEvent::DynamicApi(payload) => {
-                    tracing::info!("Received Dynamic API event: {:?}", payload);
-                    match dynamic_api_engine::run(
-                        deps.clone(),
-                        &payload.organization_id,
-                        &payload.customer_company_id,
-                    )
-                    .await
-                    {
-                        Ok(_) => tracing::info!("Dynamic API workflow completed"),
-                        Err(e) => tracing::error!("Dynamic API workflow failed: {e}"),
-                    }
-                    Ok::<(), Error>(())
                 },
             }
         }

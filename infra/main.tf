@@ -227,7 +227,7 @@ module "config_api" {
 # ───────────────────────────────────────────────────────────────────────────
 # SQS queue for dynamic API events (replaces EventBridge)
 resource "aws_sqs_queue" "etl_events" {
-  name                       = "${var.environment}-dynamic-api-events-${var.env_postfix}"
+  name                       = "${var.environment}-etl_events-${var.env_postfix}"
   visibility_timeout_seconds = 300
   # retention, encryption, DLQ etc. can be added as needed
 }

@@ -11,7 +11,6 @@ mod repositories;
 
 use axum::{
     http::HeaderValue,
-    middleware::map_response,
     routing::{get, post},
     Router,
 };
@@ -144,6 +143,7 @@ fn router(state: Dependancies) -> Router {
     let mut cors_builder = CorsLayer::new()
         .allow_methods(Any)
         .allow_headers(Any);
+
     if let Some(origin) = allowed_origin {
         if let Ok(val) = origin.parse::<HeaderValue>() {
             cors_builder = cors_builder.allow_origin(val);
@@ -181,13 +181,5 @@ fn router(state: Dependancies) -> Router {
         .route("/settings", get(get_settings).put(upsert_settings))
         .with_state(state)
         .layer(cors)
-        .layer(map_response(|mut res: axum::http::Response| {
-            if let Ok(origin) = std::env::var("FRONTEND_URL") {
-                if let Ok(val) = origin.parse::<HeaderValue>() {
-                    res.headers_mut().insert("access-control-allow-origin", val);
-                }
-            }
-            res
-        }))
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
 }
