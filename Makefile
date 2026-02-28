@@ -4,10 +4,10 @@ VENV := .venv/bin/activate
 #
 # You can override any of these by exporting them in your shell, e.g.: 
 #
-  export OPENSSL_DIR=/home/mathew/tmp/openssl-headers
-  export OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu
-  export OPENSSL_STATIC=1
-  export RUSTFLAGS='-C linker=gcc'
+#   export OPENSSL_DIR=/home/mathew/tmp/openssl-headers
+#   export OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu
+#   export OPENSSL_STATIC=1
+#   export RUSTFLAGS="-C link-arg=-fuse-ld=mold"
 #
 # or prepend them to the make command:
 #
@@ -107,7 +107,7 @@ frontend-url:
 ## All-in-one
 ##──────────────────────────────────────────────────────────────
 
-deploy: plan apply upload-frontend
+deploy: plan apply sync-env upload-frontend
 
 ##──────────────────────────────────────────────────────────────
 ## OpenAPI spec — build the API binary and dump the spec to JSON
