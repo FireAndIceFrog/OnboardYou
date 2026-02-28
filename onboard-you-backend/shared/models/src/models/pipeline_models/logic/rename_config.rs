@@ -1,6 +1,6 @@
 //! Configuration model for the rename-column engine.
 
-use crate::domain::{Error, Result};
+use crate::{Error, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use utoipa::ToSchema;

@@ -15,9 +15,9 @@
 //! `client_secret` and `refresh_token` will be encrypted per-org in DynamoDB
 //! and decrypted at construction time via a `SecretProvider` trait.
 
-use crate::capabilities::egress::models::{DispatchResponse, OAuth2GrantType, OAuth2RepoConfig};
+use models::{DispatchResponse, OAuth2GrantType, OAuth2RepoConfig};
 use crate::capabilities::egress::traits::EgressRepository;
-use crate::domain::{Error, Result};
+use models::{Error, Result};
 use std::sync::Mutex;
 use std::time::Instant;
 

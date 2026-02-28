@@ -158,19 +158,21 @@ impl<'de> Deserialize<'de> for ActionConfig {
 #[derive(Clone, Debug, Serialize, ToSchema)]
 #[serde(untagged)]
 pub enum ActionConfigPayload {
-    CsvHrisConnector(crate::capabilities::ingestion::engine::CsvHrisConnectorConfig),
-    WorkdayHrisConnector(crate::capabilities::ingestion::engine::WorkdayConfig),
-    ScdType2(crate::capabilities::logic::models::ScdType2Config),
-    PiiMasking(crate::capabilities::logic::models::PIIMaskingConfig),
-    IdentityDeduplicator(crate::capabilities::logic::models::DedupConfig),
-    RegexReplace(crate::capabilities::logic::models::RegexReplaceConfig),
-    IsoCountrySanitizer(crate::capabilities::logic::models::IsoCountrySanitizerConfig),
-    CellphoneSanitizer(crate::capabilities::logic::models::CellphoneSanitizerConfig),
-    HandleDiacritics(crate::capabilities::logic::models::HandleDiacriticsConfig),
-    RenameColumn(crate::capabilities::logic::models::RenameConfig),
-    DropColumn(crate::capabilities::logic::models::DropConfig),
-    FilterByValue(crate::capabilities::logic::models::FilterByValueConfig),
-    ApiDispatcher(crate::capabilities::egress::models::ApiDispatcherConfig),
+    CsvHrisConnector(crate::CsvHrisConnectorConfig),
+    WorkdayHrisConnector(crate::WorkdayConfig),
+    
+    ScdType2(crate::ScdType2Config),
+    PiiMasking(crate::PIIMaskingConfig),
+    IdentityDeduplicator(crate::DedupConfig),
+    RegexReplace(crate::RegexReplaceConfig),
+    IsoCountrySanitizer(crate::IsoCountrySanitizerConfig),
+    CellphoneSanitizer(crate::CellphoneSanitizerConfig),
+    HandleDiacritics(crate::HandleDiacriticsConfig),
+    RenameColumn(crate::RenameConfig),
+    DropColumn(crate::DropConfig),
+    FilterByValue(crate::FilterByValueConfig),
+
+    ApiDispatcher(crate::ApiDispatcherConfig),
 }
 
 impl Manifest {

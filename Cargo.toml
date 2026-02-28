@@ -3,7 +3,8 @@ members = [
     "onboard-you-backend/shared/ETL",
     "onboard-you-backend/lambdas/api",
     "onboard-you-backend/lambdas/etl-trigger",
-    "onboard-you-backend/lambdas/authorizer",
+    "onboard-you-backend/lambdas/authorizer", 
+    "onboard-you-backend/shared/models",
 ]
 resolver = "2"
 
@@ -39,3 +40,4 @@ gh_models = { version = "0.2.0" }
 regex = "1"
 criterion = "0.5"
 tempfile = "3"
+macro_rules_attribute="0.2.2"

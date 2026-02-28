@@ -4,8 +4,8 @@
 //! The `ApiEngine` delegates to a concrete `EgressRepository` at runtime,
 //! allowing auth methods to be swapped via manifest config.
 
-use crate::capabilities::egress::models::DispatchResponse;
-use crate::domain::Result;
+use models::DispatchResponse;
+use models::Result;
 
 /// Core contract for all egress authentication and dispatch strategies.
 ///

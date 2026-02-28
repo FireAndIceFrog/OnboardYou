@@ -15,9 +15,9 @@
 //! in-place. When set, new columns with the suffix are created alongside
 //! the originals.
 
-use crate::capabilities::logic::models::HandleDiacriticsConfig;
-use crate::capabilities::logic::traits::ColumnCalculator;
-use crate::domain::{Error, OnboardingAction, Result, RosterContext};
+use models::HandleDiacriticsConfig;
+use models::ColumnCalculator;
+use models::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 
 // ---------------------------------------------------------------------------

@@ -4,7 +4,7 @@
 //! egress capabilities rely on. By centralising transport here, every
 //! capability gets a single, mockable seam for network I/O.
 
-use crate::domain::{Error, Result};
+use models::{Error, Result};
 
 // ───────────────────────────────────────────────────────────────────────────
 // SOAP Client Trait

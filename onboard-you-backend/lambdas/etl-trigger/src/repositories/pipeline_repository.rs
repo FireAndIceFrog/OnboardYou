@@ -92,7 +92,7 @@ mod tests {
     };
 
     struct NoopAction;
-    impl onboard_you::capabilities::logic::traits::ColumnCalculator for NoopAction {
+    impl onboard_you::ColumnCalculator for NoopAction {
         fn calculate_columns(&self, ctx: RosterContext) -> onboard_you::Result<RosterContext> {
             Ok(ctx)
         }

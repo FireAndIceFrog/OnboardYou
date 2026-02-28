@@ -22,7 +22,7 @@ macro_rules! DynamicEgressModel {
         }
 
         // 2. Emit the trait implementation
-        impl $(<$($gen)*>)? $crate::capabilities::egress::traits::DynamicEgressModel for $name $(<$($gen)*>)? $(where $($where)*)? {
+        impl $(<$($gen)*>)? $crate::DynamicEgressModel for $name $(<$($gen)*>)? $(where $($where)*)? {
             fn get_schema(&self) -> ::std::collections::HashMap<String, String> {
                 self.schema.clone()
             }

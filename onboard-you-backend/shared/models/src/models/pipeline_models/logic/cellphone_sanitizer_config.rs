@@ -1,6 +1,6 @@
 //! Configuration model for the cellphone sanitizer engine.
 
-use crate::domain::{Error, Result};
+use crate::{Error, Result};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 

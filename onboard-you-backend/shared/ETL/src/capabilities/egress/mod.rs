@@ -9,14 +9,12 @@
 
 pub mod api_dispatcher;
 pub mod engine;
-pub mod models;
 pub mod observability;
 pub mod repositories;
 pub mod traits;
 
 pub use api_dispatcher::*;
 pub use engine::*;
-pub use models::*;
 pub use observability::*;
 pub use repositories::*;
 pub use traits::*;

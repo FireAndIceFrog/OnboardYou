@@ -3,6 +3,8 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
+use crate::DynamicEgressModel;
+
 /// The OAuth2 grant type this repo instance should use.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
@@ -34,6 +36,8 @@ impl Default for OAuth2GrantType {
 ///     "scopes": ["employees.write"]
 /// }
 /// ```
+/// ```
+#[macro_rules_attribute::apply(DynamicEgressModel!)]
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct OAuth2RepoConfig {
     /// Destination endpoint URL.
@@ -56,9 +60,9 @@ pub struct OAuth2RepoConfig {
 
 impl OAuth2RepoConfig {
     /// Deserialise from the raw `serde_json::Value` stored in `ActionConfig.config`.
-    pub fn from_json(value: &serde_json::Value) -> crate::domain::Result<Self> {
+    pub fn from_json(value: &serde_json::Value) -> crate::Result<Self> {
         serde_json::from_value(value.clone()).map_err(|e| {
-            crate::domain::Error::ConfigurationError(format!("Invalid OAuth2RepoConfig: {e}"))
+            crate::Error::ConfigurationError(format!("Invalid OAuth2RepoConfig: {e}"))
         })
     }
 }

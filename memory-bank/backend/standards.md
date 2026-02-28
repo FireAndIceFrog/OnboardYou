@@ -204,7 +204,7 @@ Every new capability action **must** follow this exact pattern:
 ```rust
 //! Brief description of what this action does
 
-use crate::domain::{OnboardingAction, RosterContext, Result};
+use models::{OnboardingAction, RosterContext, Result};
 use serde::{Deserialize, Serialize};
 
 /// Config parsed from the manifest's `config` JSON object.

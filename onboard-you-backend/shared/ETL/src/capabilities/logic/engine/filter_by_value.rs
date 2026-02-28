@@ -26,9 +26,9 @@
 //! }
 //! ```
 
-use crate::capabilities::logic::models::{FilterByValueConfig, SafeRegex};
-use crate::capabilities::logic::traits::ColumnCalculator;
-use crate::domain::{Error, OnboardingAction, Result, RosterContext};
+use models::{FilterByValueConfig, SafeRegex};
+use models::ColumnCalculator;
+use models::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 
 // ---------------------------------------------------------------------------
@@ -132,7 +132,7 @@ impl OnboardingAction for FilterByValue {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::capabilities::logic::models::MAX_PATTERN_LEN;
+    use models::MAX_PATTERN_LEN;
     use polars::df;
 
     fn sample_df() -> DataFrame {

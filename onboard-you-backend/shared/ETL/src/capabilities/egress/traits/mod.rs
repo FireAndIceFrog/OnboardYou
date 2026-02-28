@@ -5,5 +5,6 @@
 mod egress_repository;
 pub mod dynamic_egress_model;
 
-pub use crate::capabilities::egress::models::DispatchResponse;
+pub use models::DispatchResponse;
 pub use egress_repository::*;
+pub use dynamic_egress_model::*;

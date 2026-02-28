@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use utoipa::ToSchema;
-
+use crate::DynamicEgressModel;
 /// How the credential is attached to outbound requests.
 ///
 /// This is a pure discriminator — the actual header name or query-param key
@@ -37,6 +37,7 @@ impl Default for BearerPlacement {
 ///     "placement": "authorization_header"
 /// }
 /// ```
+#[macro_rules_attribute::apply(DynamicEgressModel!)]
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct BearerRepoConfig {
     /// Destination endpoint URL.
@@ -56,9 +57,9 @@ pub struct BearerRepoConfig {
 
 impl BearerRepoConfig {
     /// Deserialise from the raw `serde_json::Value` stored in `ActionConfig.config`.
-    pub fn from_json(value: &serde_json::Value) -> crate::domain::Result<Self> {
+    pub fn from_json(value: &serde_json::Value) -> crate::Result<Self> {
         serde_json::from_value(value.clone()).map_err(|e| {
-            crate::domain::Error::ConfigurationError(format!("Invalid BearerRepoConfig: {e}"))
+            crate::Error::ConfigurationError(format!("Invalid BearerRepoConfig: {e}"))
         })
     }
 }

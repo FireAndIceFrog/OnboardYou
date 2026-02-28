@@ -143,6 +143,7 @@ mod tests {
                 placement: onboard_you::BearerPlacement::AuthorizationHeader,
                 placement_key: None,
                 extra_headers: std::collections::HashMap::new(),
+                schema: std::collections::HashMap::new(),
             });
 
             Ok(Some(onboard_you::OrgSettings {

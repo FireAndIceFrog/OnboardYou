@@ -18,9 +18,9 @@
 //! }
 //! ```
 
-use crate::capabilities::logic::models::DedupConfig;
-use crate::capabilities::logic::traits::{ColumnCalculator, Deduplicator};
-use crate::domain::{Error, OnboardingAction, Result, RosterContext};
+use models::DedupConfig;
+use models::{ColumnCalculator};
+use models::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 
 // ---------------------------------------------------------------------------
@@ -72,12 +72,6 @@ impl ColumnCalculator for IdentityDeduplicator {
         context.set_field_source("canonical_id".into(), "LOGIC_ACTION".into());
         context.set_field_source("is_duplicate".into(), "LOGIC_ACTION".into());
         Ok(context)
-    }
-}
-
-impl Deduplicator for IdentityDeduplicator {
-    fn deduplicate(&self, context: RosterContext) -> Result<RosterContext> {
-        self.execute(context)
     }
 }
 

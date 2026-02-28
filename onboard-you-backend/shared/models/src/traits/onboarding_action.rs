@@ -2,9 +2,9 @@
 //!
 //! Implementors (capabilities) transform a RosterContext through the pipeline
 
-use crate::capabilities::logic::traits::ColumnCalculator;
-use crate::domain::models::errors::Result;
-use crate::domain::models::RosterContext;
+use crate::traits::ColumnCalculator;
+use crate::models::errors::Result;
+use crate::models::RosterContext;
 
 /// Core trait for all onboarding actions
 ///

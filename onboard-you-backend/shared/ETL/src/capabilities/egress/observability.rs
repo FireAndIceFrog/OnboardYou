@@ -1,7 +1,7 @@
 //! Real-time request/response logging and Root Cause Analysis (RCA)
 
-use crate::capabilities::logic::traits::ColumnCalculator;
-use crate::domain::{OnboardingAction, Result, RosterContext};
+use models::ColumnCalculator;
+use models::{OnboardingAction, Result, RosterContext};
 
 /// Observability and logging for the pipeline
 pub struct Observability;

@@ -5,9 +5,5 @@
 //! - **engine**: Concrete implementations (SCDType2, PIIMasking, IdentityDeduplicator)
 
 pub mod engine;
-pub mod models;
-pub mod traits;
 
 pub use engine::*;
-pub use models::*;
-pub use traits::*;

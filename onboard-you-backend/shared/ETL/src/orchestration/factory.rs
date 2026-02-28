@@ -12,8 +12,8 @@ use crate::capabilities::logic::engine::{
     CellphoneSanitizer, DropColumn, FilterByValue, HandleDiacritics, IdentityDeduplicator,
     IsoCountrySanitizer, PIIMasking, RegexReplace, RenameColumn, SCDType2,
 };
-use crate::domain::models::manifest::{ActionConfig, ActionConfigPayload};
-use crate::domain::{ActionType, Error, OnboardingAction, Result};
+use models::{ActionConfig, ActionConfigPayload};
+use models::{ActionType, Error, OnboardingAction, Result};
 use crate::RosterContext;
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -132,9 +132,9 @@ impl ActionFactoryTrait for ActionFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::capabilities::logic::traits::ColumnCalculator;
-    use crate::domain::models::manifest::{ActionConfig, ActionConfigPayload};
-    use crate::domain::ActionType;
+    use models::ColumnCalculator;
+    use models::manifest::{ActionConfig, ActionConfigPayload};
+    use ActionType;
     use polars::prelude::*;
 
     /// A trivial pass-through action for testing the runner.

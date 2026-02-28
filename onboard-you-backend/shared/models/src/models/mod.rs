@@ -10,10 +10,12 @@ pub mod org_settings;
 pub mod pipeline_config;
 pub mod roster;
 pub mod scheduled_event;
+pub mod pipeline_models;
 
-pub use scheduled_event::{ScheduledEtlEvent, ScheduledEvent};
-pub use errors::{Error, Result};
-pub use manifest::{ActionConfig, ActionType, Manifest};
-pub use org_settings::OrgSettings;
-pub use pipeline_config::PipelineConfig;
-pub use roster::{FieldMetadata, RosterContext};
+pub use pipeline_models::*;
+pub use scheduled_event::*;
+pub use errors::*;
+pub use manifest::*;
+pub use org_settings::*;
+pub use pipeline_config::*;
+pub use roster::*;

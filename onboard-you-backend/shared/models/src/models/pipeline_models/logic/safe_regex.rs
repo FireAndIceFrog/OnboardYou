@@ -14,7 +14,7 @@
 //! | Exactly 0 or 1 capture groups  | Requirement: single match-group only.                         |
 //! | Nesting depth ≤ 3              | Rejects deeply nested groups like `(((...)))`.                |
 
-use crate::domain::{Error, Result};
+use crate::{Error, Result};
 use regex::Regex;
 use std::fmt;
 

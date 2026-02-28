@@ -19,9 +19,9 @@
 //! }
 //! ```
 
-use crate::capabilities::logic::models::ScdType2Config;
-use crate::capabilities::logic::traits::ColumnCalculator;
-use crate::domain::{OnboardingAction, Result, RosterContext};
+use models::ScdType2Config;
+use models::ColumnCalculator;
+use models::{OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 
 // ---------------------------------------------------------------------------

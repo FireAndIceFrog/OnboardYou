@@ -4,8 +4,8 @@
 //! transforms the column set.  This enables up-front validation and lineage
 //! tracking without executing the full pipeline.
 
-use crate::domain::models::errors::Result;
-use crate::domain::models::roster::RosterContext;
+use crate::models::errors::Result;
+use crate::models::roster::RosterContext;
 
 /// Trait for computing the output column set of a pipeline step.
 ///

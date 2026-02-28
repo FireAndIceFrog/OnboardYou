@@ -18,17 +18,9 @@
 //! 5. **Observe**: Log and track execution
 
 pub mod capabilities;
-pub mod domain;
 pub mod orchestration;
-
-pub use capabilities::egress::models::{
-    ApiDispatcherConfig, AuthType, BearerPlacement, BearerRepoConfig, OAuth2GrantType,
-    OAuth2RepoConfig, OAuthRepoConfig,
-};
-pub use capabilities::ingestion::CsvHrisConnectorConfig;
-pub use domain::models::manifest::ActionConfigPayload;
-pub use domain::{
-    ActionConfig, ActionType, ColumnCalculator, Error, Manifest, OnboardingAction, OrgSettings,
-    PipelineConfig, Result, RosterContext, ScheduledEtlEvent, ScheduledEvent,
-};
 pub use orchestration::{ActionFactory, ActionFactoryTrait};
+
+pub use ::models::*;
+#[macro_use]
+extern crate macro_rules_attribute;

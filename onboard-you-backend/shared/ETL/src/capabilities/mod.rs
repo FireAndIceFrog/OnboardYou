@@ -14,4 +14,3 @@ pub use egress::*;
 pub use ingestion::engine::*;
 pub use ingestion::traits::*;
 pub use logic::engine::*;
-pub use logic::traits::*;

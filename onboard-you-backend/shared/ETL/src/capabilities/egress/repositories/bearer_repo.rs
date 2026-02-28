@@ -5,9 +5,9 @@
 //! No refresh logic is needed — the caller is responsible for rotating the
 //! value in the manifest / DynamoDB config when it expires.
 
-use crate::capabilities::egress::models::{BearerPlacement, BearerRepoConfig, DispatchResponse};
+use models::{BearerPlacement, BearerRepoConfig, DispatchResponse};
 use crate::capabilities::egress::traits::EgressRepository;
-use crate::domain::{Error, Result};
+use models::{Error, Result};
 
 // ---------------------------------------------------------------------------
 // Repository

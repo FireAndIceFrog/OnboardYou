@@ -9,9 +9,9 @@
 //! internals are async — bridged via `tokio::runtime::Handle::block_on`.
 
 use crate::capabilities::egress::engine::api_engine::ApiEngine;
-use crate::capabilities::egress::models::ApiDispatcherConfig;
-use crate::capabilities::logic::traits::ColumnCalculator;
-use crate::domain::{Error, OnboardingAction, Result, RosterContext};
+use models::ApiDispatcherConfig;
+use models::ColumnCalculator;
+use models::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 use tracing::{info, warn};
 
