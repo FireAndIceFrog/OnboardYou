@@ -9,8 +9,8 @@ name = "etl-trigger"
 path = "src/main.rs"
 
 [dependencies]
-onboard_you = { path = "../../ETL" }
-polars = { version = "0.53", features = ["lazy"] }
+onboard_you = { path = "../../shared/ETL" }
+polars = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }

@@ -5,27 +5,27 @@ edition = "2021"
 
 [dependencies]
 # Data processing
-polars = { version = "0.53", features = ["lazy", "parquet", "csv", "strings", "dtype-struct"] }
+polars = { workspace = true }
 
 # Regex (safe — guarantees linear-time matching, no backtracking)
-regex = "1"
+regex = { workspace = true }
 
 # Error handling
-thiserror = "1.0"
+thiserror = { workspace = true }
 
 # Serialization
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 # OpenAPI schema generation
-utoipa = "5"
-serde_yaml = "0.9"
+utoipa = { workspace = true }
+serde_yaml =  { workspace = true }
 
 # HTTP client (Workday SOAP API) — uses rustls to avoid system OpenSSL dependency
-reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }
+reqwest = { workspace = true }
 
 # AWS Lambda
-lambda_runtime = "0.10"
+lambda_runtime = { workspace = true }
 
 # AWS S3 (CSV uploads)
 aws-config = { workspace = true }
@@ -33,14 +33,14 @@ aws-sdk-s3 = { workspace = true }
 
 # Utilities
 async-trait = { workspace = true }
-tokio = { version = "1", features = ["full"] }
-tracing = "0.1"
-tracing-subscriber = "0.3"
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 
 [features]
 benchmark = []
 
 [dev-dependencies]
 # Testing utilities
-criterion = "0.5"
-tempfile = "3"
+criterion = { workspace = true }
+tempfile = { workspace = true }
