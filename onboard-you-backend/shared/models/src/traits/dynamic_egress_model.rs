@@ -18,6 +18,7 @@ macro_rules! DynamicEgressModel {
         $vis struct $name $(<$($gen)*>)? $(where $($where)*)? {
             #[serde(default)]
             pub schema: ::std::collections::HashMap<String, String>,
+            pub body_path: Option<String>,
             $($fields)*
         }
 
@@ -50,7 +51,7 @@ mod tests {
 
     #[test]
     fn test_derive_works() {
-        let mut instance = TestStruct { schema: HashMap::new(), placement: "test".to_string() };
+        let mut instance = TestStruct { body_path: None, schema: HashMap::new(), placement: "test".to_string() };
 
         instance.set_schema(HashMap::new());
         instance.get_schema();

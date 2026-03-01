@@ -11,7 +11,7 @@
 ##──────────────────────────────────────────────────────────────
 set -euo pipefail
 
-INFRA_DIR="$(cd "$(dirname "$0")/../../infra" && pwd)"
+INFRA_DIR="$(cd "$(dirname "$0")/../../../infra" && pwd)"
 ENV_FILE="$(cd "$(dirname "$0")" && pwd)/.env"
 
 echo "▸ Reading tofu outputs from ${INFRA_DIR}…"

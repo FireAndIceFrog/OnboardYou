@@ -883,6 +883,12 @@
           "destination_url"
         ],
         "properties": {
+          "body_path": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "destination_url": {
             "type": "string",
             "description": "Destination endpoint URL."
@@ -1291,6 +1297,12 @@
           "token_url"
         ],
         "properties": {
+          "body_path": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "client_id": {
             "type": "string",
             "description": "OAuth2 client identifier."
@@ -1350,6 +1362,12 @@
           "access_token": {
             "type": "string",
             "description": "OAuth 1.0a access token."
+          },
+          "body_path": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "consumer_key": {
             "type": "string",

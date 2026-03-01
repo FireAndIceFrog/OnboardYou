@@ -98,6 +98,7 @@ export type BearerPlacement = 'authorization_header' | 'custom_header' | 'query_
  * ```
  */
 export type BearerRepoConfig = {
+    body_path?: string | null;
     /**
      * Destination endpoint URL.
      */
@@ -468,6 +469,7 @@ export type OAuth2GrantType = 'client_credentials' | 'authorization_code';
  * ```
  */
 export type OAuth2RepoConfig = {
+    body_path?: string | null;
     /**
      * OAuth2 client identifier.
      */
@@ -523,6 +525,7 @@ export type OAuthRepoConfig = {
      * OAuth 1.0a access token.
      */
     access_token: string;
+    body_path?: string | null;
     /**
      * OAuth 1.0a consumer key.
      */

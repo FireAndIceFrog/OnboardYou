@@ -107,7 +107,7 @@ frontend-url:
 ## All-in-one
 ##──────────────────────────────────────────────────────────────
 
-deploy: plan apply sync-env upload-frontend
+deploy: plan apply smoke-test openapi sync-env upload-frontend
 
 ##──────────────────────────────────────────────────────────────
 ## OpenAPI spec — build the API binary and dump the spec to JSON
@@ -121,7 +121,7 @@ openapi:
 	@echo "✓ Wrote openapi.json"
 	@echo "▸ Generating TypeScript clients…"
 	cd onboard-you-frontend && pnpm openapi-ts
-	cd test/smoke-test && npx openapi-ts
+	cd onboard-you-backend/test/smoke-test && npx openapi-ts
 	@echo "✓ TypeScript clients generated"
 
 ##──────────────────────────────────────────────────────────────
@@ -130,9 +130,9 @@ openapi:
 
 smoke-test:
 	@echo "▸ Syncing smoke-test .env from tofu output…"
-	cd test/smoke-test && bash ./sync-env.sh
+	cd onboard-you-backend/test/smoke-test && bash ./sync-env.sh
 	@echo "▸ Running smoke tests…"
-	cd test/smoke-test && pnpm test
+	cd onboard-you-backend/test/smoke-test && pnpm test
 
 clean:
 	cargo clean

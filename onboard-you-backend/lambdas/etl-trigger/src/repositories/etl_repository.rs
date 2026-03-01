@@ -144,6 +144,7 @@ mod tests {
                 placement_key: None,
                 extra_headers: std::collections::HashMap::new(),
                 schema: std::collections::HashMap::new(),
+                body_path: None,
             });
 
             Ok(Some(onboard_you_models::OrgSettings {
