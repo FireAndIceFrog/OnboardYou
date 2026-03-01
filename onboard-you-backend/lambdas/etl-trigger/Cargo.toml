@@ -24,7 +24,7 @@ serde_dynamo = { workspace = true }
 chrono = { workspace = true }
 async-trait = { workspace = true }
 gh_models = { workspace = true }
-
+openssl = { workspace = true }
 # HTTP client used by the OpenAPI repository
 reqwest = { workspace = true }
 

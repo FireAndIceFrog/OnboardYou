@@ -17,6 +17,12 @@ echo "▸ Reading tofu outputs from ${INFRA_DIR}…"
 
 API_BASE_URL=$(cd "$INFRA_DIR" && tofu output -raw api_url)
 
+# frontend hosting URL (cloudfront) used by module federation when
+# running the platform in production.  fall back to localhost dev server
+# in case the output isn't available (e.g. before first deploy).
+# Use tofu to query the same outputs as the other values.
+FRONTEND_URL=$(cd "$INFRA_DIR" && tofu output -raw frontend_url 2>/dev/null || echo '')
+
 # demo_credentials is a sensitive map { email = password }
 # Extract the first entry for the demo login.
 CREDS_JSON=$(cd "$INFRA_DIR" && tofu output -json demo_credentials)
@@ -29,7 +35,7 @@ cat > "$ENV_FILE" <<EOF
 
 VITE_API_BASE_URL='${API_BASE_URL}'
 VITE_MOCK_MODE=false
-VITE_CONFIG_REMOTE_URL='http://localhost:5174'
+VITE_REMOTE_URL='${FRONTEND_URL:-http://localhost:5174}'
 
 # ── Demo user credentials (pre-filled on the login form) ─────
 VITE_DEMO_EMAIL='${DEMO_EMAIL}'

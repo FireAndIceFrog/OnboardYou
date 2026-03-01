@@ -4,6 +4,7 @@ import { federation } from '@module-federation/vite';
 import { resolve } from 'path';
 
 export default defineConfig({
+  base: '/config/',
   plugins: [
     react(),
     federation({
@@ -11,6 +12,7 @@ export default defineConfig({
       filename: 'remoteEntry.js',
       exposes: {
         './App': './src/app/App.tsx',
+        './i18n': './src/i18n/index.ts',
         './ConfigListScreen': './src/features/config-list/ui/screens/ConfigListScreen.tsx',
         './ConfigDetailsPage': './src/features/config-details/ui/screens/ConfigDetailsScreen.tsx',
       },

@@ -5,8 +5,11 @@ import { resolve } from 'path';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const configRemoteUrl =
-    env.VITE_CONFIG_REMOTE_URL || 'http://localhost:5174';
+  // remote entry for config app.  in prod we sync the bundle to
+  // <bucket>/config/, so the URL must include the `/config` prefix.
+  // default for local development should match the dev server's base.
+  const remoteUrl =
+    env.VITE_REMOTE_URL || 'http://localhost:5174';
 
   return {
   plugins: [
@@ -18,7 +21,7 @@ export default defineConfig(({ mode }) => {
         configApp: {
           type: 'module',
           name: 'configApp',
-          entry: `${configRemoteUrl}/remoteEntry.js`,
+          entry: `${remoteUrl}/config/remoteEntry.js`,
           entryGlobalName: 'configApp',
           shareScope: 'default',
         },

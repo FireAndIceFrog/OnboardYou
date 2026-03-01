@@ -8,6 +8,7 @@ export interface RemotePackageConfig {
   path: string;
   useGlobal: boolean;
   version: number;
+  translations?: () => Promise<any>;
   entry: () => Promise<RemoteModule>;
 }
 

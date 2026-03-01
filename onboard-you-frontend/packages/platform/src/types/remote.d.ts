@@ -23,3 +23,9 @@ declare module 'configApp/ConfigDetailsPage' {
   const ConfigDetailsPage: ComponentType;
   export default ConfigDetailsPage;
 }
+
+declare module 'configApp/i18n' {
+  // remote translation initializer – no exports needed
+  const _default: any;
+  export default _default;
+}

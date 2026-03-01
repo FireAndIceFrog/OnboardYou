@@ -31,6 +31,7 @@ function createRemoteHandle(config: RemotePackageConfig): RemoteHandle {
     }
 
     const m = await loader;
+    await config?.translations?.(); // trigger loading of translations if provided
 
     if (config.useGlobal && typeof m.setGlobalValue === 'function') {
       _setGlobalValue = m.setGlobalValue;
