@@ -11,7 +11,12 @@ export default defineConfig(({ mode }) => {
   const remoteUrl =
     env.VITE_REMOTE_URL || 'http://localhost:5174';
 
+  // Base path for GitHub Pages (e.g. /OnboardYou) or empty for root hosting.
+  // Written by sync-env.sh from the tofu frontend_url output.
+  const basePath = env.VITE_BASE_PATH || '';
+
   return {
+  base: basePath ? `${basePath}/` : '/',
   plugins: [
     react(),
     federation({

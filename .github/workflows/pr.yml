@@ -10,6 +10,7 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-C link-arg=-fuse-ld=mold"
 
 jobs:
   # ════════════════════════════════════════════════════════════
@@ -21,12 +22,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install mold linker
+        run: sudo apt-get update && sudo apt-get install -y mold
+
       - uses: dtolnay/rust-toolchain@stable
 
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: backend
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          shared-key: rust-release
+          cache-on-failure: true
 
       - name: Build workspace
         run: cargo build --release --workspace

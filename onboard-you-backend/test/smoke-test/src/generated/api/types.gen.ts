@@ -98,6 +98,7 @@ export type BearerPlacement = 'authorization_header' | 'custom_header' | 'query_
  * ```
  */
 export type BearerRepoConfig = {
+    body_path?: string | null;
     /**
      * Destination endpoint URL.
      */
@@ -117,6 +118,9 @@ export type BearerRepoConfig = {
      * Defaults to `"X-API-Key"` for custom headers, `"api_key"` for query params.
      */
     placement_key?: string | null;
+    schema?: {
+        [key: string]: string;
+    };
     /**
      * The static token / API key. `None` means no authentication.
      */
@@ -462,8 +466,10 @@ export type OAuth2GrantType = 'client_credentials' | 'authorization_code';
  * "scopes": ["employees.write"]
  * }
  * ```
+ * ```
  */
 export type OAuth2RepoConfig = {
+    body_path?: string | null;
     /**
      * OAuth2 client identifier.
      */
@@ -484,6 +490,9 @@ export type OAuth2RepoConfig = {
      * Pre-obtained refresh token (required for `AuthorizationCode` grant).
      */
     refresh_token?: string | null;
+    schema?: {
+        [key: string]: string;
+    };
     /**
      * Requested scopes.
      */
@@ -509,12 +518,14 @@ export type OAuth2RepoConfig = {
  * "token_secret": "ts_secret"
  * }
  * ```
+ * ```
  */
 export type OAuthRepoConfig = {
     /**
      * OAuth 1.0a access token.
      */
     access_token: string;
+    body_path?: string | null;
     /**
      * OAuth 1.0a consumer key.
      */
@@ -527,6 +538,9 @@ export type OAuthRepoConfig = {
      * Destination endpoint URL.
      */
     destination_url: string;
+    schema?: {
+        [key: string]: string;
+    };
     /**
      * OAuth 1.0a token secret.
      */
@@ -574,9 +588,7 @@ export type OrgSettings = {
      * Must contain `"auth_type"` plus all fields required by the
      * chosen strategy (bearer, oauth, oauth2).
      */
-    defaultAuth: {
-        [key: string]: unknown;
-    };
+    defaultAuth: ApiDispatcherConfig;
     /**
      * Unique identifier for the organization (partition key)
      */

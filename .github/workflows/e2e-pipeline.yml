@@ -13,6 +13,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-C link-arg=-fuse-ld=mold"
 
 jobs:
   e2e:
@@ -22,15 +23,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install mold linker
+        run: sudo apt-get update && sudo apt-get install -y mold
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache cargo registry & build artefacts
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: e2e
-          # Save cache even when tests fail so the next run doesn't rebuild
-          save-if: "true"
+          shared-key: rust-release
+          save-if: true
           cache-on-failure: true
 
       # ── Smoke test (always) ──────────────────────────────────────────

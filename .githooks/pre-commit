@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+##──────────────────────────────────────────────────────────────
+## Pre-commit hook — keep .env files in sync with tofu state
+##
+## Since tfstate is kept local (not in S3), this hook ensures
+## the committed .env always reflects the current deployment.
+## Skipped gracefully if tofu state doesn't exist.
+##──────────────────────────────────────────────────────────────
+set -euo pipefail
+
+INFRA_DIR="$(git rev-parse --show-toplevel)/infra"
+PLATFORM_ENV="$(git rev-parse --show-toplevel)/onboard-you-frontend/packages/platform/.env"
+CONFIG_ENV="$(git rev-parse --show-toplevel)/onboard-you-frontend/packages/config/.env"
+
+# Only sync if tofu state exists and has resources
+if [ -f "$INFRA_DIR/terraform.tfstate" ] && \
+   grep -q '"resources"' "$INFRA_DIR/terraform.tfstate" 2>/dev/null; then
+
+  echo "▸ [pre-commit] Syncing .env from tofu state…"
+  make -C "$(git rev-parse --show-toplevel)" sync-env 2>/dev/null || true
+
+  # Stage the updated .env files so they're included in the commit
+  for f in "$PLATFORM_ENV" "$CONFIG_ENV"; do
+    [ -f "$f" ] && git add "$f"
+  done
+else
+  echo "▸ [pre-commit] No tofu state found — skipping .env sync"
+fi

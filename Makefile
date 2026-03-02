@@ -16,7 +16,7 @@ VENV := .venv/bin/activate
 
 
 .PHONY: setup build-lambdas build-config-api build-etl-trigger build-authorizer \
-        plan apply deploy clean smoke-test
+        plan apply deploy clean smoke-test assemble-pages openapi-ts setup-hooks
 
 ##──────────────────────────────────────────────────────────────
 ## Setup — create venv and install cargo-lambda
@@ -27,7 +27,9 @@ setup:
 	python3 -m venv .venv
 	@echo "▸ Installing cargo-lambda..."
 	. $(VENV) && pip install cargo-lambda
-	@echo "✓ Setup complete — cargo-lambda installed in .venv"
+	@echo "▸ Configuring git hooks..."
+	git config core.hooksPath .githooks
+	@echo "✓ Setup complete — cargo-lambda installed, git hooks configured"
 
 ##──────────────────────────────────────────────────────────────
 ## Build — cross-compile Rust Lambdas with cargo-lambda
@@ -87,7 +89,7 @@ sync-env-local:
 	@echo "✓ Frontend .env synced locally"
 	
 # build the monorepo and deploy frontend artifacts
-# When prod=true → S3 + CloudFront  |  Otherwise → manual GitHub Pages deploy
+# When prod=true → S3 + CloudFront  |  Otherwise → GitHub Pages
 upload-frontend: sync-env
 	
 	@echo "▸ Building frontend packages…"
@@ -108,11 +110,18 @@ upload-frontend: sync-env
 		aws cloudfront create-invalidation --distribution-id $$distro --paths "/*" && \
 		echo "✓ Invalidation submitted" ; \
 	else \
-		echo "▸ [dev] Frontend hosting mode: GitHub Pages" && \
-		echo "  Build artifacts are in onboard-you-frontend/packages/platform/dist/" && \
-		echo "  Push them to the gh-pages branch or configure GitHub Actions to deploy." && \
-		echo "✓ Frontend built — deploy via GitHub Pages" ; \
+		echo "▸ [dev] Running local mod: No frontend to deploy" && \ 
 	fi
+
+# Assemble build artifacts into _site/ for GitHub Pages deployment
+# Copies 404.html from index.html for SPA client-side routing on GH Pages
+assemble-pages:
+	@echo "▸ Assembling GitHub Pages artifact…"
+	rm -rf _site
+	cp -r onboard-you-frontend/packages/platform/dist _site
+	cp -r onboard-you-frontend/packages/config/dist _site/config
+	cp _site/index.html _site/404.html
+	@echo "✓ Artifact assembled in _site/"
 
 frontend-url:
 	@echo "▸ Fetching frontend URL from Terraform outputs…"
@@ -122,22 +131,33 @@ frontend-url:
 ## All-in-one
 ##──────────────────────────────────────────────────────────────
 
-deploy: plan apply smoke-test openapi sync-env upload-frontend
+deploy: plan apply smoke-test openapi upload-frontend
 
 ##──────────────────────────────────────────────────────────────
 ## OpenAPI spec — build the API binary and dump the spec to JSON
 ##──────────────────────────────────────────────────────────────
 
-openapi:
-	@echo "▸ Building config-api…"
-	cargo build -p api
+openapi: build-config-api
 	@echo "▸ Generating OpenAPI spec…"
 	./target/debug/config-api --openapi > openapi.json
 	@echo "✓ Wrote openapi.json"
+	@$(MAKE) openapi-ts
+
+# Generate TypeScript clients from the existing openapi.json (no Rust build)
+openapi-ts:
 	@echo "▸ Generating TypeScript clients…"
 	cd onboard-you-frontend && pnpm openapi-ts
 	cd onboard-you-backend/test/smoke-test && npx openapi-ts
 	@echo "✓ TypeScript clients generated"
+
+##──────────────────────────────────────────────────────────────
+## Git hooks
+##──────────────────────────────────────────────────────────────
+
+setup-hooks:
+	@echo "▸ Configuring git hooks path…"
+	git config core.hooksPath .githooks
+	@echo "✓ Git hooks configured — pre-commit will run 'make sync-env'"
 
 ##──────────────────────────────────────────────────────────────
 ## Smoke tests — sync credentials from tofu output, then run
@@ -151,4 +171,4 @@ smoke-test:
 
 clean:
 	cargo clean
-	rm -rf infra/.build infra/plan.out
+	rm -rf infra/.build infra/plan.out _site

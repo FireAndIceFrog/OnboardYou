@@ -5,6 +5,10 @@ import { HomeScreen } from '@/features/home';
 import { SettingsPage } from '@/features/settings';
 import { buildRemoteRoutes } from '@/features/remotePackages';
 
+// Vite sets import.meta.env.BASE_URL from the `base` config.
+// For GitHub Pages (/OnboardYou/) this tells React Router where app is mounted.
+const basename = import.meta.env.BASE_URL.replace(/\/$/, '') || '/';
+
 export const router = createBrowserRouter([
   {
     path: '/login',
@@ -29,4 +33,4 @@ export const router = createBrowserRouter([
       },
     ],
   },
-]);
+], { basename });

@@ -1,0 +1,120 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-C link-arg=-fuse-ld=mold"
+
+# Required permissions for GitHub Pages deployment via Actions
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  backend:
+    name: Rust compile & tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install mold linker
+        run: sudo apt-get update && sudo apt-get install -y mold
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: rust-release
+          save-if: true
+          cache-on-failure: true
+
+      - name: Run Rust unit tests
+        run: cargo test --release --workspace --lib
+
+      - name: Generate OpenAPI spec
+        run: ./target/release/config-api --openapi > openapi.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openapi-spec
+          path: openapi.json
+
+  frontend:
+    name: Build & test frontend
+    needs: backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: openapi-spec
+
+      # ── Node / pnpm ──
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: onboard-you-frontend/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        run: cd onboard-you-frontend && pnpm install --frozen-lockfile
+
+      - name: Install smoke-test dependencies
+        run: cd onboard-you-backend/test/smoke-test && pnpm install --frozen-lockfile
+
+      - name: Generate TypeScript clients
+        run: make openapi-ts
+
+      - name: Lint frontend
+        run: cd onboard-you-frontend && pnpm lint
+
+      - name: Run frontend tests
+        run: cd onboard-you-frontend && pnpm test
+
+      - name: Build frontend
+        run: cd onboard-you-frontend && pnpm build
+
+      - name: Assemble GitHub Pages artifact
+        run: make assemble-pages
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pages-site
+          path: _site
+
+  deploy:
+    name: Deploy to Pages
+    needs: frontend
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: pages-site
+          path: _site
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

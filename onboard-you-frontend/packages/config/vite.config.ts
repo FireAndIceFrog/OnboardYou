@@ -1,10 +1,15 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { federation } from '@module-federation/vite';
 import { resolve } from 'path';
 
-export default defineConfig({
-  base: '/config/',
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  // Base path for GitHub Pages (e.g. /OnboardYou) or empty for root hosting.
+  const basePath = env.VITE_BASE_PATH || '';
+
+  return {
+  base: basePath ? `${basePath}/config/` : '/config/',
   plugins: [
     react(),
     federation({
@@ -47,4 +52,5 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
   },
+};
 });
