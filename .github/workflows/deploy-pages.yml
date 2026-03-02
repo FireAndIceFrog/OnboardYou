@@ -40,6 +40,9 @@ jobs:
       - name: Run Rust unit tests
         run: cargo test --release --workspace --lib
 
+      - name: Build config-api binary
+        run: cargo build --release -p api
+
       - name: Generate OpenAPI spec
         run: ./target/release/config-api --openapi > openapi.json
 
