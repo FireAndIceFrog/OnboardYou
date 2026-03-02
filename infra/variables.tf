@@ -54,5 +54,5 @@ variable "gh_token" {
 variable "github_pages_url" {
   description = "GitHub Pages URL used as the frontend origin when environment = staging"
   type        = string
-  default     = "https://fireandicefrog.github.io/OnboardYou"
+  default     = "https://fireandicefrog.github.io"
 }

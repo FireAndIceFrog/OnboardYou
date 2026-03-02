@@ -82,7 +82,7 @@ export const performLogin = createAsyncThunk(
       dispatch(
         setUser({
           user,
-          token: tokens.access_token,
+          token: tokens.id_token,
           refreshToken: tokens.refresh_token ?? null,
         }),
       );
