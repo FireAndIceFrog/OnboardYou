@@ -16,7 +16,7 @@ VENV := .venv/bin/activate
 
 
 .PHONY: setup build-lambdas build-config-api build-etl-trigger build-authorizer \
-        plan apply deploy clean smoke-test assemble-pages openapi-ts setup-hooks
+        plan apply deploy clean smoke-test assemble-pages openapi-ts setup-hooks \
 
 ##──────────────────────────────────────────────────────────────
 ## Setup — create venv and install cargo-lambda
@@ -89,7 +89,7 @@ sync-env-local:
 	@echo "✓ Frontend .env synced locally"
 	
 # build the monorepo and deploy frontend artifacts
-# When prod=true → S3 + CloudFront  |  Otherwise → GitHub Pages
+# prod → S3 + CloudFront  |  staging → GitHub Pages (via CI)  |  local → skip
 upload-frontend: sync-env
 	
 	@echo "▸ Building frontend packages…"
@@ -110,7 +110,7 @@ upload-frontend: sync-env
 		aws cloudfront create-invalidation --distribution-id $$distro --paths "/*" && \
 		echo "✓ Invalidation submitted" ; \
 	else \
-		echo "▸ [dev] Running local mod: No frontend to deploy" && \ 
+		echo "▸ [staging/local] Frontend deployed via GitHub Pages CI — skipping upload" ; \
 	fi
 
 # Assemble build artifacts into _site/ for GitHub Pages deployment

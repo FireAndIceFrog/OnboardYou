@@ -9,9 +9,14 @@ variable "aws_region" {
 }
 
 variable "environment" {
-  description = "Deployment environment (dev / staging / prod)"
+  description = "Deployment environment: local (CORS=*), staging (GitHub Pages), prod (S3+CloudFront)"
   type        = string
-  default     = "dev"
+  default     = "staging"
+
+  validation {
+    condition     = contains(["local", "staging", "prod"], var.environment)
+    error_message = "environment must be one of: local, staging, prod"
+  }
 }
 
 variable "log_retention_days" {
@@ -46,14 +51,8 @@ variable "gh_token" {
   sensitive = true
 }
 
-variable "prod" {
-  description = "When true, deploy frontend to S3+CloudFront. When false (default), frontend is hosted on GitHub Pages."
-  type        = bool
-  default     = false
-}
-
 variable "github_pages_url" {
-  description = "GitHub Pages URL used as the frontend origin when prod = false"
+  description = "GitHub Pages URL used as the frontend origin when environment = staging"
   type        = string
   default     = "https://fireandicefrog.github.io/OnboardYou"
 }

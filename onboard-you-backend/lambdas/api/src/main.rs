@@ -139,20 +139,25 @@ async fn main() -> Result<(), lambda_http::Error> {
 
 fn router(state: Dependancies) -> Router {
     // determine allowed origin from environment; fall back to Any (for local dev).
-    let allowed_origin = std::env::var("FRONTEND_URL").ok();
+    let allowed_origin = std::env::var("FRONTEND_URL")
+        .ok()
+        .filter(|s| !s.is_empty());
     let mut cors_builder = CorsLayer::new()
         .allow_methods(Any)
         .allow_headers(Any);
 
-    if let Some(origin) = allowed_origin {
-        if let Ok(val) = origin.parse::<HeaderValue>() {
-            cors_builder = cors_builder.allow_origin(val);
-        } else {
-            // parsing failed, retain default Any
+    match allowed_origin.as_deref() {
+        // "*" or missing → allow all origins
+        Some("*") | None => {
             cors_builder = cors_builder.allow_origin(Any);
         }
-    } else {
-        cors_builder = cors_builder.allow_origin(Any);
+        Some(origin) => {
+            if let Ok(val) = origin.parse::<HeaderValue>() {
+                cors_builder = cors_builder.allow_origin(val);
+            } else {
+                cors_builder = cors_builder.allow_origin(Any);
+            }
+        }
     }
     let cors = cors_builder;
 

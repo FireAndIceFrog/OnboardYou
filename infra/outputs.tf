@@ -64,12 +64,12 @@ output "scheduler_role_arn" {
 
 output "frontend_bucket_name" {
   description = "S3 bucket for frontend build artefacts"
-  value       = var.prod ? module.frontend[0].bucket_name : null
+  value       = var.environment == "prod" ? module.frontend[0].bucket_name : null
 }
 
 output "frontend_cloudfront_id" {
   description = "CloudFront distribution ID (for cache invalidation)"
-  value       = var.prod ? module.frontend[0].cloudfront_distribution_id : null
+  value       = var.environment == "prod" ? module.frontend[0].cloudfront_distribution_id : null
 }
 
 output "frontend_url" {
@@ -79,5 +79,5 @@ output "frontend_url" {
 
 output "frontend_hosting_mode" {
   description = "Where the frontend is hosted: 'github-pages' or 's3-cloudfront'"
-  value       = var.prod ? "s3-cloudfront" : "github-pages"
+  value       = var.environment == "prod" ? "s3-cloudfront" : "github-pages"
 }

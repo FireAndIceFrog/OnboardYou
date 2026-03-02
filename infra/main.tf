@@ -43,9 +43,12 @@ provider "aws" {
 data "aws_caller_identity" "current" {}
 
 locals {
-  # When prod = true  → S3 + CloudFront URL
-  # When prod = false → GitHub Pages URL (free hosting for pre-release)
-  frontend_url = var.prod ? module.frontend[0].website_url : var.github_pages_url
+  # prod → CloudFront | staging → GitHub Pages | local → * (allow all CORS)
+  frontend_url = (
+    var.environment == "prod" ? module.frontend[0].website_url :
+    var.environment == "local" ? "*" :
+    var.github_pages_url
+  )
 }
 
 
@@ -164,7 +167,7 @@ module "authorizer" {
   log_retention_days = var.log_retention_days
 
   environment_variables = {
-    AUTH_DEV_MODE        = var.environment == "dev" ? "true" : "false"
+    AUTH_DEV_MODE        = var.environment == "local" ? "true" : "false"
     COGNITO_USER_POOL_ID = module.cognito.user_pool_id
     COGNITO_CLIENT_ID    = module.cognito.client_id
     RUST_LOG             = "info"
@@ -251,7 +254,7 @@ resource "aws_lambda_event_source_mapping" "etl_sqs" {
 # ══════════════════════════════════════════════════════════════
 
 module "frontend" {
-  count          = var.prod ? 1 : 0
+  count          = var.environment == "prod" ? 1 : 0
   source         = "./modules/frontend-hosting"
   project_prefix = "onboardyou"
   environment    = var.environment

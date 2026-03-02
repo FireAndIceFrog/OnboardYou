@@ -1,6 +1,6 @@
 # Copy to terraform.tfvars and customise
 aws_region         = "ap-southeast-2"
-environment        = "dev"
+environment        = "staging"
 env_postfix        = "a1b2"
 log_retention_days = 14
 
@@ -14,5 +14,5 @@ demo_users = [
   # { email = "qa@onboardyou.com", organization_id = "qa-org" },
 ]
 
-# Frontend hosting: false = GitHub Pages (free, default), true = S3 + CloudFront
-# prod = true
+# Environment: "local" (CORS=*), "staging" (GitHub Pages), "prod" (S3+CloudFront)
+# environment = "prod"
