@@ -45,3 +45,15 @@ variable "gh_token" {
   type        = string
   sensitive = true
 }
+
+variable "prod" {
+  description = "When true, deploy frontend to S3+CloudFront. When false (default), frontend is hosted on GitHub Pages."
+  type        = bool
+  default     = false
+}
+
+variable "github_pages_url" {
+  description = "GitHub Pages URL used as the frontend origin when prod = false"
+  type        = string
+  default     = "https://fireandicefrog.github.io/OnboardYou"
+}

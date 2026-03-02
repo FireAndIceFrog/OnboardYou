@@ -2,13 +2,22 @@
 ##──────────────────────────────────────────────────────────────
 ## sync-env.sh — pull live config + demo credentials from tofu
 ##
-## Reads api_url and demo_credentials from the infra/ OpenTofu
-## state and writes a .env file that Vite picks up automatically.
-##
-## Prerequisites:
-##   sudo apt-get install -y jq
+## Usage: ./sync-env.sh [-local]
 ##──────────────────────────────────────────────────────────────
 set -euo pipefail
+
+# Initialize flags
+USE_LOCAL=false
+
+# Simple argument parser
+for arg in "$@"; do
+  case $arg in
+    -local|--local)
+      USE_LOCAL=true
+      shift
+      ;;
+  esac
+done
 
 INFRA_DIR="$(cd "$(dirname "$0")/../../../infra" && pwd)"
 ENV_FILE="$(cd "$(dirname "$0")" && pwd)/.env"
@@ -17,14 +26,16 @@ echo "▸ Reading tofu outputs from ${INFRA_DIR}…"
 
 API_BASE_URL=$(cd "$INFRA_DIR" && tofu output -raw api_url)
 
-# frontend hosting URL (cloudfront) used by module federation when
-# running the platform in production.  fall back to localhost dev server
-# in case the output isn't available (e.g. before first deploy).
-# Use tofu to query the same outputs as the other values.
-FRONTEND_URL=$(cd "$INFRA_DIR" && tofu output -raw frontend_url 2>/dev/null || echo '')
+# Set FRONTEND_URL based on the -local flag
+if [ "$USE_LOCAL" = true ]; then
+    echo "  ! Local flag detected: forcing localhost URL."
+    FRONTEND_URL="http://localhost:5174"
+else
+    # Query tofu, fall back to localhost if the output is missing
+    FRONTEND_URL=$(cd "$INFRA_DIR" && tofu output -raw frontend_url 2>/dev/null || echo 'http://localhost:5174')
+fi
 
-# demo_credentials is a sensitive map { email = password }
-# Extract the first entry for the demo login.
+# demo_credentials logic remains the same
 CREDS_JSON=$(cd "$INFRA_DIR" && tofu output -json demo_credentials)
 DEMO_EMAIL=$(echo "$CREDS_JSON" | jq -r 'keys[0]')
 DEMO_PASSWORD=$(echo "$CREDS_JSON" | jq -r '.[keys[0]]')
@@ -35,14 +46,11 @@ cat > "$ENV_FILE" <<EOF
 
 VITE_API_BASE_URL='${API_BASE_URL}'
 VITE_MOCK_MODE=false
-VITE_REMOTE_URL='${FRONTEND_URL:-http://localhost:5174}'
-
-# ── Demo user credentials (pre-filled on the login form) ─────
-VITE_DEMO_EMAIL='${DEMO_EMAIL}'
-VITE_DEMO_PASSWORD='${DEMO_PASSWORD}'
+VITE_REMOTE_URL='${FRONTEND_URL}'
 EOF
 
 echo "✓ Wrote ${ENV_FILE}"
 echo ""
+echo "  Remote URL → ${FRONTEND_URL}"
 echo "  Demo login → ${DEMO_EMAIL}"
 echo "  Password   → ${DEMO_PASSWORD}"

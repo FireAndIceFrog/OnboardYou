@@ -80,24 +80,39 @@ sync-env:
 	@echo "▸ Syncing frontend .env from Terraform outputs…"
 	cd onboard-you-frontend && npm run sync-env
 	@echo "✓ Frontend .env synced"
-# build the monorepo and copy the artifacts to the Terraform‑provisioned bucket
+
+sync-env-local:
+	@echo "▸ Syncing frontend .env from Terraform outputs…"
+	cd onboard-you-frontend && npm run dev:sync-env
+	@echo "✓ Frontend .env synced locally"
+	
+# build the monorepo and deploy frontend artifacts
+# When prod=true → S3 + CloudFront  |  Otherwise → manual GitHub Pages deploy
 upload-frontend: sync-env
 	
 	@echo "▸ Building frontend packages…"
 	cd onboard-you-frontend && pnpm build
 
-	@echo "▸ Looking up bucket and CloudFront distribution from Terraform outputs…"
-	@bucket=$$(cd infra && tofu output -raw frontend_bucket_name) && \
-	distro=$$(cd infra && tofu output -raw frontend_cloudfront_id) && \
-	echo "▸ Syncing platform app → s3://$$bucket/ …" && \
-	aws s3 sync onboard-you-frontend/packages/platform/dist \
-			s3://$$bucket/ --delete && \
-	echo "▸ Syncing config bundle → s3://$$bucket/config/ …" && \
-	aws s3 sync onboard-you-frontend/packages/config/dist \
-			s3://$$bucket/config/ --delete && \
-	echo "✓ Frontend artifacts uploaded" && \
-	aws cloudfront create-invalidation --distribution-id $$distro --paths "/*" && \
-	echo "✓ Invalidation submitted"
+	@mode=$$(cd infra && tofu output -raw frontend_hosting_mode) && \
+	if [ "$$mode" = "s3-cloudfront" ]; then \
+		echo "▸ [prod] Looking up bucket and CloudFront distribution…" && \
+		bucket=$$(cd infra && tofu output -raw frontend_bucket_name) && \
+		distro=$$(cd infra && tofu output -raw frontend_cloudfront_id) && \
+		echo "▸ Syncing platform app → s3://$$bucket/ …" && \
+		aws s3 sync onboard-you-frontend/packages/platform/dist \
+				s3://$$bucket/ --delete && \
+		echo "▸ Syncing config bundle → s3://$$bucket/config/ …" && \
+		aws s3 sync onboard-you-frontend/packages/config/dist \
+				s3://$$bucket/config/ --delete && \
+		echo "✓ Frontend artifacts uploaded" && \
+		aws cloudfront create-invalidation --distribution-id $$distro --paths "/*" && \
+		echo "✓ Invalidation submitted" ; \
+	else \
+		echo "▸ [dev] Frontend hosting mode: GitHub Pages" && \
+		echo "  Build artifacts are in onboard-you-frontend/packages/platform/dist/" && \
+		echo "  Push them to the gh-pages branch or configure GitHub Actions to deploy." && \
+		echo "✓ Frontend built — deploy via GitHub Pages" ; \
+	fi
 
 frontend-url:
 	@echo "▸ Fetching frontend URL from Terraform outputs…"

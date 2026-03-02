@@ -13,7 +13,6 @@ import {
 } from '@chakra-ui/react';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { performLogin, selectAuth } from '@/features/auth/state/authSlice';
-import { DEMO_EMAIL, DEMO_PASSWORD } from '@/features/auth/domain/constants';
 import { APP_NAME } from '@/shared/domain/constants';
 
 export function LoginPage() {
@@ -21,8 +20,8 @@ export function LoginPage() {
   const dispatch = useAppDispatch();
   const { isAuthenticated, isLoading, error } = useAppSelector(selectAuth);
 
-  const [email, setEmail] = useState(DEMO_EMAIL);
-  const [password, setPassword] = useState(DEMO_PASSWORD);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   if (isAuthenticated) {
     return <Navigate to="/" replace />;

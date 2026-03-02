@@ -13,3 +13,6 @@ demo_users = [
   { email = "demo@onboardyou.com", organization_id = "qa-org" },
   # { email = "qa@onboardyou.com", organization_id = "qa-org" },
 ]
+
+# Frontend hosting: false = GitHub Pages (free, default), true = S3 + CloudFront
+# prod = true

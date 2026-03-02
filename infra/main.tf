@@ -42,6 +42,12 @@ provider "aws" {
 
 data "aws_caller_identity" "current" {}
 
+locals {
+  # When prod = true  → S3 + CloudFront URL
+  # When prod = false → GitHub Pages URL (free hosting for pre-release)
+  frontend_url = var.prod ? module.frontend[0].website_url : var.github_pages_url
+}
+
 
 
 # ══════════════════════════════════════════════════════════════
@@ -162,7 +168,7 @@ module "authorizer" {
     COGNITO_USER_POOL_ID = module.cognito.user_pool_id
     COGNITO_CLIENT_ID    = module.cognito.client_id
     RUST_LOG             = "info"
-    FRONTEND_URL = module.frontend.website_url
+    FRONTEND_URL = local.frontend_url
   }
 }
 
@@ -190,7 +196,7 @@ module "config_api" {
     RUST_LOG                              = "info"
     SQS_QUEUE_URL = aws_sqs_queue.etl_events.id
     # frontend origin used by the Rust CORS layer
-    FRONTEND_URL = module.frontend.website_url
+    FRONTEND_URL = local.frontend_url
   }
 
   iam_policy_statements = [
@@ -245,6 +251,7 @@ resource "aws_lambda_event_source_mapping" "etl_sqs" {
 # ══════════════════════════════════════════════════════════════
 
 module "frontend" {
+  count          = var.prod ? 1 : 0
   source         = "./modules/frontend-hosting"
   project_prefix = "onboardyou"
   environment    = var.environment
@@ -280,7 +287,7 @@ module "api" {
 
   # ── CORS ─────────────────────────────────────────────────────
   # tighten origin to whatever frontend URL Terraform created
-  cors_allowed_origin = module.frontend.website_url
+  cors_allowed_origin = local.frontend_url
 
   # ── Routes ──────────────────────────────────────────────────
   routes = [

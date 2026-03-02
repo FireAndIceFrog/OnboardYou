@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "sync-env": "pnpm --filter @onboard-you/platform sync-env",
+    "dev:sync-env": "pnpm --filter @onboard-you/platform sync-env -- -local",
     "dev:platform": "pnpm --filter @onboard-you/platform dev",
     "dev:config": "pnpm --filter @onboard-you/config dev",
     "dev:mock": "pnpm --filter @onboard-you/config run dev:mock:build && pnpm -r --parallel dev:mock",
