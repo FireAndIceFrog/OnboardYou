@@ -11,6 +11,8 @@ import reducer, {
   clearSettingsError,
   fetchSettingsThunk,
   saveSettingsThunk,
+  toggleShowAdvanced,
+  setWizardStep,
   LoadingStatus,
 } from './settingsSlice';
 import { DEFAULT_EGRESS_SETTINGS } from '../domain/types';
@@ -22,6 +24,8 @@ const initialState = {
   loadingStatus: LoadingStatus.Idle,
   isSaving: false,
   error: null,
+  showAdvanced: false,
+  wizardStep: 0,
 };
 
 describe('settingsSlice', () => {
@@ -100,6 +104,27 @@ describe('settingsSlice', () => {
     const errorState = { ...initialState, error: 'Something failed' };
     const state = reducer(errorState, clearSettingsError());
     expect(state.error).toBeNull();
+  });
+
+  /* ── Show‑advanced & wizard step ───────────────────────── */
+
+  it('toggleShowAdvanced flips the flag', () => {
+    const state = reducer(initialState, toggleShowAdvanced());
+    expect(state.showAdvanced).toBe(true);
+    const state2 = reducer(state, toggleShowAdvanced());
+    expect(state2.showAdvanced).toBe(false);
+  });
+
+  it('toggling showAdvanced off clamps wizardStep to 1', () => {
+    const advanced = { ...initialState, showAdvanced: true, wizardStep: 2 };
+    const state = reducer(advanced, toggleShowAdvanced());
+    expect(state.showAdvanced).toBe(false);
+    expect(state.wizardStep).toBe(1);
+  });
+
+  it('setWizardStep sets the step', () => {
+    const state = reducer(initialState, setWizardStep(1));
+    expect(state.wizardStep).toBe(1);
   });
 
   /* ── Fetch thunk reducers ──────────────────────────────── */

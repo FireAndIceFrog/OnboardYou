@@ -14,6 +14,7 @@ import {
   saveSettingsThunk,
   clearSettingsError,
   toggleShowAdvanced,
+  setWizardStep,
 } from './settingsSlice';
 import type {
   AuthType,
@@ -24,7 +25,7 @@ import type {
 
 export function useSettingsState() {
   const dispatch = useAppDispatch();
-  const { settings, saved, dirty, loadingStatus, isSaving, error, showAdvanced } = useAppSelector(
+  const { settings, saved, dirty, loadingStatus, isSaving, error, showAdvanced, wizardStep } = useAppSelector(
     (state) => state.settings,
   );
   const { showNotification } = useGlobal();
@@ -125,8 +126,32 @@ export function useSettingsState() {
     dispatch(toggleShowAdvanced());
   }, [dispatch]);
 
+  const totalSteps = showAdvanced ? 3 : 2;
+
+  const goToStep = useCallback(
+    (step: number) => {
+      if (step >= 0 && step < totalSteps) {
+        dispatch(setWizardStep(step));
+      }
+    },
+    [dispatch, totalSteps],
+  );
+
+  const goNext = useCallback(() => {
+    goToStep(wizardStep + 1);
+  }, [goToStep, wizardStep]);
+
+  const goPrev = useCallback(() => {
+    goToStep(wizardStep - 1);
+  }, [goToStep, wizardStep]);
+
   return {
     showAdvanced,
+    wizardStep,
+    totalSteps,
+    goToStep,
+    goNext,
+    goPrev,
     settings,
     saved,
     dirty,

@@ -110,6 +110,13 @@
     "saveSettings": "Save Settings",
     "showAdvanced": "Show advanced settings",
     "hideAdvanced": "Hide advanced settings",
+    "wizard": {
+      "previous": "Previous",
+      "next": "Next",
+      "stepConnection": "Connection",
+      "stepPayload": "Payload",
+      "stepRetries": "Retries"
+    },
     "dynamic": {
       "title": "Dynamic Payload",
       "description": "Configure the schema of the object sent to your API and optionally the path used as the request body.",

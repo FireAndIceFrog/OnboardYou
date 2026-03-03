@@ -1,14 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Badge,
   Box,
-  Button,
   Center,
-  Flex,
-  Heading,
   Spinner,
-  Text,
 } from '@chakra-ui/react';
 import { useSettingsState } from '../../state/useSettingsState';
 import { useSettingsValidation } from '../../state/useSettingsValidation';
@@ -21,6 +16,7 @@ import {
   SettingsHeader,
   ErrorBanner,
   SettingsFooter,
+  WizardNavigation,
 } from '../components';
 import { fetchSettingsThunk } from '../..';
 import { useAppDispatch } from '@/store';
@@ -30,6 +26,7 @@ export function SettingsPage() {
   const { t } = useTranslation();
   const {
     showAdvanced,
+    wizardStep,
     settings,
     dirty,
     loadingStatus,
@@ -48,10 +45,7 @@ export function SettingsPage() {
     handleSave();
   };
 
-  /* ── Load settings on mount (only once for all hook instances) ───── */
-  // multiple components use this hook; run fetch exactly once for the
-  // whole module. a plain variable outside the function scope survives
-  // across hook invocations.
+  /* ── Load settings on mount ─────────────────────────────── */
   useEffect(() => {
     if (loadingStatus !== LoadingStatus.Idle) return;
     dispatch(fetchSettingsThunk());
@@ -76,22 +70,28 @@ export function SettingsPage() {
     >
       {/* Header */}
       <SettingsHeader />
+      
+      {/* Wizard navigation */}
+      <WizardNavigation />
 
       {/* Error banner */}
       {error && <ErrorBanner message={error} onDismiss={handleClearError} />}
 
-      {/* Auth type selection */}
-      <AuthTypeSelector />
+      {/* ── Step 0: Connection / Auth ──────────────────────── */}
+      {wizardStep === 0 && (
+        <>
+          <AuthTypeSelector />
+          {settings.authType === 'bearer' && <BearerSettings showAdvanced={showAdvanced} />}
+          {settings.authType === 'oauth2' && <OAuth2Settings />}
+        </>
+      )}
 
-      {/* provider-specific configuration */}
-      {settings.authType === 'bearer' && <BearerSettings showAdvanced={showAdvanced} />}
-      {settings.authType === 'oauth2' && <OAuth2Settings />}
+      {/* ── Step 1: Dynamic Payload ────────────────────────── */}
+      {wizardStep === 1 && <FieldSettings />}
 
-      {/* dynamic field settings and body path */}
-      <FieldSettings />
+      {/* ── Step 2: Retry Policy (advanced only) ───────────── */}
+      {wizardStep === 2 && showAdvanced && <RetrySettings />}
 
-      {/* retry policy */}
-      {showAdvanced && <RetrySettings />}
 
       {/* Footer */}
       <SettingsFooter

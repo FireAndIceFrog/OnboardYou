@@ -28,6 +28,7 @@ export interface SettingsState {
   isSaving: boolean;
   error: string | null;
   showAdvanced: boolean;
+  wizardStep: number;
 }
 
 /* ── Initial state ────────────────────────────────────────── */
@@ -40,6 +41,7 @@ const initialState: SettingsState = {
   isSaving: false,
   error: null,
   showAdvanced: false,
+  wizardStep: 0,
 };
 
 /* ── Async thunks ─────────────────────────────────────────── */
@@ -143,6 +145,13 @@ const settingsSlice = createSlice({
     },
     toggleShowAdvanced(state) {
       state.showAdvanced = !state.showAdvanced;
+      // If hiding advanced and on the retry step, move back
+      if (!state.showAdvanced && state.wizardStep > 1) {
+        state.wizardStep = 1;
+      }
+    },
+    setWizardStep(state, action: PayloadAction<number>) {
+      state.wizardStep = action.payload;
     },
     updateRetryField(
       state,
@@ -205,6 +214,7 @@ export const {
   updateRetryField,
   clearSettingsError,
   toggleShowAdvanced,
+  setWizardStep,
 } = settingsSlice.actions;
 
 /* ── Selectors ────────────────────────────────────────────── */

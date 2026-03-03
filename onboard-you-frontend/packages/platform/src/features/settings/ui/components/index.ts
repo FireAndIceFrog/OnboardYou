@@ -7,3 +7,4 @@ export { RetrySettings } from './RetrySettings/RetrySettings';
 export { SettingsFooter } from './SettingsFooter/SettingsFooter';
 export { SettingsHeader } from './SettingsHeader/SettingsHeader';
 export { ErrorBanner } from './ErrorBanner/ErrorBanner';
+export { WizardNavigation } from './WizardNavigation/WizardNavigation';
