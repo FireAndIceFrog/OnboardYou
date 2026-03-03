@@ -7,6 +7,7 @@ import { useSettingsState } from '../../../state/useSettingsState';
 export function FieldSettings() {
   const { t } = useTranslation();
   const {
+    showAdvanced,
     settings,
     updateBearerSchema,
     updateOAuth2Schema,
@@ -69,27 +70,28 @@ export function FieldSettings() {
         </Field.HelperText>
       </Field.Root>
 
-      <Box mt={4}>
-        <Field.Root>
-          <Field.Label>{t('settings.dynamic.bodyPath')}</Field.Label>
-          <Input
-            type="text"
-            placeholder={t('settings.dynamic.bodyPathPlaceholder', {
-              defaultValue: 'e.g. data.items',
-            })}
-            value={
-              settings.authType === 'bearer'
-                ? settings.bearer.bodyPath
-                : settings.oauth2.bodyPath
-            }
-            onChange={
-              settings.authType === 'bearer'
-                ? updateBearerBodyPath
-                : updateOAuth2BodyPath
-            }
-          />
-        </Field.Root>
-      </Box>
+      {showAdvanced && (
+        <Box mt={4}>
+          <Field.Root>
+            <Field.Label>{t('settings.dynamic.bodyPath')}</Field.Label>
+            <Input
+              type="text"
+              placeholder={t('settings.dynamic.bodyPathPlaceholder', {
+                defaultValue: 'e.g. data.items',
+              })}
+              value={
+                settings.authType === 'bearer'
+                  ? settings.bearer.bodyPath
+                  : settings.oauth2.bodyPath
+              }
+              onChange={
+                settings.authType === 'bearer'
+                  ? updateBearerBodyPath
+                  : updateOAuth2BodyPath
+              }
+            />
+          </Field.Root>
+        </Box>)}
     </Box>
   );
 }

@@ -27,6 +27,7 @@ export interface SettingsState {
   loadingStatus: LoadingStatus;
   isSaving: boolean;
   error: string | null;
+  showAdvanced: boolean;
 }
 
 /* ── Initial state ────────────────────────────────────────── */
@@ -38,6 +39,7 @@ const initialState: SettingsState = {
   loadingStatus: LoadingStatus.Idle,
   isSaving: false,
   error: null,
+  showAdvanced: false,
 };
 
 /* ── Async thunks ─────────────────────────────────────────── */
@@ -139,6 +141,9 @@ const settingsSlice = createSlice({
       state.dirty = true;
       state.saved = false;
     },
+    toggleShowAdvanced(state) {
+      state.showAdvanced = !state.showAdvanced;
+    },
     updateRetryField(
       state,
       action: PayloadAction<{ field: keyof RetryPolicy; value: number | number[] }>,
@@ -199,6 +204,7 @@ export const {
   updateOAuth2BodyPath,
   updateRetryField,
   clearSettingsError,
+  toggleShowAdvanced,
 } = settingsSlice.actions;
 
 /* ── Selectors ────────────────────────────────────────────── */

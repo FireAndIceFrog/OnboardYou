@@ -29,6 +29,7 @@ import { LoadingStatus } from '../../state/settingsSlice';
 export function SettingsPage() {
   const { t } = useTranslation();
   const {
+    showAdvanced,
     settings,
     dirty,
     loadingStatus,
@@ -39,7 +40,6 @@ export function SettingsPage() {
     handleClearError,
   } = useSettingsState();
 
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const dispatch = useAppDispatch();
   const { isValid, validateAll } = useSettingsValidation(settings);
 
@@ -86,13 +86,6 @@ export function SettingsPage() {
       {/* provider-specific configuration */}
       {settings.authType === 'bearer' && <BearerSettings showAdvanced={showAdvanced} />}
       {settings.authType === 'oauth2' && <OAuth2Settings />}
-
-      {/* toggle for advanced controls */}
-      <Flex justifyContent="flex-end" mb={5}>
-        <Button variant="outline" size="sm" onClick={() => setShowAdvanced((s) => !s)}>
-          {showAdvanced ? t('settings.hideAdvanced') : t('settings.showAdvanced')}
-        </Button>
-      </Flex>
 
       {/* dynamic field settings and body path */}
       <FieldSettings />

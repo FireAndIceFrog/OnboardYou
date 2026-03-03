@@ -13,6 +13,7 @@ import {
   fetchSettingsThunk,
   saveSettingsThunk,
   clearSettingsError,
+  toggleShowAdvanced,
 } from './settingsSlice';
 import type {
   AuthType,
@@ -23,12 +24,10 @@ import type {
 
 export function useSettingsState() {
   const dispatch = useAppDispatch();
-  const { settings, saved, dirty, loadingStatus, isSaving, error } = useAppSelector(
+  const { settings, saved, dirty, loadingStatus, isSaving, error, showAdvanced } = useAppSelector(
     (state) => state.settings,
   );
   const { showNotification } = useGlobal();
-
-
 
   /* ── Generic updaters ───────────────────────────────────── */
   const updateBearer = useCallback(
@@ -122,7 +121,12 @@ export function useSettingsState() {
     dispatch(clearSettingsError());
   }, [dispatch]);
 
+  const handleToggleShowAdvanced = useCallback(() => {
+    dispatch(toggleShowAdvanced());
+  }, [dispatch]);
+
   return {
+    showAdvanced,
     settings,
     saved,
     dirty,
@@ -140,5 +144,6 @@ export function useSettingsState() {
     handleSave,
     handleTestConnection,
     handleClearError,
+    handleToggleShowAdvanced,
   } as const;
 }
