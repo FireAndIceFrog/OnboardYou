@@ -17,6 +17,7 @@ describe('settingsService mapping', () => {
         ...DEFAULT_EGRESS_SETTINGS,
         authType: 'bearer',
         bearer: {
+          ...DEFAULT_BEARER,
           destinationUrl: 'https://api.example.com/employees',
           token: 'sk-test',
           placement: 'custom_header',
@@ -32,6 +33,7 @@ describe('settingsService mapping', () => {
       expect(result.defaultAuth.placement).toBe('custom_header');
       expect(result.defaultAuth.placement_key).toBe('X-API-Key');
       expect(result.defaultAuth.extra_headers).toEqual({ 'Content-Type': 'application/json' });
+      // dynamic fields should be omitted because we didn't set them
     });
 
     it('maps oauth2 settings with scopes as array', () => {
@@ -39,6 +41,7 @@ describe('settingsService mapping', () => {
         ...DEFAULT_EGRESS_SETTINGS,
         authType: 'oauth2',
         oauth2: {
+          ...DEFAULT_OAUTH2,
           destinationUrl: 'https://api.example.com/v2/employees',
           clientId: 'app-123',
           clientSecret: 'secret',
@@ -53,6 +56,45 @@ describe('settingsService mapping', () => {
       expect(result.defaultAuth.auth_type).toBe('oauth2');
       expect(result.defaultAuth.client_id).toBe('app-123');
       expect(result.defaultAuth.scopes).toEqual(['read', 'write']);
+    });
+
+    it('includes schema and body_path when set on bearer', () => {
+      const settings: EgressSettings = {
+        ...DEFAULT_EGRESS_SETTINGS,
+        authType: 'bearer',
+        bearer: {
+          ...DEFAULT_BEARER,
+          destinationUrl: 'https://api.example.com',
+          token: 'tok',
+          schema: { a: 'string' },
+          bodyPath: 'payload',
+        },
+      };
+      const result = toApi(settings);
+      expect(result.defaultAuth.schema).toEqual({ a: 'string' });
+      expect(result.defaultAuth.body_path).toBe('payload');
+    });
+
+    it('includes schema and body_path when set on oauth2', () => {
+      const settings: EgressSettings = {
+        ...DEFAULT_EGRESS_SETTINGS,
+        authType: 'oauth2',
+        oauth2: {
+          ...DEFAULT_OAUTH2,
+          destinationUrl: 'https://api.example.com',
+          clientId: 'cid',
+          clientSecret: 'cs',
+          tokenUrl: 'https://auth',
+          scopes: '',
+          grantType: 'client_credentials',
+          refreshToken: '',
+          schema: { b: 'number' },
+          bodyPath: 'root',
+        },
+      };
+      const result = toApi(settings);
+      expect(result.defaultAuth.schema).toEqual({ b: 'number' });
+      expect(result.defaultAuth.body_path).toBe('root');
     });
 
     it('includes retry policy in snake_case', () => {
@@ -77,6 +119,8 @@ describe('settingsService mapping', () => {
           placement: 'authorization_header',
           placement_key: 'Authorization',
           extra_headers: {},
+          schema: { foo: 'string' },
+          body_path: 'data',
           retry_policy: {
             max_attempts: 5,
             initial_backoff_ms: 2000,
@@ -89,6 +133,8 @@ describe('settingsService mapping', () => {
       expect(result.authType).toBe('bearer');
       expect(result.bearer.destinationUrl).toBe('https://api.example.com/employees');
       expect(result.bearer.token).toBe('sk-test');
+      expect(result.bearer.schema).toEqual({ foo: 'string' });
+      expect(result.bearer.bodyPath).toBe('data');
       expect(result.oauth2).toEqual(DEFAULT_OAUTH2);
       expect(result.retryPolicy.maxAttempts).toBe(5);
       expect(result.retryPolicy.retryableStatusCodes).toEqual([429, 503]);
@@ -105,6 +151,8 @@ describe('settingsService mapping', () => {
           token_url: 'https://auth.example.com/token',
           scopes: ['read', 'write'],
           grant_type: 'client_credentials',
+          schema: { bar: 'number' },
+          body_path: 'body.items',
         },
       };
 
@@ -134,6 +182,8 @@ describe('settingsService mapping', () => {
           placement: 'authorization_header',
           placementKey: 'Authorization',
           extraHeaders: {},
+          schema: { x: 'string' },
+          bodyPath: 'x',
         },
         oauth2: DEFAULT_OAUTH2,
         retryPolicy: { maxAttempts: 3, initialBackoffMs: 1000, retryableStatusCodes: [429, 502] },

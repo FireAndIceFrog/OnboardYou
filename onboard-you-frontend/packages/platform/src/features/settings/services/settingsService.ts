@@ -32,6 +32,12 @@ export function toApi(settings: EgressSettings): OrgSettingsPayload {
     base.placement = settings.bearer.placement;
     base.placement_key = settings.bearer.placementKey;
     base.extra_headers = settings.bearer.extraHeaders;
+    if (Object.keys(settings.bearer.schema).length > 0) {
+      base.schema = settings.bearer.schema;
+    }
+    if (settings.bearer.bodyPath) {
+      base.body_path = settings.bearer.bodyPath;
+    }
   } else {
     base.destination_url = settings.oauth2.destinationUrl;
     base.client_id = settings.oauth2.clientId;
@@ -46,6 +52,12 @@ export function toApi(settings: EgressSettings): OrgSettingsPayload {
     base.grant_type = settings.oauth2.grantType;
     if (settings.oauth2.refreshToken) {
       base.refresh_token = settings.oauth2.refreshToken;
+    }
+    if (Object.keys(settings.oauth2.schema).length > 0) {
+      base.schema = settings.oauth2.schema;
+    }
+    if (settings.oauth2.bodyPath) {
+      base.body_path = settings.oauth2.bodyPath;
     }
   }
 
@@ -76,6 +88,8 @@ export function fromApi(raw: OrgSettingsPayload): EgressSettings {
               (auth.placement as BearerConfig['placement']) ?? 'authorization_header',
             placementKey: (auth.placement_key as string) ?? 'Authorization',
             extraHeaders: (auth.extra_headers as Record<string, string>) ?? {},
+            schema: (auth.schema as Record<string, string>) ?? {},
+            bodyPath: (auth.body_path as string) ?? '',
           }
         : DEFAULT_BEARER,
     oauth2:
@@ -91,6 +105,8 @@ export function fromApi(raw: OrgSettingsPayload): EgressSettings {
             grantType:
               (auth.grant_type as OAuth2Config['grantType']) ?? 'client_credentials',
             refreshToken: (auth.refresh_token as string) ?? '',
+            schema: (auth.schema as Record<string, string>) ?? {},
+            bodyPath: (auth.body_path as string) ?? '',
           }
         : DEFAULT_OAUTH2,
     retryPolicy: {

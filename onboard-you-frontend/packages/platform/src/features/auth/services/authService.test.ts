@@ -81,7 +81,7 @@ describe('authService', () => {
       const encoded = btoa(JSON.stringify(claims));
       const fakeJwt = `header.${encoded}.signature`;
 
-      const user = userFromIdToken(fakeJwt);
+      const user = userFromIdToken(fakeJwt, '');
       expect(user.id).toBe('user-abc');
       expect(user.email).toBe('alice@company.com');
       expect(user.name).toBe('Alice');

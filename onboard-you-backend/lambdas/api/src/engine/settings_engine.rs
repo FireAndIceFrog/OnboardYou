@@ -119,7 +119,9 @@ mod tests {
         let json = serde_json::json!({
             "auth_type": "bearer",
             "destination_url": "https://api.example.com/employees",
-            "token": "sk-live-abc123"
+            "token": "sk-live-abc123",
+            "schema": { "id": "string" },
+            "body_path": "id"
         });
         serde_json::from_value(json).unwrap()
     }
@@ -138,6 +140,13 @@ mod tests {
 
         let fetched = super::get(&state, "org-1").await.unwrap();
         assert_eq!(fetched.organization_id, "org-1");
+        // the helper config injects schema/body_path so they should round-trip
+        if let onboard_you_models::ApiDispatcherConfig::Bearer(b) = &fetched.default_auth {
+            assert_eq!(b.schema.get("id"), Some(&"string".to_string()));
+            assert_eq!(b.body_path.as_deref(), Some("id"));
+        } else {
+            panic!("expected bearer config");
+        }
     }
 
     #[tokio::test]

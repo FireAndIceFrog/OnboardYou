@@ -1,14 +1,20 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { useGlobal } from '@/shared/hooks';
 import {
   setAuthType,
   updateBearerField,
+  updateBearerSchema as updateBearerSchemaAction,
+  updateBearerBodyPath as updateBearerBodyPathAction,
   updateOAuth2Field,
+  updateOAuth2Schema as updateOAuth2SchemaAction,
+  updateOAuth2BodyPath as updateOAuth2BodyPathAction,
   updateRetryField,
   fetchSettingsThunk,
   saveSettingsThunk,
   clearSettingsError,
+  toggleShowAdvanced,
+  setWizardStep,
 } from './settingsSlice';
 import type {
   AuthType,
@@ -19,19 +25,10 @@ import type {
 
 export function useSettingsState() {
   const dispatch = useAppDispatch();
-  const { settings, saved, dirty, isLoading, isSaving, error } = useAppSelector(
+  const { settings, saved, dirty, loadingStatus, isSaving, error, showAdvanced, wizardStep } = useAppSelector(
     (state) => state.settings,
   );
   const { showNotification } = useGlobal();
-
-  /* ── Load settings on mount ─────────────────────────────── */
-  const fetchedRef = useRef(false);
-
-  useEffect(() => {
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-    dispatch(fetchSettingsThunk());
-  }, [dispatch]);
 
   /* ── Generic updaters ───────────────────────────────────── */
   const updateBearer = useCallback(
@@ -42,11 +39,39 @@ export function useSettingsState() {
     [dispatch],
   );
 
+  const updateBearerSchema = useCallback(
+    (schema: Record<string, string>) => {
+      dispatch(updateBearerSchemaAction(schema));
+    },
+    [dispatch],
+  );
+
+  const updateBearerBodyPath = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      dispatch(updateBearerBodyPathAction(e.target.value));
+    },
+    [dispatch],
+  );
+
   const updateOAuth2 = useCallback(
     (field: keyof OAuth2Config) =>
       (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         dispatch(updateOAuth2Field({ field, value: e.target.value }));
       },
+    [dispatch],
+  );
+
+  const updateOAuth2Schema = useCallback(
+    (schema: Record<string, string>) => {
+      dispatch(updateOAuth2SchemaAction(schema));
+    },
+    [dispatch],
+  );
+
+  const updateOAuth2BodyPath = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      dispatch(updateOAuth2BodyPathAction(e.target.value));
+    },
     [dispatch],
   );
 
@@ -97,19 +122,53 @@ export function useSettingsState() {
     dispatch(clearSettingsError());
   }, [dispatch]);
 
+  const handleToggleShowAdvanced = useCallback(() => {
+    dispatch(toggleShowAdvanced());
+  }, [dispatch]);
+
+  const totalSteps = showAdvanced ? 3 : 2;
+
+  const goToStep = useCallback(
+    (step: number) => {
+      if (step >= 0 && step < totalSteps) {
+        dispatch(setWizardStep(step));
+      }
+    },
+    [dispatch, totalSteps],
+  );
+
+  const goNext = useCallback(() => {
+    goToStep(wizardStep + 1);
+  }, [goToStep, wizardStep]);
+
+  const goPrev = useCallback(() => {
+    goToStep(wizardStep - 1);
+  }, [goToStep, wizardStep]);
+
   return {
+    showAdvanced,
+    wizardStep,
+    totalSteps,
+    goToStep,
+    goNext,
+    goPrev,
     settings,
     saved,
     dirty,
-    isLoading,
+    loadingStatus,
     isSaving,
     error,
     updateBearer,
+    updateBearerSchema,
+    updateBearerBodyPath,
     updateOAuth2,
+    updateOAuth2Schema,
+    updateOAuth2BodyPath,
     updateRetry,
     handleAuthTypeChange,
     handleSave,
     handleTestConnection,
     handleClearError,
+    handleToggleShowAdvanced,
   } as const;
 }

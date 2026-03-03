@@ -14,14 +14,21 @@ import {
 import type { RootState } from '@/store';
 
 /* ── State type ───────────────────────────────────────────── */
-
+export enum LoadingStatus {
+  Idle = 'idle',
+  Loading = 'loading',
+  Succeeded = 'succeeded',
+  Failed = 'failed',
+}
 export interface SettingsState {
   settings: EgressSettings;
   saved: boolean;
   dirty: boolean;
-  isLoading: boolean;
+  loadingStatus: LoadingStatus;
   isSaving: boolean;
   error: string | null;
+  showAdvanced: boolean;
+  wizardStep: number;
 }
 
 /* ── Initial state ────────────────────────────────────────── */
@@ -30,9 +37,11 @@ const initialState: SettingsState = {
   settings: DEFAULT_EGRESS_SETTINGS,
   saved: false,
   dirty: false,
-  isLoading: false,
+  loadingStatus: LoadingStatus.Idle,
   isSaving: false,
   error: null,
+  showAdvanced: false,
+  wizardStep: 0,
 };
 
 /* ── Async thunks ─────────────────────────────────────────── */
@@ -94,6 +103,22 @@ const settingsSlice = createSlice({
       state.dirty = true;
       state.saved = false;
     },
+    updateBearerSchema(
+      state,
+      action: PayloadAction<Record<string, string>>,
+    ) {
+      state.settings.bearer.schema = action.payload;
+      state.dirty = true;
+      state.saved = false;
+    },
+    updateBearerBodyPath(
+      state,
+      action: PayloadAction<string>,
+    ) {
+      state.settings.bearer.bodyPath = action.payload;
+      state.dirty = true;
+      state.saved = false;
+    },
     updateOAuth2Field(
       state,
       action: PayloadAction<{ field: keyof OAuth2Config; value: string }>,
@@ -101,6 +126,32 @@ const settingsSlice = createSlice({
       (state.settings.oauth2[action.payload.field] as string) = action.payload.value;
       state.dirty = true;
       state.saved = false;
+    },
+    updateOAuth2Schema(
+      state,
+      action: PayloadAction<Record<string, string>>,
+    ) {
+      state.settings.oauth2.schema = action.payload;
+      state.dirty = true;
+      state.saved = false;
+    },
+    updateOAuth2BodyPath(
+      state,
+      action: PayloadAction<string>,
+    ) {
+      state.settings.oauth2.bodyPath = action.payload;
+      state.dirty = true;
+      state.saved = false;
+    },
+    toggleShowAdvanced(state) {
+      state.showAdvanced = !state.showAdvanced;
+      // If hiding advanced and on the retry step, move back
+      if (!state.showAdvanced && state.wizardStep > 1) {
+        state.wizardStep = 1;
+      }
+    },
+    setWizardStep(state, action: PayloadAction<number>) {
+      state.wizardStep = action.payload;
     },
     updateRetryField(
       state,
@@ -119,11 +170,11 @@ const settingsSlice = createSlice({
     builder
       /* ── fetch ──────────────────────────────────────────── */
       .addCase(fetchSettingsThunk.pending, (state) => {
-        state.isLoading = true;
+        state.loadingStatus = LoadingStatus.Loading;
         state.error = null;
       })
       .addCase(fetchSettingsThunk.fulfilled, (state, action) => {
-        state.isLoading = false;
+        state.loadingStatus = LoadingStatus.Succeeded;
         if (action.payload) {
           state.settings = action.payload;
         }
@@ -131,7 +182,7 @@ const settingsSlice = createSlice({
         state.saved = false;
       })
       .addCase(fetchSettingsThunk.rejected, (state, action) => {
-        state.isLoading = false;
+        state.loadingStatus = LoadingStatus.Failed;
         state.error = (action.payload as string) ?? 'Failed to load settings';
       })
       /* ── save ───────────────────────────────────────────── */
@@ -155,15 +206,21 @@ const settingsSlice = createSlice({
 export const {
   setAuthType,
   updateBearerField,
+  updateBearerSchema,
+  updateBearerBodyPath,
   updateOAuth2Field,
+  updateOAuth2Schema,
+  updateOAuth2BodyPath,
   updateRetryField,
   clearSettingsError,
+  toggleShowAdvanced,
+  setWizardStep,
 } = settingsSlice.actions;
 
 /* ── Selectors ────────────────────────────────────────────── */
 
 export const selectSettings = (state: RootState) => state.settings;
-export const selectSettingsLoading = (state: RootState) => state.settings.isLoading;
+export const selectSettingsLoading = (state: RootState) => state.settings.loadingStatus;
 export const selectSettingsSaving = (state: RootState) => state.settings.isSaving;
 export const selectSettingsError = (state: RootState) => state.settings.error;
 
