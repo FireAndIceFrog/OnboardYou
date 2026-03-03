@@ -11,6 +11,7 @@ import reducer, {
   clearSettingsError,
   fetchSettingsThunk,
   saveSettingsThunk,
+  LoadingStatus,
 } from './settingsSlice';
 import { DEFAULT_EGRESS_SETTINGS } from '../domain/types';
 
@@ -18,7 +19,7 @@ const initialState = {
   settings: DEFAULT_EGRESS_SETTINGS,
   saved: false,
   dirty: false,
-  isLoading: false,
+  loadingStatus: LoadingStatus.Idle,
   isSaving: false,
   error: null,
 };
@@ -30,7 +31,7 @@ describe('settingsSlice', () => {
     expect(state.settings.retryPolicy.maxAttempts).toBe(3);
     expect(state.saved).toBe(false);
     expect(state.dirty).toBe(false);
-    expect(state.isLoading).toBe(false);
+    expect(state.loadingStatus).toBe(LoadingStatus.Idle);
     expect(state.isSaving).toBe(false);
     expect(state.error).toBeNull();
   });
@@ -105,36 +106,36 @@ describe('settingsSlice', () => {
 
   it('fetchSettingsThunk.pending sets loading', () => {
     const state = reducer(initialState, fetchSettingsThunk.pending('', {} as never));
-    expect(state.isLoading).toBe(true);
+    expect(state.loadingStatus).toBe(LoadingStatus.Loading);
     expect(state.error).toBeNull();
   });
 
   it('fetchSettingsThunk.fulfilled updates settings', () => {
     const loaded = { ...DEFAULT_EGRESS_SETTINGS, authType: 'oauth2' as const };
     const state = reducer(
-      { ...initialState, isLoading: true },
+      { ...initialState, loadingStatus: LoadingStatus.Loading },
       fetchSettingsThunk.fulfilled(loaded, '', {} as never),
     );
-    expect(state.isLoading).toBe(false);
+    expect(state.loadingStatus).toBe(LoadingStatus.Succeeded);
     expect(state.settings.authType).toBe('oauth2');
     expect(state.dirty).toBe(false);
   });
 
   it('fetchSettingsThunk.fulfilled with null keeps defaults', () => {
     const state = reducer(
-      { ...initialState, isLoading: true },
+      { ...initialState, loadingStatus: LoadingStatus.Loading },
       fetchSettingsThunk.fulfilled(null, '', {} as never),
     );
-    expect(state.isLoading).toBe(false);
+    expect(state.loadingStatus).toBe(LoadingStatus.Succeeded);
     expect(state.settings).toEqual(DEFAULT_EGRESS_SETTINGS);
   });
 
   it('fetchSettingsThunk.rejected sets error', () => {
     const state = reducer(
-      { ...initialState, isLoading: true },
+      { ...initialState, loadingStatus: LoadingStatus.Loading },
       fetchSettingsThunk.rejected(null, '', {} as never, 'Network error'),
     );
-    expect(state.isLoading).toBe(false);
+    expect(state.loadingStatus).toBe(LoadingStatus.Failed);
     expect(state.error).toBe('Network error');
   });
 

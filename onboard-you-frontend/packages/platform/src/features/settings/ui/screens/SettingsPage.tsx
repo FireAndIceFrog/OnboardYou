@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Badge,
@@ -22,14 +22,16 @@ import {
   ErrorBanner,
   SettingsFooter,
 } from '../components';
+import { fetchSettingsThunk } from '../..';
+import { useAppDispatch } from '@/store';
+import { LoadingStatus } from '../../state/settingsSlice';
 
 export function SettingsPage() {
   const { t } = useTranslation();
   const {
     settings,
-    saved,
     dirty,
-    isLoading,
+    loadingStatus,
     isSaving,
     error,
     handleSave,
@@ -38,15 +40,24 @@ export function SettingsPage() {
   } = useSettingsState();
 
   const [showAdvanced, setShowAdvanced] = useState(false);
-
-  const { errors, isValid, validateAll } = useSettingsValidation(settings);
+  const dispatch = useAppDispatch();
+  const { isValid, validateAll } = useSettingsValidation(settings);
 
   const onSave = () => {
     if (!validateAll()) return;
     handleSave();
   };
 
-  if (isLoading) {
+  /* ── Load settings on mount (only once for all hook instances) ───── */
+  // multiple components use this hook; run fetch exactly once for the
+  // whole module. a plain variable outside the function scope survives
+  // across hook invocations.
+  useEffect(() => {
+    if (loadingStatus !== LoadingStatus.Idle) return;
+    dispatch(fetchSettingsThunk());
+  }, [dispatch, loadingStatus]);
+
+  if (loadingStatus === LoadingStatus.Loading) {
     return (
       <Center minH="300px" role="status" aria-label={t('settings.loading')}>
         <Spinner />

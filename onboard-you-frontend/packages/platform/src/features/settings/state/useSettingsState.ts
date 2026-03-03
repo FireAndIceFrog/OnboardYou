@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { useGlobal } from '@/shared/hooks';
 import {
@@ -23,19 +23,12 @@ import type {
 
 export function useSettingsState() {
   const dispatch = useAppDispatch();
-  const { settings, saved, dirty, isLoading, isSaving, error } = useAppSelector(
+  const { settings, saved, dirty, loadingStatus, isSaving, error } = useAppSelector(
     (state) => state.settings,
   );
   const { showNotification } = useGlobal();
 
-  /* ── Load settings on mount ─────────────────────────────── */
-  const fetchedRef = useRef(false);
 
-  useEffect(() => {
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-    dispatch(fetchSettingsThunk());
-  }, [dispatch]);
 
   /* ── Generic updaters ───────────────────────────────────── */
   const updateBearer = useCallback(
@@ -133,7 +126,7 @@ export function useSettingsState() {
     settings,
     saved,
     dirty,
-    isLoading,
+    loadingStatus,
     isSaving,
     error,
     updateBearer,

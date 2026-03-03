@@ -14,12 +14,17 @@ import {
 import type { RootState } from '@/store';
 
 /* ── State type ───────────────────────────────────────────── */
-
+export enum LoadingStatus {
+  Idle = 'idle',
+  Loading = 'loading',
+  Succeeded = 'succeeded',
+  Failed = 'failed',
+}
 export interface SettingsState {
   settings: EgressSettings;
   saved: boolean;
   dirty: boolean;
-  isLoading: boolean;
+  loadingStatus: LoadingStatus;
   isSaving: boolean;
   error: string | null;
 }
@@ -30,7 +35,7 @@ const initialState: SettingsState = {
   settings: DEFAULT_EGRESS_SETTINGS,
   saved: false,
   dirty: false,
-  isLoading: false,
+  loadingStatus: LoadingStatus.Idle,
   isSaving: false,
   error: null,
 };
@@ -151,11 +156,11 @@ const settingsSlice = createSlice({
     builder
       /* ── fetch ──────────────────────────────────────────── */
       .addCase(fetchSettingsThunk.pending, (state) => {
-        state.isLoading = true;
+        state.loadingStatus = LoadingStatus.Loading;
         state.error = null;
       })
       .addCase(fetchSettingsThunk.fulfilled, (state, action) => {
-        state.isLoading = false;
+        state.loadingStatus = LoadingStatus.Succeeded;
         if (action.payload) {
           state.settings = action.payload;
         }
@@ -163,7 +168,7 @@ const settingsSlice = createSlice({
         state.saved = false;
       })
       .addCase(fetchSettingsThunk.rejected, (state, action) => {
-        state.isLoading = false;
+        state.loadingStatus = LoadingStatus.Failed;
         state.error = (action.payload as string) ?? 'Failed to load settings';
       })
       /* ── save ───────────────────────────────────────────── */
@@ -199,7 +204,7 @@ export const {
 /* ── Selectors ────────────────────────────────────────────── */
 
 export const selectSettings = (state: RootState) => state.settings;
-export const selectSettingsLoading = (state: RootState) => state.settings.isLoading;
+export const selectSettingsLoading = (state: RootState) => state.settings.loadingStatus;
 export const selectSettingsSaving = (state: RootState) => state.settings.isSaving;
 export const selectSettingsError = (state: RootState) => state.settings.error;
 

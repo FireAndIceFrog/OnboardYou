@@ -27,6 +27,7 @@ describe('SettingsFooter', () => {
     rerender(
       <SettingsFooter onTest={() => {}} onSave={() => {}} disabledSave={false} isSaving={true} />,
     );
-    expect(screen.getByText(/save settings/i)).toHaveAttribute('data-loading');
+    const saveButton = screen.getByRole('button', { name: /saving…/i });
+    expect(saveButton).toHaveAttribute('data-loading');
   });
 });
