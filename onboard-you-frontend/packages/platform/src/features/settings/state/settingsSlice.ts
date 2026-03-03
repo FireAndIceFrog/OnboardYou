@@ -94,11 +94,43 @@ const settingsSlice = createSlice({
       state.dirty = true;
       state.saved = false;
     },
+    updateBearerSchema(
+      state,
+      action: PayloadAction<Record<string, string>>,
+    ) {
+      state.settings.bearer.schema = action.payload;
+      state.dirty = true;
+      state.saved = false;
+    },
+    updateBearerBodyPath(
+      state,
+      action: PayloadAction<string>,
+    ) {
+      state.settings.bearer.bodyPath = action.payload;
+      state.dirty = true;
+      state.saved = false;
+    },
     updateOAuth2Field(
       state,
       action: PayloadAction<{ field: keyof OAuth2Config; value: string }>,
     ) {
       (state.settings.oauth2[action.payload.field] as string) = action.payload.value;
+      state.dirty = true;
+      state.saved = false;
+    },
+    updateOAuth2Schema(
+      state,
+      action: PayloadAction<Record<string, string>>,
+    ) {
+      state.settings.oauth2.schema = action.payload;
+      state.dirty = true;
+      state.saved = false;
+    },
+    updateOAuth2BodyPath(
+      state,
+      action: PayloadAction<string>,
+    ) {
+      state.settings.oauth2.bodyPath = action.payload;
       state.dirty = true;
       state.saved = false;
     },
@@ -155,7 +187,11 @@ const settingsSlice = createSlice({
 export const {
   setAuthType,
   updateBearerField,
+  updateBearerSchema,
+  updateBearerBodyPath,
   updateOAuth2Field,
+  updateOAuth2Schema,
+  updateOAuth2BodyPath,
   updateRetryField,
   clearSettingsError,
 } = settingsSlice.actions;

@@ -107,13 +107,24 @@
       "authorization_code": "Authorization Code"
     },
     "testConnection": "🔗 Test Connection",
-    "saveSettings": "Save Settings"
+    "saveSettings": "Save Settings",
+    "showAdvanced": "Show advanced settings",
+    "hideAdvanced": "Hide advanced settings",
+    "dynamic": {
+      "title": "Dynamic Payload",
+      "description": "Configure the schema of the object sent to your API and optionally the path used as the request body.",
+      "schema": "Schema (key:type)",
+      "schemaHint": "Provide a JSON object mapping field names to types.",
+      "bodyPath": "Body Path",
+      "bodyPathPlaceholder": "e.g. data.items"
+    }
   },
   "validation": {
     "required": "This field is required",
     "invalidUrl": "Please enter a valid URL",
     "retryRange": "Must be between {{min}} and {{max}}",
-    "positiveInteger": "Must be a positive integer"
+    "positiveInteger": "Must be a positive integer",
+    "invalidJson": "Invalid JSON"
   },
   "common": {
     "loading": "Loading...",

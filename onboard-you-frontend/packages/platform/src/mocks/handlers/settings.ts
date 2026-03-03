@@ -11,6 +11,8 @@ const MOCK_SETTINGS = {
     token: 'sk-mock-token-abc123',
     placement: 'authorization_header',
     placement_key: 'Authorization',
+    schema: {},
+    body_path: '',
     extra_headers: {},
     retry_policy: {
       max_attempts: 3,

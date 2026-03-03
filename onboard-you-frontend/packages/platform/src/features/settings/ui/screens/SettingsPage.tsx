@@ -1,3 +1,4 @@
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Badge,
@@ -13,11 +14,12 @@ import {
   SimpleGrid,
   Spinner,
   Text,
+  Textarea,
 } from '@chakra-ui/react';
 import { PLACEMENT_OPTIONS, GRANT_TYPE_OPTIONS } from '../../domain/types';
 import { useSettingsState } from '../../state/useSettingsState';
 import { useSettingsValidation } from '../../state/useSettingsValidation';
-import { FieldError } from '../components/FieldError';
+import { FieldError } from '../components/FieldError/FieldError';
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -29,13 +31,57 @@ export function SettingsPage() {
     isSaving,
     error,
     updateBearer,
+    updateBearerSchema,
+    updateBearerBodyPath,
     updateOAuth2,
+    updateOAuth2Schema,
+    updateOAuth2BodyPath,
     updateRetry,
     handleAuthTypeChange,
     handleSave,
     handleTestConnection,
     handleClearError,
   } = useSettingsState();
+
+  // local UI state for dynamic schema textarea and parsing error
+  const [schemaText, setSchemaText] = useState('');
+  const [schemaError, setSchemaError] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // when settings change we need to sync the textarea text
+  useEffect(() => {
+    const obj =
+      settings.authType === 'bearer'
+        ? settings.bearer.schema
+        : settings.oauth2.schema;
+    setSchemaText(JSON.stringify(obj || {}, null, 2));
+    setSchemaError('');
+  }, [settings.authType, settings.bearer.schema, settings.oauth2.schema]);
+
+  const handleSchemaChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const txt = e.target.value;
+      setSchemaText(txt);
+      try {
+        const parsed = JSON.parse(txt);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          if (settings.authType === 'bearer') {
+            updateBearerSchema(parsed as Record<string, string>);
+          } else {
+            updateOAuth2Schema(parsed as Record<string, string>);
+          }
+          setSchemaError('');
+        } else {
+          throw new Error('schema must be an object');
+        }
+      } catch (err) {
+        setSchemaError(
+          t('validation.invalidJson', { defaultValue: 'Invalid JSON' }),
+        );
+      }
+    },
+    [settings.authType, updateBearerSchema, updateOAuth2Schema, t],
+  );
 
   const { errors, isValid, validateAll } = useSettingsValidation(settings);
 
@@ -214,42 +260,45 @@ export function SettingsPage() {
                 </Field.Root>
               </Box>
 
-              <SimpleGrid columns={{ base: 1, sm: 2 }} gap={4}>
-                <Field.Root>
-                  <Field.Label>
-                    {t('settings.bearer.tokenPlacement')}
-                  </Field.Label>
-                  <NativeSelect.Root>
-                    <NativeSelect.Field
-                      value={settings.bearer.placement}
-                      onChange={updateBearer('placement')}
-                    >
-                      {PLACEMENT_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {t(`settings.placementOptions.${opt.value}`)}
-                        </option>
-                      ))}
-                    </NativeSelect.Field>
-                    <NativeSelect.Indicator />
-                  </NativeSelect.Root>
-                </Field.Root>
-                <Field.Root>
-                  <Field.Label>
-                    {t('settings.bearer.placementKey')}
-                  </Field.Label>
-                  <Input
-                    type="text"
-                    placeholder={t(
-                      'settings.bearer.placementKeyPlaceholder',
-                    )}
-                    value={settings.bearer.placementKey}
-                    onChange={updateBearer('placementKey')}
-                  />
-                  <Field.HelperText>
-                    {t('settings.bearer.placementKeyHint')}
-                  </Field.HelperText>
-                </Field.Root>
-              </SimpleGrid>
+              {/* placement fields are advanced only */}
+              {showAdvanced && (
+                <SimpleGrid columns={{ base: 1, sm: 2 }} gap={4}>
+                  <Field.Root>
+                    <Field.Label>
+                      {t('settings.bearer.tokenPlacement')}
+                    </Field.Label>
+                    <NativeSelect.Root>
+                      <NativeSelect.Field
+                        value={settings.bearer.placement}
+                        onChange={updateBearer('placement')}
+                      >
+                        {PLACEMENT_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {t(`settings.placementOptions.${opt.value}`)}
+                          </option>
+                        ))}
+                      </NativeSelect.Field>
+                      <NativeSelect.Indicator />
+                    </NativeSelect.Root>
+                  </Field.Root>
+                  <Field.Root>
+                    <Field.Label>
+                      {t('settings.bearer.placementKey')}
+                    </Field.Label>
+                    <Input
+                      type="text"
+                      placeholder={t(
+                        'settings.bearer.placementKeyPlaceholder',
+                      )}
+                      value={settings.bearer.placementKey}
+                      onChange={updateBearer('placementKey')}
+                    />
+                    <Field.HelperText>
+                      {t('settings.bearer.placementKeyHint')}
+                    </Field.HelperText>
+                  </Field.Root>
+                </SimpleGrid>
+              )}
             </Box>
           </Card.Body>
         </Card.Root>
@@ -383,9 +432,101 @@ export function SettingsPage() {
         </Card.Root>
       )}
 
-      {/* Retry policy */}
-      <Card.Root mb={5}>
-        <Card.Body p={6}>
+      {/* advanced toggle */}
+      <Flex justifyContent="flex-end" mb={5}>
+        <Button variant="outline" size="sm" onClick={() => setShowAdvanced((s) => !s)}>
+          {showAdvanced ? t('settings.hideAdvanced') : t('settings.showAdvanced')}
+        </Button>
+      </Flex>
+
+      {/* Dynamic schema (appears for whichever auth type is selected) */}
+      {settings.authType === 'bearer' && (
+        <Card.Root mb={5}>
+          <Card.Body p={6}>
+            <Box as="fieldset">
+              <Heading as="legend" size="lg" fontWeight="semibold" mb={1}>
+                {t('settings.dynamic.title')}
+              </Heading>
+              <Text fontSize="sm" color="fg.muted" mb={5}>
+                {t('settings.dynamic.description')}
+              </Text>
+
+              <Field.Root invalid={!!schemaError}>
+                <Field.Label>{t('settings.dynamic.schema')}</Field.Label>
+                <Textarea
+                  minH="120px"
+                  value={schemaText}
+                  onChange={handleSchemaChange}
+                />
+                {schemaError && (
+                  <FieldError id="schema-error" error={schemaError} />
+                )}
+                <Field.HelperText>
+                  {t('settings.dynamic.schemaHint')}
+                </Field.HelperText>
+              </Field.Root>
+
+              <Box mt={4}>
+                <Field.Root>
+                  <Field.Label>{t('settings.dynamic.bodyPath')}</Field.Label>
+                  <Input
+                    type="text"
+                    placeholder={t('settings.dynamic.bodyPathPlaceholder', { defaultValue: 'e.g. data.items' })}
+                    value={settings.bearer.bodyPath}
+                    onChange={updateBearerBodyPath}
+                  />
+                </Field.Root>
+              </Box>
+            </Box>
+          </Card.Body>
+        </Card.Root>
+      )}
+      {settings.authType === 'oauth2' && (
+        <Card.Root mb={5}>
+          <Card.Body p={6}>
+            <Box as="fieldset">
+              <Heading as="legend" size="lg" fontWeight="semibold" mb={1}>
+                {t('settings.dynamic.title')}
+              </Heading>
+              <Text fontSize="sm" color="fg.muted" mb={5}>
+                {t('settings.dynamic.description')}
+              </Text>
+
+              <Field.Root invalid={!!schemaError}>
+                <Field.Label>{t('settings.dynamic.schema')}</Field.Label>
+                <Textarea
+                  minH="120px"
+                  value={schemaText}
+                  onChange={handleSchemaChange}
+                />
+                {schemaError && (
+                  <FieldError id="schema-error" error={schemaError} />
+                )}
+                <Field.HelperText>
+                  {t('settings.dynamic.schemaHint')}
+                </Field.HelperText>
+              </Field.Root>
+
+              <Box mt={4}>
+                <Field.Root>
+                  <Field.Label>{t('settings.dynamic.bodyPath')}</Field.Label>
+                  <Input
+                    type="text"
+                    placeholder={t('settings.dynamic.bodyPathPlaceholder', { defaultValue: 'e.g. data.items' })}
+                    value={settings.oauth2.bodyPath}
+                    onChange={updateOAuth2BodyPath}
+                  />
+                </Field.Root>
+              </Box>
+            </Box>
+          </Card.Body>
+        </Card.Root>
+      )}
+
+      {/* Retry policy (advanced) */}
+      {showAdvanced && (
+        <Card.Root mb={5}>
+          <Card.Body p={6}>
           <Box as="fieldset">
             <Heading as="legend" size="lg" fontWeight="semibold" mb={1}>
               {t('settings.retry.title')}
@@ -448,6 +589,7 @@ export function SettingsPage() {
           </Box>
         </Card.Body>
       </Card.Root>
+      )}
 
       {/* Footer */}
       <Flex

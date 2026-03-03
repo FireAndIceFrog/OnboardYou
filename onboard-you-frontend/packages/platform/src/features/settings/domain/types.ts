@@ -8,6 +8,15 @@ export interface BearerConfig {
   placement: 'authorization_header' | 'custom_header' | 'query_param';
   placementKey: string;
   extraHeaders: Record<string, string>;
+  /**
+   * Dynamic schema for the API payload sent to the egress endpoint.  Keys are
+   * field names and values are their types (e.g. "id": "string").  Stored
+   * alongside the auth object so the backend can generate a body dynamically.
+   */
+  schema: Record<string, string>;
+  /** Optional JSON‑pointer (dot/bracket) to the location within the
+   * generated object that should be used as the request body. */
+  bodyPath: string;
 }
 
 export interface OAuth2Config {
@@ -18,6 +27,10 @@ export interface OAuth2Config {
   scopes: string;
   grantType: 'client_credentials' | 'authorization_code';
   refreshToken: string;
+  /** dynamic schema similar to {@link BearerConfig.schema} */
+  schema: Record<string, string>;
+  /** Optional pointer into the generated object for the request body */
+  bodyPath: string;
 }
 
 export interface RetryPolicy {
@@ -39,6 +52,8 @@ export const DEFAULT_BEARER: BearerConfig = {
   placement: 'authorization_header',
   placementKey: 'Authorization',
   extraHeaders: {},
+  schema: {},
+  bodyPath: '',
 };
 
 export const DEFAULT_OAUTH2: OAuth2Config = {
@@ -49,6 +64,8 @@ export const DEFAULT_OAUTH2: OAuth2Config = {
   scopes: '',
   grantType: 'client_credentials',
   refreshToken: '',
+  schema: {},
+  bodyPath: '',
 };
 
 export const DEFAULT_RETRY: RetryPolicy = {

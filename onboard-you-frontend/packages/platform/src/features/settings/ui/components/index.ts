@@ -1,1 +1,1 @@
-export { FieldError } from './FieldError';
+export { FieldError } from './FieldError/FieldError';

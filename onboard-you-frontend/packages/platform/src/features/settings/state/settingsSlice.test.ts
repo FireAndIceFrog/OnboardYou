@@ -2,7 +2,11 @@ import { describe, it, expect } from 'vitest';
 import reducer, {
   setAuthType,
   updateBearerField,
+  updateBearerSchema,
+  updateBearerBodyPath,
   updateOAuth2Field,
+  updateOAuth2Schema,
+  updateOAuth2BodyPath,
   updateRetryField,
   clearSettingsError,
   fetchSettingsThunk,
@@ -47,12 +51,38 @@ describe('settingsSlice', () => {
     expect(state.dirty).toBe(true);
   });
 
+  it('updateBearerSchema replaces the schema object', () => {
+    const newSchema = { id: 'string', count: 'number' };
+    const state = reducer(initialState, updateBearerSchema(newSchema));
+    expect(state.settings.bearer.schema).toEqual(newSchema);
+    expect(state.dirty).toBe(true);
+  });
+
+  it('updateBearerBodyPath sets the bodyPath string', () => {
+    const state = reducer(initialState, updateBearerBodyPath('data.items'));
+    expect(state.settings.bearer.bodyPath).toBe('data.items');
+    expect(state.dirty).toBe(true);
+  });
+
   it('updateOAuth2Field updates a specific OAuth2 field', () => {
     const state = reducer(
       initialState,
       updateOAuth2Field({ field: 'clientId', value: 'my-client' }),
     );
     expect(state.settings.oauth2.clientId).toBe('my-client');
+    expect(state.dirty).toBe(true);
+  });
+
+  it('updateOAuth2Schema replaces the schema object', () => {
+    const newSchema = { foo: 'string' };
+    const state = reducer(initialState, updateOAuth2Schema(newSchema));
+    expect(state.settings.oauth2.schema).toEqual(newSchema);
+    expect(state.dirty).toBe(true);
+  });
+
+  it('updateOAuth2BodyPath sets the bodyPath string', () => {
+    const state = reducer(initialState, updateOAuth2BodyPath('payload')); 
+    expect(state.settings.oauth2.bodyPath).toBe('payload');
     expect(state.dirty).toBe(true);
   });
 
