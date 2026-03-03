@@ -1,108 +1,123 @@
 //! Plan prompt — generates the AI prompt for ETL pipeline plan generation.
 //!
-//! Uses the [`action_schema!`] macro to validate config field names against
-//! the actual struct definitions at compile time. If a config field is renamed
-//! or removed, this module will fail to compile.
+//! Uses `utoipa::ToSchema` to derive config schemas directly from the Rust
+//! struct definitions. If a field is added, renamed, or removed, the prompt
+//! automatically reflects the change — no manual sync needed.
 
 use std::collections::HashMap;
+use utoipa::ToSchema;
 
-/// Generates action schema text with compile-time field name validation.
+/// Render an OpenAPI schema from a `ToSchema` type as a pretty-printed JSON string.
+fn schema_json<T: ToSchema>() -> String {
+    let schema = T::schema();
+    serde_json::to_string_pretty(&schema).unwrap_or_else(|_| "{}".into())
+}
+
+/// One action definition: its `action_type` key, a human description,
+/// and the JSON schema derived from the Rust config struct.
+struct ActionDef {
+    action_type: &'static str,
+    description: &'static str,
+    config_schema: String,
+}
+
+/// Build the action definition list, grouped by category.
+fn action_defs() -> Vec<(&'static str, Vec<ActionDef>)> {
+    vec![
+        ("INGRESS ACTIONS (pick ONE as the first action)", vec![
+            ActionDef {
+                action_type: "csv_hris_connector",
+                description: "Ingests employee data from a CSV file.",
+                config_schema: schema_json::<crate::CsvHrisConnectorConfig>(),
+            },
+            ActionDef {
+                action_type: "workday_hris_connector",
+                description: "Ingests employee data from the Workday SOAP API.",
+                config_schema: schema_json::<crate::WorkdayConfig>(),
+            },
+        ]),
+        ("TRANSFORMATION ACTIONS (zero or more, in any order)", vec![
+            ActionDef {
+                action_type: "scd_type_2",
+                description: "Slowly Changing Dimension Type 2 — tracks historical changes to entities.",
+                config_schema: schema_json::<crate::ScdType2Config>(),
+            },
+            ActionDef {
+                action_type: "pii_masking",
+                description: "Masks PII fields (e.g. SSN, salary) using configurable strategies.",
+                config_schema: schema_json::<crate::PIIMaskingConfig>(),
+            },
+            ActionDef {
+                action_type: "identity_deduplicator",
+                description: "Deduplicates records based on matching columns.",
+                config_schema: schema_json::<crate::DedupConfig>(),
+            },
+            ActionDef {
+                action_type: "regex_replace",
+                description: "Applies regex find-and-replace on a column.",
+                config_schema: schema_json::<crate::RegexReplaceConfig>(),
+            },
+            ActionDef {
+                action_type: "iso_country_sanitizer",
+                description: "Normalizes country codes to ISO 3166 format.",
+                config_schema: schema_json::<crate::IsoCountrySanitizerConfig>(),
+            },
+            ActionDef {
+                action_type: "cellphone_sanitizer",
+                description: "Normalizes phone numbers to E.164 format.",
+                config_schema: schema_json::<crate::CellphoneSanitizerConfig>(),
+            },
+            ActionDef {
+                action_type: "handle_diacritics",
+                description: "Normalizes diacritical characters (e.g. é → e, ñ → n).",
+                config_schema: schema_json::<crate::HandleDiacriticsConfig>(),
+            },
+            ActionDef {
+                action_type: "rename_column",
+                description: "Renames columns via a source → target mapping.",
+                config_schema: schema_json::<crate::RenameConfig>(),
+            },
+            ActionDef {
+                action_type: "drop_column",
+                description: "Drops specified columns from the dataset.",
+                config_schema: schema_json::<crate::DropConfig>(),
+            },
+            ActionDef {
+                action_type: "filter_by_value",
+                description: "Filters rows by regex. Matching rows are kept.",
+                config_schema: schema_json::<crate::FilterByValueConfig>(),
+            },
+        ]),
+        ("EGRESS ACTION (must be the LAST action)", vec![
+            ActionDef {
+                action_type: "api_dispatcher",
+                description: "Sends transformed data to the destination API. Auth variants: Bearer, OAuth 1.0, OAuth 2.0, or Default (org-level settings). Config is one of:",
+                config_schema: format!(
+                    "Bearer: {bearer}\nOAuth 1.0: {oauth}\nOAuth 2.0: {oauth2}",
+                    bearer = schema_json::<crate::BearerRepoConfig>(),
+                    oauth = schema_json::<crate::OAuthRepoConfig>(),
+                    oauth2 = schema_json::<crate::OAuth2RepoConfig>(),
+                ),
+            },
+        ]),
+    ]
+}
+
+/// Schemas for sub-types referenced via `$ref` in the action configs above.
 ///
-/// Each `$field` ident is checked against the real struct — if a field is
-/// renamed or removed the build breaks immediately.
-macro_rules! action_schema {
-    ($struct:ty, $action_type:literal, $desc:literal, {
-        $($field:ident : $fdesc:literal),* $(,)?
-    }) => {{
-        // Compile-time: assert every listed field actually exists on the struct.
-        const _: () = {
-            #[allow(unused)]
-            fn _assert_fields_exist(s: &$struct) {
-                $( let _ = &s.$field; )*
-            }
-        };
-        concat!(
-            "### ", $action_type, "\n",
-            $desc, "\n",
-            "Config: {\n",
-            $( "  \"", stringify!($field), "\": ", $fdesc, "\n", )*
-            "}\n"
-        )
-    }};
+/// Without these the LLM would see an opaque `$ref` string and not know the
+/// shape of the type.  Each entry maps the OpenAPI component name to its
+/// auto-derived JSON schema.
+fn referenced_type_schemas() -> Vec<(&'static str, String)> {
+    vec![
+        ("WorkdayResponseGroup", schema_json::<crate::WorkdayResponseGroup>()),
+        ("ColumnMask", schema_json::<crate::ColumnMask>()),
+        ("MaskStrategy", schema_json::<crate::MaskStrategy>()),
+        ("CountryOutputFormat", schema_json::<crate::CountryOutputFormat>()),
+        ("BearerPlacement", schema_json::<crate::BearerPlacement>()),
+        ("OAuth2GrantType", schema_json::<crate::OAuth2GrantType>()),
+    ]
 }
-
-/// Validates field names exist on a struct at compile time (for nested / enum-variant types
-/// whose schema text is written manually).
-macro_rules! validate_fields {
-    ($struct:ty { $($field:ident),* $(,)? }) => {
-        const _: () = {
-            #[allow(unused)]
-            fn _assert_fields_exist(s: &$struct) {
-                $( let _ = &s.$field; )*
-            }
-        };
-    };
-}
-
-// ── Compile-time validation for nested / enum-variant types ────────
-// These types appear inside parent descriptions but don't get their own
-// `action_schema!` call, so we validate their fields separately.
-
-validate_fields!(crate::WorkdayResponseGroup {
-    include_personal_information,
-    include_employment_information,
-    include_compensation,
-    include_organizations,
-    include_roles,
-});
-
-validate_fields!(crate::ColumnMask { name, strategy });
-
-// ApiDispatcherConfig is an enum — validate each variant's inner struct.
-validate_fields!(crate::BearerRepoConfig {
-    destination_url, token, placement, placement_key, extra_headers,
-});
-validate_fields!(crate::OAuthRepoConfig {
-    destination_url, consumer_key, consumer_secret, access_token, token_secret,
-});
-validate_fields!(crate::OAuth2RepoConfig {
-    destination_url, client_id, client_secret, token_url, scopes, grant_type, refresh_token,
-});
-
-/// Hand-written schema for `api_dispatcher` since [`ApiDispatcherConfig`] is an enum
-/// with multiple auth variants. Field names are validated above via [`validate_fields!`].
-const API_DISPATCHER_SCHEMA: &str = r#"### api_dispatcher
-Sends transformed data to the destination API. Supports Bearer, OAuth 1.0, and OAuth 2.0.
-Config (auth_type: "bearer"): {
-  "destination_url": "string" — Target API endpoint
-  "token": "string" | null — Bearer token
-  "placement": "authorization_header" | "custom_header" | "query_param" (default: authorization_header)
-  "placement_key": "string" | null — Header/param name when not using Authorization header
-  "extra_headers": { "header": "value" } — Additional HTTP headers
-  "schema": { "source_col": "dest_field" } — Column mapping
-}
-Config (auth_type: "oauth"): {
-  "destination_url": "string"
-  "consumer_key": "string"
-  "consumer_secret": "string"
-  "access_token": "string"
-  "token_secret": "string"
-  "schema": { "source_col": "dest_field" }
-}
-Config (auth_type: "oauth2"): {
-  "destination_url": "string"
-  "client_id": "string"
-  "client_secret": "string"
-  "token_url": "string"
-  "scopes": ["string"]
-  "grant_type": "client_credentials" | "authorization_code" (default: client_credentials)
-  "refresh_token": "string" | null
-  "schema": { "source_col": "dest_field" }
-}
-Config (auth_type: "default"): {
-  "schema": { "source_col": "dest_field" }
-}
-"#;
 
 /// Context needed to generate an AI prompt for pipeline plan generation.
 pub struct PlanPrompt<'a> {
@@ -214,111 +229,32 @@ Return the JSON plan."#,
         )
     }
 
-    /// Build the complete ETL action schema from the actual config struct definitions.
+    /// Build the complete ETL action schema from `utoipa::ToSchema` definitions.
     ///
-    /// Each `action_schema!` call validates field names against the real Rust struct
-    /// at compile time. If a field is renamed or removed, this function won't compile.
+    /// Each config struct's OpenAPI schema is serialized to JSON automatically.
+    /// Adding or changing a field on the struct updates the prompt with zero manual work.
     fn etl_schema() -> String {
-        [
-            "AVAILABLE ACTIONS AND CONFIG SCHEMAS:\n",
+        let mut out = String::from("AVAILABLE ACTIONS AND CONFIG SCHEMAS:\n");
 
-            "\n## INGRESS ACTIONS (pick ONE as the first action)\n",
+        for (category, actions) in action_defs() {
+            out.push_str(&format!("\n## {category}\n\n"));
+            for def in actions {
+                out.push_str(&format!(
+                    "### {action_type}\n{description}\nConfig schema:\n{schema}\n\n",
+                    action_type = def.action_type,
+                    description = def.description,
+                    schema = def.config_schema,
+                ));
+            }
+        }
 
-            action_schema!(crate::CsvHrisConnectorConfig, "csv_hris_connector",
-                "Ingests employee data from a CSV file.", {
-                    filename: "\"string\" — Name of the CSV file",
-                    columns: "[\"string\"] — Column names to ingest",
-                }
-            ),
+        out.push_str("\n## REFERENCED TYPES\n\n");
+        out.push_str("The schemas above reference these component types via `$ref`:\n\n");
+        for (name, schema) in referenced_type_schemas() {
+            out.push_str(&format!("### {name}\n{schema}\n\n"));
+        }
 
-            action_schema!(crate::WorkdayConfig, "workday_hris_connector",
-                "Ingests employee data from the Workday SOAP API.", {
-                    tenant_url: "\"string\" — Workday tenant URL",
-                    tenant_id: "\"string\" — Workday tenant ID",
-                    username: "\"string\" — Service account username",
-                    password: "\"string\" — Service account password",
-                    worker_count_limit: "number (default: 200) — Max workers per request",
-                    response_group: "{ include_personal_information: bool (true), include_employment_information: bool (true), include_compensation: bool (false), include_organizations: bool (false), include_roles: bool (false) }",
-                }
-            ),
-
-            "\n## TRANSFORMATION ACTIONS (zero or more, in any order)\n",
-
-            action_schema!(crate::ScdType2Config, "scd_type_2",
-                "Slowly Changing Dimension Type 2 — tracks historical changes to entities.", {
-                    entity_column: "\"string\" (default: \"employee_id\") — Entity identifier column",
-                    date_column: "\"string\" (default: \"start_date\") — Effective date column",
-                }
-            ),
-
-            action_schema!(crate::PIIMaskingConfig, "pii_masking",
-                "Masks PII fields (e.g. SSN, salary) using configurable strategies.", {
-                    columns: "[{ name: \"string\", strategy: { \"Redact\": { keep_last: number, mask_prefix: \"string\" } } | \"Zero\" }]",
-                }
-            ),
-
-            action_schema!(crate::DedupConfig, "identity_deduplicator",
-                "Deduplicates records based on matching columns.", {
-                    columns: "[\"string\"] (default: [\"national_id\", \"email\"]) — Match columns",
-                    employee_id_column: "\"string\" (default: \"employee_id\") — Primary key column",
-                }
-            ),
-
-            action_schema!(crate::RegexReplaceConfig, "regex_replace",
-                "Applies regex find-and-replace on a column.", {
-                    column: "\"string\" — Target column",
-                    pattern: "\"string\" — Regex pattern (Rust syntax, max 128 chars)",
-                    replacement: "\"string\" — Replacement text (max 256 chars)",
-                }
-            ),
-
-            action_schema!(crate::IsoCountrySanitizerConfig, "iso_country_sanitizer",
-                "Normalizes country codes to ISO 3166 format.", {
-                    source_column: "\"string\" — Input column with raw country values",
-                    output_column: "\"string\" — Output column for normalized codes",
-                    output_format: "\"alpha2\" | \"alpha3\"",
-                }
-            ),
-
-            action_schema!(crate::CellphoneSanitizerConfig, "cellphone_sanitizer",
-                "Normalizes phone numbers to E.164 format.", {
-                    phone_column: "\"string\" — Column with phone numbers",
-                    country_columns: "[\"string\"] — Priority-ordered ISO country code columns",
-                    output_column: "\"string\" — Output column for normalized numbers",
-                }
-            ),
-
-            action_schema!(crate::HandleDiacriticsConfig, "handle_diacritics",
-                "Normalizes diacritical characters (e.g. é → e, ñ → n).", {
-                    columns: "[\"string\"] — Columns to normalize (default: all)",
-                    output_suffix: "\"string\" | null — Suffix for output column, or null for in-place",
-                }
-            ),
-
-            action_schema!(crate::RenameConfig, "rename_column",
-                "Renames columns via a source → target mapping.", {
-                    mapping: "{ \"old_name\": \"new_name\" } — Source to target column mapping",
-                }
-            ),
-
-            action_schema!(crate::DropConfig, "drop_column",
-                "Drops specified columns from the dataset.", {
-                    columns: "[\"string\"] — Columns to remove",
-                }
-            ),
-
-            action_schema!(crate::FilterByValueConfig, "filter_by_value",
-                "Filters rows by regex. Matching rows are kept.", {
-                    column: "\"string\" — Column to filter on",
-                    pattern: "\"string\" — Regex pattern; matching rows kept",
-                }
-            ),
-
-            "\n## EGRESS ACTION (must be the LAST action)\n",
-
-            API_DISPATCHER_SCHEMA,
-        ]
-        .join("\n")
+        out
     }
 }
 

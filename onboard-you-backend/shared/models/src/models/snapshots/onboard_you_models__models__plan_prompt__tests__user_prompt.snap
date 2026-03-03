@@ -7,8 +7,8 @@ Generate a pipeline plan for the following scenario:
 SOURCE SYSTEM: Workday
 PIPELINE COLUMNS (after ingress): name, email, department
 EGRESS SCHEMA (destination API fields): {
-  "name": "fullName",
-  "email": "workEmail"
+  "email": "workEmail",
+  "name": "fullName"
 }
 SCHEMA DIFF:
   MAPPED: name → fullName
