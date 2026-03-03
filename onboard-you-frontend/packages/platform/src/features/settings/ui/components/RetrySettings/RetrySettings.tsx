@@ -1,9 +1,9 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box, Field, Input, SimpleGrid, Heading, Text } from '@chakra-ui/react';
+import { Box, SimpleGrid, Heading, Text } from '@chakra-ui/react';
 import { useSettingsState } from '../../../state/useSettingsState';
 import { useSettingsValidation } from '../../../state/useSettingsValidation';
-import { FieldError } from '../FieldError/FieldError';
+import { FormField } from '@/shared/ui/FormField/FormField';
 
 export function RetrySettings() {
   const { t } = useTranslation();
@@ -20,48 +20,33 @@ export function RetrySettings() {
       </Text>
 
       <SimpleGrid columns={{ base: 1, sm: 2 }} gap={4} mb={4}>
-        <Field.Root invalid={!!errors['retry.maxAttempts']}>
-          <Field.Label>{t('settings.retry.maxAttempts')}</Field.Label>
-          <Input
-            type="number"
-            min={1}
-            max={10}
-            value={settings.retryPolicy.maxAttempts}
-            onChange={updateRetry('maxAttempts')}
-          />
-          <FieldError
-            id="retry-max-attempts-error"
-            error={errors['retry.maxAttempts']}
-          />
-        </Field.Root>
-        <Field.Root invalid={!!errors['retry.initialBackoffMs']}>
-          <Field.Label>{t('settings.retry.initialBackoff')}</Field.Label>
-          <Input
-            type="number"
-            min={100}
-            step={100}
-            value={settings.retryPolicy.initialBackoffMs}
-            onChange={updateRetry('initialBackoffMs')}
-          />
-          <FieldError
-            id="retry-initial-backoff-error"
-            error={errors['retry.initialBackoffMs']}
-          />
-        </Field.Root>
+        <FormField
+          error={errors['retry.maxAttempts']}
+          label={t('settings.retry.maxAttempts')}
+          type="number"
+          min={1}
+          max={10}
+          value={settings.retryPolicy.maxAttempts}
+          onChange={updateRetry('maxAttempts')}
+        />
+        <FormField
+          error={errors['retry.initialBackoffMs']}
+          label={t('settings.retry.initialBackoff')}
+          type="number"
+          min={100}
+          step={100}
+          value={settings.retryPolicy.initialBackoffMs}
+          onChange={updateRetry('initialBackoffMs')}
+        />
       </SimpleGrid>
 
-      <Field.Root>
-        <Field.Label>{t('settings.retry.retryableStatusCodes')}</Field.Label>
-        <Input
-          type="text"
-          placeholder={t('settings.retry.retryableStatusCodesPlaceholder')}
-          value={settings.retryPolicy.retryableStatusCodes.join(', ')}
-          onChange={updateRetry('retryableStatusCodes')}
-        />
-        <Field.HelperText>
-          {t('settings.retry.retryableStatusCodesHint')}
-        </Field.HelperText>
-      </Field.Root>
+      <FormField
+        label={t('settings.retry.retryableStatusCodes')}
+        placeholder={t('settings.retry.retryableStatusCodesPlaceholder')}
+        value={settings.retryPolicy.retryableStatusCodes.join(', ')}
+        onChange={updateRetry('retryableStatusCodes')}
+        helperText={t('settings.retry.retryableStatusCodesHint')}
+      />
     </Box>
   );
 }

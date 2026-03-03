@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import {
   Box,
   Button,
-  Field,
   Flex,
   Heading,
   Input,
@@ -15,6 +14,7 @@ import {
 import { useSettingsState } from '../../../state/useSettingsState';
 import { FIELD_TYPE_OPTIONS } from '../../../domain/types';
 import type { SchemaFieldType } from '../../../domain/types';
+import { FormField } from '@/shared/ui/FormField/FormField';
 
 /** Stable row identity that doesn't change when the user edits a field name. */
 let nextRowId = 0;
@@ -234,25 +234,22 @@ export function FieldSettings() {
 
       {showAdvanced && (
         <Box mt={4}>
-          <Field.Root>
-            <Field.Label>{t('settings.dynamic.bodyPath')}</Field.Label>
-            <Input
-              type="text"
-              placeholder={t('settings.dynamic.bodyPathPlaceholder', {
-                defaultValue: 'e.g. data.items',
-              })}
-              value={
-                settings.authType === 'bearer'
-                  ? settings.bearer.bodyPath
-                  : settings.oauth2.bodyPath
-              }
-              onChange={
-                settings.authType === 'bearer'
-                  ? updateBearerBodyPath
-                  : updateOAuth2BodyPath
-              }
-            />
-          </Field.Root>
+          <FormField
+            label={t('settings.dynamic.bodyPath')}
+            placeholder={t('settings.dynamic.bodyPathPlaceholder', {
+              defaultValue: 'e.g. data.items',
+            })}
+            value={
+              settings.authType === 'bearer'
+                ? settings.bearer.bodyPath
+                : settings.oauth2.bodyPath
+            }
+            onChange={
+              settings.authType === 'bearer'
+                ? updateBearerBodyPath
+                : updateOAuth2BodyPath
+            }
+          />
         </Box>
       )}
     </Box>
