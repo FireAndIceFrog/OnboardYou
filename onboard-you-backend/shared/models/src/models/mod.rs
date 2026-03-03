@@ -11,6 +11,7 @@ pub mod pipeline_config;
 pub mod roster;
 pub mod scheduled_event;
 pub mod pipeline_models;
+pub mod schema_diff;
 
 pub use pipeline_models::*;
 pub use scheduled_event::*;
@@ -19,3 +20,4 @@ pub use manifest::*;
 pub use org_settings::*;
 pub use pipeline_config::*;
 pub use roster::*;
+pub use schema_diff::*;

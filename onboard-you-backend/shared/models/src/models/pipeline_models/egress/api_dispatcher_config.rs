@@ -21,6 +21,8 @@
 //! }
 //! ```
 
+use crate::DynamicEgressModel;
+
 use super::{AuthType, BearerRepoConfig, OAuth2RepoConfig, OAuthRepoConfig};
 use serde::de::Deserializer;
 use serde::ser::Serializer;
@@ -69,6 +71,26 @@ impl ApiDispatcherConfig {
     /// needs resolution.
     pub fn is_default(&self) -> bool {
         matches!(self, Self::Default)
+    }
+}
+
+impl DynamicEgressModel for ApiDispatcherConfig {
+    fn get_schema(&self) -> std::collections::HashMap<String, String> {
+        match self {
+            Self::Bearer(c) => c.get_schema(),
+            Self::OAuth(c) => c.get_schema(),
+            Self::OAuth2(c) => c.get_schema(),
+            Self::Default => std::collections::HashMap::new(),
+        }
+    }
+
+    fn set_schema(&mut self, schema: std::collections::HashMap<String, String>) {
+        match self {
+            Self::Bearer(c) => c.set_schema(schema),
+            Self::OAuth(c) => c.set_schema(schema),
+            Self::OAuth2(c) => c.set_schema(schema),
+            Self::Default => (),
+        }
     }
 }
 

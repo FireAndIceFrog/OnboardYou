@@ -4,13 +4,56 @@
 //! `calculate_columns` through the pipeline without executing any real
 //! transformations or touching external data sources.
 
+use std::collections::HashMap;
+
 use crate::{
     dependancies::Dependancies,
     models::{ApiError, StepValidation, ValidationResult},
 };
+use onboard_you_models::{ColumnMapping, DynamicEgressModel, SchemaDiff};
 use onboard_you::ActionFactoryTrait;
 use onboard_you_models::{Manifest, RosterContext};
 use polars::prelude::*;
+
+/// Compute the diff between pipeline `final_columns` and the egress schema.
+///
+/// The egress schema is a `HashMap<String, String>` where keys are pipeline
+/// column names and values are destination field names. This function
+/// categorises each column/field as mapped, unmapped-source, or unmapped-target.
+pub fn compute_schema_diff(
+    final_columns: &[String],
+    egress_schema: &HashMap<String, String>,
+) -> SchemaDiff {
+    let mut mapped = Vec::new();
+    let mut unmapped_source = Vec::new();
+
+    for col in final_columns {
+        if let Some(target) = egress_schema.get(col) {
+            mapped.push(ColumnMapping {
+                source_column: col.clone(),
+                target_field: target.clone(),
+            });
+        } else {
+            unmapped_source.push(col.clone());
+        }
+    }
+
+    // Egress fields whose key doesn't appear in final_columns
+    let final_set: std::collections::HashSet<&str> =
+        final_columns.iter().map(|s| s.as_str()).collect();
+    let mut unmapped_target: Vec<String> = egress_schema
+        .keys()
+        .filter(|k| !final_set.contains(k.as_str()))
+        .cloned()
+        .collect();
+    unmapped_target.sort(); // deterministic ordering
+
+    SchemaDiff {
+        mapped,
+        unmapped_source,
+        unmapped_target,
+    }
+}
 
 /// Validate a pipeline manifest by propagating columns through every step.
 ///
@@ -25,6 +68,7 @@ pub fn validate_pipeline(
         return Ok(ValidationResult {
             steps: vec![],
             final_columns: vec![],
+            schema_diff: None,
         });
     }
     let action_factory = deps.etl_repo.create_action_factory();
@@ -73,9 +117,21 @@ pub fn validate_pipeline(
         .map(|s| s.columns_after.clone())
         .unwrap_or_default();
 
+    // Compute schema diff if the manifest has an ApiDispatcher egress action
+    let schema_diff = manifest
+        .actions
+        .iter()
+        .find_map(|ac| match &ac.config {
+            onboard_you_models::ActionConfigPayload::ApiDispatcher(cfg) => {
+                Some(compute_schema_diff(&final_columns, &cfg.get_schema()))
+            }
+            _ => None,
+        });
+
     Ok(ValidationResult {
         steps,
         final_columns,
+        schema_diff,
     })
 }
 
@@ -83,6 +139,83 @@ pub fn validate_pipeline(
 mod tests {
     use super::*;
     use crate::dependancies::{Dependancies, Env};
+
+    // ---- compute_schema_diff unit tests ----
+
+    #[test]
+    fn schema_diff_all_mapped() {
+        let final_columns = vec!["email".into(), "name".into()];
+        let mut egress: HashMap<String, String> = HashMap::new();
+        egress.insert("email".into(), "work_email".into());
+        egress.insert("name".into(), "full_name".into());
+
+        let diff = compute_schema_diff(&final_columns, &egress);
+
+        assert_eq!(diff.mapped.len(), 2);
+        assert!(diff.unmapped_source.is_empty());
+        assert!(diff.unmapped_target.is_empty());
+        // Verify mapping content
+        assert!(diff
+            .mapped
+            .iter()
+            .any(|m| m.source_column == "email" && m.target_field == "work_email"));
+        assert!(diff
+            .mapped
+            .iter()
+            .any(|m| m.source_column == "name" && m.target_field == "full_name"));
+    }
+
+    #[test]
+    fn schema_diff_partial_mapping() {
+        let final_columns = vec!["email".into(), "phone".into(), "dept".into()];
+        let mut egress: HashMap<String, String> = HashMap::new();
+        egress.insert("email".into(), "work_email".into());
+        egress.insert("start_date".into(), "startDate".into());
+
+        let diff = compute_schema_diff(&final_columns, &egress);
+
+        assert_eq!(diff.mapped.len(), 1);
+        assert_eq!(diff.mapped[0].source_column, "email");
+        assert_eq!(diff.mapped[0].target_field, "work_email");
+        assert_eq!(diff.unmapped_source, vec!["phone", "dept"]);
+        assert_eq!(diff.unmapped_target, vec!["start_date"]);
+    }
+
+    #[test]
+    fn schema_diff_empty_egress_schema() {
+        let final_columns = vec!["a".into(), "b".into(), "c".into()];
+        let egress: HashMap<String, String> = HashMap::new();
+
+        let diff = compute_schema_diff(&final_columns, &egress);
+
+        assert!(diff.mapped.is_empty());
+        assert_eq!(diff.unmapped_source, vec!["a", "b", "c"]);
+        assert!(diff.unmapped_target.is_empty());
+    }
+
+    #[test]
+    fn schema_diff_empty_final_columns() {
+        let final_columns: Vec<String> = vec![];
+        let mut egress: HashMap<String, String> = HashMap::new();
+        egress.insert("email".into(), "work_email".into());
+
+        let diff = compute_schema_diff(&final_columns, &egress);
+
+        assert!(diff.mapped.is_empty());
+        assert!(diff.unmapped_source.is_empty());
+        assert_eq!(diff.unmapped_target, vec!["email"]);
+    }
+
+    #[test]
+    fn schema_diff_both_empty() {
+        let diff = compute_schema_diff(&[], &HashMap::new());
+
+        assert!(diff.mapped.is_empty());
+        assert!(diff.unmapped_source.is_empty());
+        assert!(diff.unmapped_target.is_empty());
+    }
+
+    // ---- validate_pipeline integration tests ----
 
     #[tokio::test(flavor = "multi_thread")]
     async fn validate_empty_manifest_returns_empty() {

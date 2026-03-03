@@ -1,3 +1,4 @@
+use onboard_you_models::SchemaDiff;
 use utoipa::ToSchema;
 
 /// Result of validating a single step in the pipeline.
@@ -18,4 +19,7 @@ pub struct ValidationResult {
     pub steps: Vec<StepValidation>,
     /// Final column set after the last step.
     pub final_columns: Vec<String>,
+    /// Schema diff against the egress model (if an egress action is present).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub schema_diff: Option<SchemaDiff>,
 }

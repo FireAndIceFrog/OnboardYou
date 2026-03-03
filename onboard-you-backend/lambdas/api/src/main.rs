@@ -27,7 +27,7 @@ use models::{
 };
 use onboard_you_models::{
     ActionConfig, ActionConfigPayload, ActionType, ApiDispatcherConfig, BearerPlacement,
-    BearerRepoConfig, Manifest, OAuth2GrantType, OAuth2RepoConfig, OAuthRepoConfig, OrgSettings,
+    BearerRepoConfig, ColumnMapping, Manifest, OAuth2GrantType, OAuth2RepoConfig, OAuthRepoConfig, OrgSettings, SchemaDiff,
     PipelineConfig,
 };
 use tower_http::cors::{Any, CorsLayer};
@@ -74,6 +74,8 @@ use utoipa_swagger_ui::SwaggerUi;
         OAuth2GrantType,
         ValidationResult,
         StepValidation,
+        SchemaDiff,
+        ColumnMapping,
         ErrorResponse,
         OrgSettings,
         SettingsRequest,

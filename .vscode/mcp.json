@@ -7,6 +7,9 @@
 				"-y",
 				"@chakra-ui/react-mcp"
 			]
+		},
+		"lsp": {
+			"command": "lsp-mcp"
 		}
 	},
 	"inputs": []
