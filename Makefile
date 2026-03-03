@@ -82,11 +82,6 @@ sync-env:
 	@echo "▸ Syncing frontend .env from Terraform outputs…"
 	cd onboard-you-frontend && npm run sync-env
 	@echo "✓ Frontend .env synced"
-
-sync-env-local:
-	@echo "▸ Syncing frontend .env from Terraform outputs…"
-	cd onboard-you-frontend && npm run dev:sync-env
-	@echo "✓ Frontend .env synced locally"
 	
 # build the monorepo and deploy frontend artifacts
 # prod → S3 + CloudFront  |  staging → GitHub Pages (via CI)  |  local → skip

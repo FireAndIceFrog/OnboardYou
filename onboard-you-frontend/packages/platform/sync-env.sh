@@ -6,19 +6,6 @@
 ##──────────────────────────────────────────────────────────────
 set -euo pipefail
 
-# Initialize flags
-USE_LOCAL=false
-
-# Simple argument parser
-for arg in "$@"; do
-  case $arg in
-    -local|--local)
-      USE_LOCAL=true
-      shift
-      ;;
-  esac
-done
-
 INFRA_DIR="$(cd "$(dirname "$0")/../../../infra" && pwd)"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ENV_FILE="${SCRIPT_DIR}/.env"
@@ -27,16 +14,7 @@ CONFIG_ENV_FILE="$(cd "${SCRIPT_DIR}/../config" && pwd)/.env"
 echo "▸ Reading tofu outputs from ${INFRA_DIR}…"
 
 API_BASE_URL=$(cd "$INFRA_DIR" && tofu output -raw api_url)
-
-# Set FRONTEND_URL based on the -local flag
-if [ "$USE_LOCAL" = true ]; then
-    echo "  ! Local flag detected: forcing localhost URL."
-    FRONTEND_URL="http://localhost:5174"
-else
-    # Query tofu, fall back to localhost if the output is missing
-    FRONTEND_URL=$(cd "$INFRA_DIR" && tofu output -raw frontend_url 2>/dev/null || echo 'http://localhost:5174')
-fi
-
+FRONTEND_URL=$(cd "$INFRA_DIR" && tofu output -raw frontend_url 2>/dev/null || echo 'http://localhost:5174')
 # demo_credentials logic remains the same
 CREDS_JSON=$(cd "$INFRA_DIR" && tofu output -json demo_credentials)
 DEMO_EMAIL=$(echo "$CREDS_JSON" | jq -r 'keys[0]')
@@ -51,7 +29,9 @@ if echo "$FRONTEND_URL" | grep -q "github.io"; then
     # ensure trailing slash removed then add /onboardyou
     FRONTEND_URL="$(echo "$FRONTEND_URL" | sed 's|/*$||')/OnboardYou"
     BASE_PATH="/OnboardYou"
-else
+elif [ "$FRONTEND_URL" = "*" ]; then
+    echo "  ! Local flag detected: forcing localhost URL."
+    FRONTEND_URL="http://localhost:5174"
     BASE_PATH=$(echo "$FRONTEND_URL" | sed 's|https\?://[^/]*||; s|/$||')
 fi
 

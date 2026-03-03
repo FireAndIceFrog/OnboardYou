@@ -51,7 +51,7 @@ export function decodeJwtPayload(token: string): Record<string, unknown> {
 /**
  * Extract a User object from a Cognito ID token.
  */
-export function userFromIdToken(idToken: string): User {
+export function userFromIdToken(idToken: string, access_token: string): User {
   const claims = decodeJwtPayload(idToken);
   return {
     id: (claims['sub'] as string) ?? '',

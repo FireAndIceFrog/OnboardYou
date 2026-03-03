@@ -44,7 +44,7 @@ export const initAuth = createAsyncThunk(
     const storedIdToken = sessionStorage.getItem('oy_id_token');
     if (storedToken && storedIdToken) {
       try {
-        const user = userFromIdToken(storedIdToken);
+        const user = userFromIdToken(storedIdToken, storedToken);
         const refreshToken = sessionStorage.getItem('oy_refresh_token');
         dispatch(setUser({ user, token: storedToken, refreshToken }));
         return;
@@ -70,7 +70,7 @@ export const performLogin = createAsyncThunk(
 
     try {
       const tokens = await loginService(API_BASE_URL, email, password);
-      const user = userFromIdToken(tokens.id_token);
+      const user = userFromIdToken(tokens.id_token, tokens.access_token);
 
       // Persist tokens so we can restore the session on refresh.
       sessionStorage.setItem('oy_access_token', tokens.access_token);
@@ -82,7 +82,7 @@ export const performLogin = createAsyncThunk(
       dispatch(
         setUser({
           user,
-          token: tokens.id_token,
+          token: tokens.access_token,
           refreshToken: tokens.refresh_token ?? null,
         }),
       );
