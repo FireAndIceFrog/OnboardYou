@@ -41,7 +41,7 @@ export function WizardNavigation() {
 
       {/* Step dots + label */}
       <Flex direction="column" alignItems="center" gap={1}>
-        <Flex gap={2}>
+        <Flex gap={2} mb={3}>
           {Array.from({ length: totalSteps }).map((_, i) => (
             <Box
               key={i}

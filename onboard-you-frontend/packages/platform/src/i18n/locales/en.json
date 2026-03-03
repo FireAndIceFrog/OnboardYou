@@ -120,8 +120,14 @@
     "dynamic": {
       "title": "Dynamic Payload",
       "description": "Configure the schema of the object sent to your API and optionally the path used as the request body.",
-      "schema": "Schema (key:type)",
-      "schemaHint": "Provide a JSON object mapping field names to types.",
+      "schema": "Schema",
+      "schemaHint": "Define the fields that make up your API payload.",
+      "addField": "+ Add Field",
+      "fieldName": "Field Name",
+      "fieldType": "Field Type",
+      "deleteField": "Delete",
+      "fieldNamePlaceholder": "e.g. employee_id",
+      "emptySchema": "No fields defined yet. Click \"+ Add Field\" to get started.",
       "bodyPath": "Body Path",
       "bodyPathPlaceholder": "e.g. data.items"
     }

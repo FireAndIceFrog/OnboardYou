@@ -91,3 +91,11 @@ export const GRANT_TYPE_OPTIONS = [
   { value: 'client_credentials', label: 'Client Credentials' },
   { value: 'authorization_code', label: 'Authorization Code' },
 ] as const;
+
+export const FIELD_TYPE_OPTIONS = [
+  { value: 'string', label: 'String' },
+  { value: 'number', label: 'Number' },
+  { value: 'boolean', label: 'Boolean' },
+] as const;
+
+export type SchemaFieldType = (typeof FIELD_TYPE_OPTIONS)[number]['value'];
