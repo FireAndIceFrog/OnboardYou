@@ -16,19 +16,21 @@ use axum::{
 };
 use controllers::login;
 use controllers::{
-    create_config, delete_config, get_config, list_configs, update_config, validate_config,
+    create_config, delete_config, generate_plan, get_config, list_configs, update_config,
+    validate_config,
 };
 use controllers::{csv_columns, csv_presigned_upload};
 use controllers::{get_settings, upsert_settings};
 use dependancies::Dependancies;
 use models::{
-    ConfigRequest, CsvColumnsResponse, ErrorResponse, LoginRequest, LoginResponse,
+    ConfigRequest, CsvColumnsResponse, ErrorResponse, GeneratePlanRequest, GeneratePlanResponse,
+    LoginRequest, LoginResponse,
     PresignedUploadResponse, SettingsRequest, StepValidation, ValidationResult,
 };
 use onboard_you_models::{
     ActionConfig, ActionConfigPayload, ActionType, ApiDispatcherConfig, BearerPlacement,
     BearerRepoConfig, ColumnMapping, Manifest, OAuth2GrantType, OAuth2RepoConfig, OAuthRepoConfig, OrgSettings, SchemaDiff,
-    PipelineConfig,
+    PipelineConfig, PlanSummary, PlanFeature, PlanPreview, SchemaGenerationStatus,
 };
 use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::{fmt, EnvFilter};
@@ -52,6 +54,7 @@ use utoipa_swagger_ui::SwaggerUi;
         controllers::config_controller::update_config,
         controllers::config_controller::delete_config,
         controllers::config_controller::validate_config,
+        controllers::config_controller::generate_plan,
         controllers::csv_upload_controller::csv_presigned_upload,
         controllers::csv_upload_controller::csv_columns,
         controllers::settings_controller::get_settings,
@@ -81,6 +84,12 @@ use utoipa_swagger_ui::SwaggerUi;
         SettingsRequest,
         PresignedUploadResponse,
         CsvColumnsResponse,
+        PlanSummary,
+        PlanFeature,
+        PlanPreview,
+        SchemaGenerationStatus,
+        GeneratePlanRequest,
+        GeneratePlanResponse,
     )),
     tags(
         (name = "Authentication", description = "Login and token management"),
@@ -176,6 +185,10 @@ fn router(state: Dependancies) -> Router {
         .route(
             "/config/{customer_company_id}/validate",
             post(validate_config),
+        )
+        .route(
+            "/config/{customer_company_id}/generate-plan",
+            post(generate_plan),
         )
         .route(
             "/config/{customer_company_id}/csv-upload",

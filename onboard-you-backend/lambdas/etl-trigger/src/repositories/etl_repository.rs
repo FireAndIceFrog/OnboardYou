@@ -167,6 +167,7 @@ mod tests {
                 config: onboard_you_models::ActionConfigPayload::ApiDispatcher(
                     onboard_you_models::ApiDispatcherConfig::Default,
                 ),
+                disabled: false,
             }],
         };
         let mut manifest_mut = manifest.clone();
@@ -208,6 +209,7 @@ mod tests {
                         columns: vec![],
                     },
                 ),
+                disabled: false,
             }],
         };
 

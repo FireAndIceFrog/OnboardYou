@@ -1,0 +1,19 @@
+---
+source: onboard-you-backend/shared/models/src/models/plan_prompt.rs
+expression: messages.user
+---
+Generate a pipeline plan for the following scenario:
+
+SOURCE SYSTEM: CSV
+PIPELINE COLUMNS (after ingress): (not yet determined — use typical columns for the source system)
+EGRESS SCHEMA (destination API fields): (not yet configured — generate reasonable defaults)
+SCHEMA DIFF:
+(no diff available)
+
+Create an intelligent pipeline that:
+1. Ingests from CSV
+2. Applies appropriate data quality transformations
+3. Maps source columns to destination fields
+4. Dispatches to the destination API
+
+Return the JSON plan.

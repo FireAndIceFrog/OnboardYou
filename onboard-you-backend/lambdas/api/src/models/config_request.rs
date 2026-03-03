@@ -40,6 +40,7 @@ impl ConfigRequest {
             customer_company_id: String::new(),
             last_edited: String::new(),
             pipeline: self.pipeline,
+            plan_summary: None,
         }
     }
 }

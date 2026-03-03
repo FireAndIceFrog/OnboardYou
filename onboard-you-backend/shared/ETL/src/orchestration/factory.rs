@@ -179,6 +179,7 @@ mod tests {
                 )
                 .unwrap(),
             ),
+            disabled: false,
         };
         let action = ActionFactory::new()
             .create(&config)
@@ -198,6 +199,7 @@ mod tests {
                 }))
                 .unwrap(),
             ),
+            disabled: false,
         };
         let action = ActionFactory::new()
             .create(&config)
@@ -216,6 +218,7 @@ mod tests {
                 )
                 .unwrap(),
             ),
+            disabled: false,
         };
         let action = ActionFactory::new()
             .create(&config)
@@ -231,6 +234,7 @@ mod tests {
             config: ActionConfigPayload::IdentityDeduplicator(
                 serde_json::from_value(serde_json::json!({ "columns": ["email"] })).unwrap(),
             ),
+            disabled: false,
         };
         let action = ActionFactory::new()
             .create(&config)
@@ -251,6 +255,7 @@ mod tests {
                 }))
                 .unwrap(),
             ),
+            disabled: false,
         };
         let action = ActionFactory::new()
             .create(&config)
@@ -271,6 +276,7 @@ mod tests {
                 }))
                 .unwrap(),
             ),
+            disabled: false,
         };
         let action = ActionFactory::new()
             .create(&config)
@@ -297,6 +303,7 @@ mod tests {
                 }))
                 .unwrap(),
             ),
+            disabled: false,
         };
         let json = serde_json::to_string(&config).unwrap();
         assert!(json.contains("\"api_dispatcher\""));
@@ -315,6 +322,7 @@ mod tests {
                 }))
                 .unwrap(),
             ),
+            disabled: false,
         };
         let action = ActionFactory::new()
             .create(&config)

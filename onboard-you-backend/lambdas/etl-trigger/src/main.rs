@@ -46,6 +46,25 @@ async fn main() -> Result<(), Error> {
                         }
                     }
                 },
+                ScheduledEvent::GeneratePlan(payload) => {
+                    tracing::info!("Received plan generation event: {:?}", payload);
+                    match engine::plan_generation_engine::run(
+                        deps,
+                        &payload.organization_id,
+                        &payload.customer_company_id,
+                        &payload.source_system,
+                    )
+                    .await {
+                        Ok(()) => {
+                            tracing::info!("Plan generation completed successfully");
+                            Ok::<(), Error>(())
+                        }
+                        Err(e) => {
+                            tracing::error!("Plan generation failed: {e}");
+                            Ok::<(), Error>(())
+                        }
+                    }
+                },
             }
         }
     }))

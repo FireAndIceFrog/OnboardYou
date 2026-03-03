@@ -4,6 +4,7 @@ mod claims;
 mod config_request;
 mod config_validation;
 mod csv_upload;
+mod generate_plan;
 mod settings_request;
 
 pub use api_error::{ApiError, ErrorResponse};
@@ -12,4 +13,5 @@ pub use claims::Claims;
 pub use config_request::ConfigRequest;
 pub use config_validation::{StepValidation, ValidationResult};
 pub use csv_upload::{CsvColumnsResponse, CsvFileQuery, PresignedUploadResponse};
+pub use generate_plan::{GeneratePlanRequest, GeneratePlanResponse};
 pub use settings_request::SettingsRequest;

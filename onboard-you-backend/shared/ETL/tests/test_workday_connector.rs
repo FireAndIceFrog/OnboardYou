@@ -89,6 +89,7 @@ fn test_factory_creates_workday_connector() {
             }))
             .unwrap(),
         ),
+        disabled: false,
     };
     let action = ActionFactory::new()
         .create(&config)
@@ -118,6 +119,7 @@ fn test_factory_workday_with_full_config() {
             }))
             .unwrap(),
         ),
+        disabled: false,
     };
     let action = ActionFactory::new()
         .create(&config)
@@ -240,6 +242,7 @@ fn test_e2e_workday_pipeline_with_scd_type_2() {
             }))
             .unwrap(),
         ),
+        disabled: false,
     };
     let scd_action = ActionFactory::new()
         .create(&scd_config)
@@ -268,6 +271,7 @@ fn test_e2e_workday_pipeline_with_deduplication() {
         config: ActionConfigPayload::IdentityDeduplicator(
             serde_json::from_value(serde_json::json!({ "columns": ["email"] })).unwrap(),
         ),
+        disabled: false,
     };
     let dedup_action = ActionFactory::new()
         .create(&dedup_config)

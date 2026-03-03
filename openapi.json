@@ -512,6 +512,80 @@
         }
       }
     },
+    "/config/{customer_company_id}/generate-plan": {
+      "post": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "POST /config/{customerCompanyId}/generate-plan",
+        "description": "Trigger async AI plan generation for a pipeline configuration.\nSets the generation status to InProgress, sends an SQS message to the\netl-trigger lambda, and returns 202 immediately. The frontend polls\n`GET /config/{id}` until `planSummary.generationStatus` is `Completed`.",
+        "operationId": "generate_plan",
+        "parameters": [
+          {
+            "name": "customer_company_id",
+            "in": "path",
+            "description": "Unique identifier for the customer company",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Source system information for plan generation",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GeneratePlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Plan generation started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeneratePlanResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Configuration not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/config/{customer_company_id}/validate": {
       "post": {
         "tags": [
@@ -708,6 +782,10 @@
           "config": {
             "$ref": "#/components/schemas/ActionConfigPayload",
             "description": "Action-specific configuration (shape depends on action_type)\n\nDeserialized into the concrete typed variant matching `action_type`\nvia the custom `Deserialize` impl below."
+          },
+          "disabled": {
+            "type": "boolean",
+            "description": "When `true`, the ETL engine skips this action at runtime.\nUsed by the plan summary UI to toggle features on/off."
           },
           "id": {
             "type": "string",
@@ -958,6 +1036,24 @@
           }
         }
       },
+      "ColumnMapping": {
+        "type": "object",
+        "description": "A single column mapping from the pipeline to the egress destination.",
+        "required": [
+          "source_column",
+          "target_field"
+        ],
+        "properties": {
+          "source_column": {
+            "type": "string",
+            "description": "Column name in the pipeline (from `final_columns`)"
+          },
+          "target_field": {
+            "type": "string",
+            "description": "Destination field name in the egress schema"
+          }
+        }
+      },
       "ColumnMask": {
         "type": "object",
         "description": "Configuration for a single column to mask.\n\n# JSON shape\n\n```json\n{ \"name\": \"ssn\", \"strategy\": \"redact\", \"keep_last\": 4, \"mask_prefix\": \"***-**-\" }\n```\n\n| Field         | Type   | Default     | Description                             |\n|---------------|--------|-------------|-----------------------------------------|\n| `name`        | string | —           | Column name to mask                     |\n| `strategy`    | string | `\"redact\"`  | `\"redact\"` or `\"zero\"`                 |\n| `keep_last`   | int    | `4`         | Characters to preserve (redact only)    |\n| `mask_prefix` | string | `\"***-**-\"` | Prefix replacing the redacted portion   |",
@@ -1120,6 +1216,32 @@
           "pattern": {
             "type": "string",
             "description": "The raw regex pattern."
+          }
+        }
+      },
+      "GeneratePlanRequest": {
+        "type": "object",
+        "description": "Request body for `POST /config/{id}/generate-plan`.",
+        "required": [
+          "sourceSystem"
+        ],
+        "properties": {
+          "sourceSystem": {
+            "type": "string",
+            "description": "Source system name — \"Workday\" or \"CSV\""
+          }
+        }
+      },
+      "GeneratePlanResponse": {
+        "type": "object",
+        "description": "Response body for `POST /config/{id}/generate-plan` (202 Accepted).",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Current generation status"
           }
         }
       },
@@ -1470,6 +1592,129 @@
           "pipeline": {
             "$ref": "#/components/schemas/Manifest",
             "description": "The full ETL pipeline manifest (passed through to the ETL Lambda)"
+          },
+          "planSummary": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PlanSummary",
+                "description": "AI-generated plan summary — cached from the plan generation engine.\n`None` until plan generation has been triggered."
+              }
+            ]
+          }
+        }
+      },
+      "PlanFeature": {
+        "type": "object",
+        "description": "A single feature card in the plan summary UI.\n\nEach feature references one or more manifest actions via `action_ids`.\nToggling a feature flips the `disabled` flag on those actions.",
+        "required": [
+          "id",
+          "icon",
+          "label",
+          "description",
+          "actionIds"
+        ],
+        "properties": {
+          "actionIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "References to the manifest action IDs this feature maps to"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of what this feature does"
+          },
+          "icon": {
+            "type": "string",
+            "description": "Icon name for the UI (e.g. \"calendar\", \"users\", \"shield\")"
+          },
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for this feature (e.g. \"sync_start_dates\")"
+          },
+          "label": {
+            "type": "string",
+            "description": "Human-readable label (e.g. \"Sync Start Dates\")"
+          }
+        }
+      },
+      "PlanPreview": {
+        "type": "object",
+        "description": "Synthetic before/after preview showing how data transforms.",
+        "required": [
+          "sourceLabel",
+          "targetLabel",
+          "before",
+          "after"
+        ],
+        "properties": {
+          "after": {
+            "type": "object",
+            "description": "Sample record after pipeline transforms",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "before": {
+            "type": "object",
+            "description": "Sample record as it appears in the source system",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "sourceLabel": {
+            "type": "string",
+            "description": "Label for the source side (e.g. \"In Workday\")"
+          },
+          "targetLabel": {
+            "type": "string",
+            "description": "Label for the target side (e.g. \"In Your App\")"
+          }
+        }
+      },
+      "PlanSummary": {
+        "type": "object",
+        "description": "AI-generated plan summary cached on `PipelineConfig`.\n\nProvides a human-readable description of the pipeline plus\ntoggleable features that map back to manifest actions.",
+        "required": [
+          "headline",
+          "description",
+          "features",
+          "preview",
+          "generationStatus"
+        ],
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Multi-sentence description of the pipeline"
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanFeature"
+            },
+            "description": "Toggleable features — each references manifest action IDs"
+          },
+          "generationStatus": {
+            "$ref": "#/components/schemas/SchemaGenerationStatus",
+            "description": "Current generation status (InProgress, Completed, Failed)"
+          },
+          "headline": {
+            "type": "string",
+            "description": "One-line headline (e.g. \"Here's the plan to connect Workday to your App.\")"
+          },
+          "preview": {
+            "$ref": "#/components/schemas/PlanPreview",
+            "description": "Synthetic before/after preview data"
           }
         }
       },
@@ -1554,6 +1799,71 @@
           }
         }
       },
+      "SchemaDiff": {
+        "type": "object",
+        "description": "Result of diffing `final_columns` against the egress schema.\n\nShows which pipeline columns map to destination fields, and which are\nunmatched on either side.",
+        "required": [
+          "mapped",
+          "unmapped_source",
+          "unmapped_target"
+        ],
+        "properties": {
+          "mapped": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ColumnMapping"
+            },
+            "description": "Columns present in the pipeline that have a mapping in the egress schema"
+          },
+          "unmapped_source": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Pipeline columns with no egress mapping"
+          },
+          "unmapped_target": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Egress schema fields with no matching pipeline column"
+          }
+        }
+      },
+      "SchemaGenerationStatus": {
+        "oneOf": [
+          {
+            "type": "string",
+            "enum": [
+              "notStarted"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "inProgress"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "completed"
+            ]
+          },
+          {
+            "type": "object",
+            "required": [
+              "failed"
+            ],
+            "properties": {
+              "failed": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
       "SettingsRequest": {
         "type": "object",
         "description": "Request body for `PUT /settings`.",
@@ -1607,6 +1917,17 @@
               "type": "string"
             },
             "description": "Final column set after the last step."
+          },
+          "schema_diff": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SchemaDiff",
+                "description": "Schema diff against the egress model (if an egress action is present)."
+              }
+            ]
           },
           "steps": {
             "type": "array",

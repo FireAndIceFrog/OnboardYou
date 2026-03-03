@@ -1,0 +1,24 @@
+---
+source: onboard-you-backend/shared/models/src/models/plan_prompt.rs
+expression: messages.user
+---
+Generate a pipeline plan for the following scenario:
+
+SOURCE SYSTEM: Workday
+PIPELINE COLUMNS (after ingress): name, email, department
+EGRESS SCHEMA (destination API fields): {
+  "name": "fullName",
+  "email": "workEmail"
+}
+SCHEMA DIFF:
+  MAPPED: name → fullName
+  MAPPED: email → workEmail
+  UNMAPPED SOURCE: department
+
+Create an intelligent pipeline that:
+1. Ingests from Workday
+2. Applies appropriate data quality transformations
+3. Maps source columns to destination fields
+4. Dispatches to the destination API
+
+Return the JSON plan.

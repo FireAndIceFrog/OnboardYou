@@ -78,6 +78,10 @@ pub struct ActionConfig {
     /// Deserialized into the concrete typed variant matching `action_type`
     /// via the custom `Deserialize` impl below.
     pub config: ActionConfigPayload,
+    /// When `true`, the ETL engine skips this action at runtime.
+    /// Used by the plan summary UI to toggle features on/off.
+    #[serde(default)]
+    pub disabled: bool,
 }
 
 /// Custom deserialiser for [`ActionConfig`].
@@ -95,6 +99,8 @@ impl<'de> Deserialize<'de> for ActionConfig {
             action_type: ActionType,
             #[serde(default)]
             config: serde_json::Value,
+            #[serde(default)]
+            disabled: bool,
         }
 
         let raw = Raw::deserialize(deserializer)?;
@@ -145,6 +151,7 @@ impl<'de> Deserialize<'de> for ActionConfig {
             id: raw.id,
             action_type: raw.action_type,
             config,
+            disabled: raw.disabled,
         })
     }
 }

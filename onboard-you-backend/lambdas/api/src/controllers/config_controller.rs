@@ -7,7 +7,7 @@ use axum::{
     Json,
 };
 
-use crate::models::{ApiError, Claims, ConfigRequest, ErrorResponse};
+use crate::models::{ApiError, Claims, ConfigRequest, ErrorResponse, GeneratePlanRequest, GeneratePlanResponse};
 use crate::{dependancies::Dependancies, engine, models::ValidationResult};
 use onboard_you_models::PipelineConfig;
 
@@ -200,4 +200,50 @@ pub async fn validate_config(
     let _ = &claims; // org scoping available if needed later
     let result = engine::validation_engine::validate_pipeline(&state, &body.pipeline)?;
     Ok(Json(result))
+}
+
+/// POST /config/{customerCompanyId}/generate-plan
+///
+/// Trigger async AI plan generation for a pipeline configuration.
+/// Sets the generation status to InProgress, sends an SQS message to the
+/// etl-trigger lambda, and returns 202 immediately. The frontend polls
+/// `GET /config/{id}` until `planSummary.generationStatus` is `Completed`.
+#[utoipa::path(
+    post,
+    path = "/config/{customer_company_id}/generate-plan",
+    tag = "Configuration",
+    params(
+        ("customer_company_id" = String, Path, description = "Unique identifier for the customer company"),
+    ),
+    request_body(
+        content = GeneratePlanRequest,
+        description = "Source system information for plan generation",
+    ),
+    responses(
+        (status = 202, description = "Plan generation started", body = GeneratePlanResponse),
+        (status = 401, description = "Unauthorized — missing or invalid token", body = ErrorResponse),
+        (status = 404, description = "Configuration not found", body = ErrorResponse),
+        (status = 500, description = "Internal server error", body = ErrorResponse),
+    )
+)]
+pub async fn generate_plan(
+    State(state): State<Dependancies>,
+    claims: Claims,
+    Path(customer_company_id): Path<String>,
+    Json(body): Json<GeneratePlanRequest>,
+) -> Result<impl IntoResponse, ApiError> {
+    engine::plan_engine::generate_plan(
+        &state,
+        &claims.organization_id,
+        &customer_company_id,
+        &body.source_system,
+    )
+    .await?;
+
+    Ok((
+        StatusCode::ACCEPTED,
+        Json(GeneratePlanResponse {
+            status: "InProgress".to_string(),
+        }),
+    ))
 }

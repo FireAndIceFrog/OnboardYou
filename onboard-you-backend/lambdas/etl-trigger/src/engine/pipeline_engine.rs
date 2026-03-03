@@ -50,10 +50,14 @@ mod tests {
     use crate::dependancies::Dependancies;
     use crate::repositories::{
         config_repository::IConfigRepo, etl_repository::IEtlRepo,
-        pipeline_repository::IPipelineRepo, settings_repository::ISettingsRepo,
+        llm_repository::ILlmRepo, pipeline_repository::IPipelineRepo,
+        schema_repository::ISchemaRepo, settings_repository::ISettingsRepo,
+        validation_repository::{IValidationRepo, ValidationResult},
     };
     use async_trait::async_trait;
+    use gh_models::types::ChatMessage;
     use lambda_runtime::Error;
+    use std::collections::HashMap;
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
 
@@ -77,6 +81,7 @@ mod tests {
                     config: onboard_you_models::ActionConfigPayload::ApiDispatcher(
                         onboard_you_models::ApiDispatcherConfig::Default,
                     ),
+                    disabled: false,
                 }],
             };
             Ok(onboard_you_models::PipelineConfig {
@@ -87,7 +92,12 @@ mod tests {
                 customer_company_id: _customer_company_id.into(),
                 last_edited: "".into(),
                 pipeline: manifest,
+                plan_summary: None,
             })
+        }
+
+        async fn put(&self, _config: &onboard_you_models::PipelineConfig) -> Result<(), Error> {
+            Ok(())
         }
     }
 
@@ -152,6 +162,54 @@ mod tests {
         }
     }
 
+    struct FakeValidationRepo;
+    #[async_trait]
+    impl IValidationRepo for FakeValidationRepo {
+        fn validate(&self, _manifest: &onboard_you_models::Manifest) -> ValidationResult {
+            ValidationResult {
+                final_columns: vec![],
+                schema_diff: String::new(),
+            }
+        }
+    }
+
+    struct FakeSchemaRepo;
+    #[async_trait]
+    impl ISchemaRepo for FakeSchemaRepo {
+        fn extract_egress_schema(
+            &self,
+            _manifest: &onboard_you_models::Manifest,
+        ) -> HashMap<String, String> {
+            HashMap::new()
+        }
+
+        async fn create_plan_summary(
+            &self,
+            _deps: &Dependancies,
+            _source_system: &str,
+            _final_columns: &[String],
+            _schema_diff: &str,
+            _egress_schema: &HashMap<String, String>,
+        ) -> onboard_you_models::PlanSummary {
+            unreachable!("not called in pipeline tests")
+        }
+    }
+
+    struct FakeLlmRepo;
+    #[async_trait]
+    impl ILlmRepo for FakeLlmRepo {
+        async fn chat_completion(
+            &self,
+            _model: &str,
+            _messages: &[ChatMessage],
+            _temperature: f32,
+            _max_tokens: usize,
+            _top_p: f32,
+        ) -> Result<String, Error> {
+            unreachable!("not called in pipeline tests")
+        }
+    }
+
     #[tokio::test]
     async fn test_run_calls_repos_and_pipeline() {
         let cfg_called = Arc::new(AtomicBool::new(false));
@@ -173,6 +231,9 @@ mod tests {
                 called: pipeline_called.clone(),
             }),
             action_factory: Arc::new(onboard_you::ActionFactory::new()),
+            validation_repo: Arc::new(FakeValidationRepo),
+            schema_repo: Arc::new(FakeSchemaRepo),
+            llm_repo: Arc::new(FakeLlmRepo),
         });
 
         let result = run(deps.clone(), "org-1", "cust-1").await.expect("run ok");

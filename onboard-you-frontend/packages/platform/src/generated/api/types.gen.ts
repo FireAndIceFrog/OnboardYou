@@ -20,6 +20,11 @@ export type ActionConfig = {
      */
     config: ActionConfigPayload;
     /**
+     * When `true`, the ETL engine skips this action at runtime.
+     * Used by the plan summary UI to toggle features on/off.
+     */
+    disabled?: boolean;
+    /**
      * Unique identifier for this pipeline step
      */
     id: string;
@@ -151,6 +156,20 @@ export type CellphoneSanitizerConfig = {
      * Column holding the raw phone number.
      */
     phone_column: string;
+};
+
+/**
+ * A single column mapping from the pipeline to the egress destination.
+ */
+export type ColumnMapping = {
+    /**
+     * Column name in the pipeline (from `final_columns`)
+     */
+    source_column: string;
+    /**
+     * Destination field name in the egress schema
+     */
+    target_field: string;
 };
 
 /**
@@ -334,6 +353,26 @@ export type FilterByValueConfig = {
      * The raw regex pattern.
      */
     pattern: string;
+};
+
+/**
+ * Request body for `POST /config/{id}/generate-plan`.
+ */
+export type GeneratePlanRequest = {
+    /**
+     * Source system name — "Workday" or "CSV"
+     */
+    sourceSystem: string;
+};
+
+/**
+ * Response body for `POST /config/{id}/generate-plan` (202 Accepted).
+ */
+export type GeneratePlanResponse = {
+    /**
+     * Current generation status
+     */
+    status: string;
 };
 
 /**
@@ -648,6 +687,91 @@ export type PipelineConfig = {
      * The full ETL pipeline manifest (passed through to the ETL Lambda)
      */
     pipeline: Manifest;
+    planSummary?: null | PlanSummary;
+};
+
+/**
+ * A single feature card in the plan summary UI.
+ *
+ * Each feature references one or more manifest actions via `action_ids`.
+ * Toggling a feature flips the `disabled` flag on those actions.
+ */
+export type PlanFeature = {
+    /**
+     * References to the manifest action IDs this feature maps to
+     */
+    actionIds: Array<string>;
+    /**
+     * Description of what this feature does
+     */
+    description: string;
+    /**
+     * Icon name for the UI (e.g. "calendar", "users", "shield")
+     */
+    icon: string;
+    /**
+     * Unique identifier for this feature (e.g. "sync_start_dates")
+     */
+    id: string;
+    /**
+     * Human-readable label (e.g. "Sync Start Dates")
+     */
+    label: string;
+};
+
+/**
+ * Synthetic before/after preview showing how data transforms.
+ */
+export type PlanPreview = {
+    /**
+     * Sample record after pipeline transforms
+     */
+    after: {
+        [key: string]: string;
+    };
+    /**
+     * Sample record as it appears in the source system
+     */
+    before: {
+        [key: string]: string;
+    };
+    /**
+     * Label for the source side (e.g. "In Workday")
+     */
+    sourceLabel: string;
+    /**
+     * Label for the target side (e.g. "In Your App")
+     */
+    targetLabel: string;
+};
+
+/**
+ * AI-generated plan summary cached on `PipelineConfig`.
+ *
+ * Provides a human-readable description of the pipeline plus
+ * toggleable features that map back to manifest actions.
+ */
+export type PlanSummary = {
+    /**
+     * Multi-sentence description of the pipeline
+     */
+    description: string;
+    /**
+     * Toggleable features — each references manifest action IDs
+     */
+    features: Array<PlanFeature>;
+    /**
+     * Current generation status (InProgress, Completed, Failed)
+     */
+    generationStatus: SchemaGenerationStatus;
+    /**
+     * One-line headline (e.g. "Here's the plan to connect Workday to your App.")
+     */
+    headline: string;
+    /**
+     * Synthetic before/after preview data
+     */
+    preview: PlanPreview;
 };
 
 /**
@@ -748,6 +872,31 @@ export type ScdType2Config = {
 };
 
 /**
+ * Result of diffing `final_columns` against the egress schema.
+ *
+ * Shows which pipeline columns map to destination fields, and which are
+ * unmatched on either side.
+ */
+export type SchemaDiff = {
+    /**
+     * Columns present in the pipeline that have a mapping in the egress schema
+     */
+    mapped: Array<ColumnMapping>;
+    /**
+     * Pipeline columns with no egress mapping
+     */
+    unmapped_source: Array<string>;
+    /**
+     * Egress schema fields with no matching pipeline column
+     */
+    unmapped_target: Array<string>;
+};
+
+export type SchemaGenerationStatus = 'notStarted' | 'inProgress' | 'completed' | {
+    failed: string;
+};
+
+/**
  * Request body for `PUT /settings`.
  */
 export type SettingsRequest = {
@@ -785,6 +934,7 @@ export type ValidationResult = {
      * Final column set after the last step.
      */
     final_columns: Array<string>;
+    schema_diff?: null | SchemaDiff;
     /**
      * Per-step column snapshots (in execution order).
      */
@@ -1146,6 +1296,47 @@ export type CsvPresignedUploadResponses = {
 };
 
 export type CsvPresignedUploadResponse = CsvPresignedUploadResponses[keyof CsvPresignedUploadResponses];
+
+export type GeneratePlanData = {
+    /**
+     * Source system information for plan generation
+     */
+    body: GeneratePlanRequest;
+    path: {
+        /**
+         * Unique identifier for the customer company
+         */
+        customer_company_id: string;
+    };
+    query?: never;
+    url: '/config/{customer_company_id}/generate-plan';
+};
+
+export type GeneratePlanErrors = {
+    /**
+     * Unauthorized — missing or invalid token
+     */
+    401: ErrorResponse;
+    /**
+     * Configuration not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal server error
+     */
+    500: ErrorResponse;
+};
+
+export type GeneratePlanError = GeneratePlanErrors[keyof GeneratePlanErrors];
+
+export type GeneratePlanResponses = {
+    /**
+     * Plan generation started
+     */
+    202: GeneratePlanResponse;
+};
+
+export type GeneratePlanResponse2 = GeneratePlanResponses[keyof GeneratePlanResponses];
 
 export type ValidateConfigData = {
     /**

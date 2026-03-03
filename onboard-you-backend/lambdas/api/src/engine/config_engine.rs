@@ -183,6 +183,7 @@ mod tests {
                 version: "1.0".into(),
                 actions: vec![],
             },
+            plan_summary: None,
         }
     }
 

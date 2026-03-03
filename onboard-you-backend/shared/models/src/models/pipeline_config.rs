@@ -1,4 +1,4 @@
-use crate::Manifest;
+use crate::{Manifest, PlanSummary};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -38,4 +38,9 @@ pub struct PipelineConfig {
 
     /// The full ETL pipeline manifest (passed through to the ETL Lambda)
     pub pipeline: Manifest,
+
+    /// AI-generated plan summary — cached from the plan generation engine.
+    /// `None` until plan generation has been triggered.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plan_summary: Option<PlanSummary>,
 }

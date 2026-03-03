@@ -2,8 +2,11 @@ use std::sync::Arc;
 use crate::repositories::{
     config_repository::{self, DynamoConfigRepo},
     etl_repository::{EtlRepository, IEtlRepo},
+    llm_repository::{GHModelsLlmRepository, ILlmRepo},
     pipeline_repository::{IPipelineRepo, PipelineRepository},
+    schema_repository::{ISchemaRepo, SchemaRepository},
     settings_repository::{self, DynamoSettingsRepo},
+    validation_repository::{IValidationRepo, ValidationRepository},
 };
 use config_repository::IConfigRepo;
 use onboard_you::ActionFactoryTrait;
@@ -36,6 +39,9 @@ pub struct Dependancies {
     pub etl_repo: Arc<dyn IEtlRepo>,
     pub pipeline_repo: Arc<dyn IPipelineRepo>,
     pub action_factory: Arc<dyn ActionFactoryTrait>,
+    pub validation_repo: Arc<dyn IValidationRepo>,
+    pub schema_repo: Arc<dyn ISchemaRepo>,
+    pub llm_repo: Arc<dyn ILlmRepo>,
 }
 
 impl Dependancies {
@@ -45,12 +51,21 @@ impl Dependancies {
         let aws_config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
         let dynamo = aws_sdk_dynamodb::Client::new(&aws_config);
 
+        let action_factory: Arc<dyn ActionFactoryTrait> =
+            Arc::new(onboard_you::ActionFactory::new());
+
+        let github_token = std::env::var("GITHUB_TOKEN")
+            .unwrap_or_default();
+
         Self {
             config_repo: DynamoConfigRepo::new(dynamo.clone(), cfg.table_name.clone()),
             settings_repo: DynamoSettingsRepo::new(dynamo.clone(), cfg.settings_table_name.clone()),
             etl_repo: EtlRepository::new(),
             pipeline_repo: PipelineRepository::new(),
-            action_factory: Arc::new(onboard_you::ActionFactory::new()),
+            action_factory: action_factory.clone(),
+            validation_repo: ValidationRepository::new(action_factory),
+            schema_repo: SchemaRepository::new(),
+            llm_repo: GHModelsLlmRepository::new(github_token),
         }
     }
 }

@@ -153,6 +153,7 @@ mod tests {
                 config: ActionConfigPayload::ApiDispatcher(
                     onboard_you_models::ApiDispatcherConfig::Default,
                 ),
+                disabled: false,
             }],
         };
 

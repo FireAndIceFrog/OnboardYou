@@ -132,7 +132,7 @@ module "etl_trigger" {
 
   iam_policy_statements = [
     {
-      actions   = ["dynamodb:GetItem", "dynamodb:Query"]
+      actions   = ["dynamodb:GetItem", "dynamodb:Query", "dynamodb:PutItem"]
       resources = [module.pipeline_configs_table.arn, module.org_settings_table.arn]
     },
     {

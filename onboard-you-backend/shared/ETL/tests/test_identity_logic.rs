@@ -25,6 +25,7 @@ fn test_identity_resolution_basic() {
         config: ActionConfigPayload::IdentityDeduplicator(
             serde_json::from_value(serde_json::json!({ "columns": ["email"] })).unwrap(),
         ),
+        disabled: false,
     };
     let action = ActionFactory::new()
         .create(&config)

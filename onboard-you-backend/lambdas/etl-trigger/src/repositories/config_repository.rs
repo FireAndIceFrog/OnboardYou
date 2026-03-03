@@ -1,4 +1,4 @@
-//! Config repository — reads PipelineConfig from DynamoDB using serde_dynamo.
+//! Config repository — reads/writes PipelineConfig from/to DynamoDB using serde_dynamo.
 
 use async_trait::async_trait;
 use aws_sdk_dynamodb::types::AttributeValue;
@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use onboard_you_models::PipelineConfig;
 
-/// Repository trait used by the pipeline engine to fetch pipeline configs.
+/// Repository trait used by the pipeline engine to fetch/update pipeline configs.
 #[async_trait]
 pub trait IConfigRepo: Send + Sync {
     async fn get(
@@ -16,6 +16,9 @@ pub trait IConfigRepo: Send + Sync {
         organization_id: &str,
         customer_company_id: &str,
     ) -> Result<PipelineConfig, Error>;
+
+    /// Write a full PipelineConfig back to DynamoDB.
+    async fn put(&self, config: &PipelineConfig) -> Result<(), Error>;
 }
 
 /// Dynamo-backed implementation of `IConfigRepo`.
@@ -64,5 +67,26 @@ impl IConfigRepo for DynamoConfigRepo {
             .map_err(|e| Error::from(format!("Failed to deserialize config: {e}")))?;
 
         Ok(config)
+    }
+
+    /// Write a full PipelineConfig back to DynamoDB (used for plan summary write-back).
+    async fn put(&self, config: &PipelineConfig) -> Result<(), Error> {
+        let item = dynamo_serde::to_item(config)
+            .map_err(|e| Error::from(format!("Failed to serialize config: {e}")))?;
+
+        self.dynamo
+            .put_item()
+            .table_name(&self.table_name)
+            .set_item(Some(item))
+            .send()
+            .await
+            .map_err(|e| Error::from(format!("put_item failed: {e}")))?;
+
+        tracing::info!(
+            organization_id = %config.organization_id,
+            customer_company_id = %config.customer_company_id,
+            "Config persisted (plan write-back)"
+        );
+        Ok(())
     }
 }
