@@ -2,7 +2,7 @@
   "name": "onboard-you-frontend",
   "private": true,
   "scripts": {
-    "sync-env": "pnpm --filter @onboard-you/platform sync-env",
+    "sync-env": "pnpm -r --parallel sync-env",
     "dev:sync-env": "pnpm --filter @onboard-you/platform sync-env -- -local",
     "dev:platform": "pnpm --filter @onboard-you/platform dev",
     "dev:config": "pnpm --filter @onboard-you/config dev",

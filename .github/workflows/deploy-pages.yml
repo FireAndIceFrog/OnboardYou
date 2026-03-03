@@ -76,9 +76,6 @@ jobs:
       - name: Install frontend dependencies
         run: cd onboard-you-frontend && pnpm install --frozen-lockfile
 
-      - name: Install smoke-test dependencies
-        run: cd onboard-you-backend/test/smoke-test && pnpm install --frozen-lockfile
-
       - name: Generate TypeScript clients
         run: make openapi-ts
 

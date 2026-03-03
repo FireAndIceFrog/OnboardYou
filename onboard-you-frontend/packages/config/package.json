@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "sync-env": "bash ../../sync-env.sh",
     "dev:mock": "vite preview --port 5174 --strictPort --mode mock",
     "dev:mock:build": "vite build --mode mock",
     "build": "tsc -b && vite build",

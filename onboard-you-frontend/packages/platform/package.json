@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "sync-env": "bash ./sync-env.sh",
+    "sync-env": "bash ../../sync-env.sh",
     "dev": "vite",
     "dev:mock": "vite --mode mock",
     "build": "tsc -b && vite build",
