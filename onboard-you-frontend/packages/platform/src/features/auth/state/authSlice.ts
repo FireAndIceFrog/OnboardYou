@@ -46,7 +46,7 @@ export const initAuth = createAsyncThunk(
       try {
         const user = userFromIdToken(storedIdToken, storedToken);
         const refreshToken = sessionStorage.getItem('oy_refresh_token');
-        dispatch(setUser({ user, token: storedToken, refreshToken }));
+        dispatch(setUser({ user, token: storedIdToken, refreshToken }));
         return;
       } catch {
         // Token is corrupt — fall through to logout.
@@ -82,7 +82,7 @@ export const performLogin = createAsyncThunk(
       dispatch(
         setUser({
           user,
-          token: tokens.access_token,
+          token: tokens.id_token,
           refreshToken: tokens.refresh_token ?? null,
         }),
       );

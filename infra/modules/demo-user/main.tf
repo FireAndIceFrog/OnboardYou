@@ -56,6 +56,13 @@ resource "terraform_data" "provision" {
             Name=custom:organizationId,Value="$ORG_ID" \
         --message-action SUPPRESS 2>/dev/null || true
 
+      # Ensure attributes are up-to-date (covers pre-existing users)
+      aws cognito-idp admin-update-user-attributes \
+        --user-pool-id "$POOL_ID" \
+        --username "$EMAIL" \
+        --user-attributes \
+            Name=custom:organizationId,Value="$ORG_ID"
+
       # Set permanent password (rotated every deploy)
       aws cognito-idp admin-set-user-password \
         --user-pool-id "$POOL_ID" \
