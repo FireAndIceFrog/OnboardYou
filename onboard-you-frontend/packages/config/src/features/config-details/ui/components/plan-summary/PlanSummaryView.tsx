@@ -14,8 +14,6 @@ interface PlanSummaryViewProps {
   isGenerating: boolean;
   /** Whether the plan is out of sync with the advanced config */
   isStale: boolean;
-  /** Whether this is a brand-new unsaved config */
-  isNewConfig: boolean;
   onToggleFeature: (featureId: string) => void;
   onApplyPlan: () => void;
   onMakeChanges: () => void;
@@ -48,7 +46,6 @@ export function PlanSummaryView({
   isSaving,
   isGenerating,
   isStale,
-  isNewConfig,
   onToggleFeature,
   onApplyPlan,
   onMakeChanges,
@@ -74,7 +71,44 @@ export function PlanSummaryView({
     );
   }
 
-  // ── State 1: No plan yet ─────────────────────────────────
+  // ── State 1a: Plan generation failed ─────────────────────
+  const generationStatus = planSummary?.generationStatus;
+  const isFailed = typeof generationStatus === 'object' && generationStatus !== null && 'failed' in generationStatus;
+  if (isFailed) {
+    return (
+      <Flex
+        direction="column"
+        align="center"
+        justify="center"
+        h="100%"
+        gap="5"
+        p="8"
+        data-testid="plan-failed-state"
+      >
+        <Text fontSize="5xl">😵</Text>
+        <Heading size="lg" color="red.600" textAlign="center">
+          Plan generation failed
+        </Heading>
+        <Text color="gray.500" textAlign="center" maxW="400px">
+          {(generationStatus as { failed: string }).failed}
+        </Text>
+        <Button
+          size="lg"
+          bg="purple.600"
+          color="white"
+          fontWeight="600"
+          borderRadius="lg"
+          _hover={{ bg: 'purple.700' }}
+          onClick={handleGenerate}
+          data-testid="retry-generate-plan-button"
+        >
+          🔄 Try Again
+        </Button>
+      </Flex>
+    );
+  }
+
+  // ── State 1b: No plan yet ────────────────────────────────
   if (!planSummary) {
     return (
       <Flex
@@ -91,9 +125,7 @@ export function PlanSummaryView({
           No plan yet
         </Heading>
         <Text color="gray.500" textAlign="center" maxW="400px">
-          {isNewConfig
-            ? 'Save your configuration first, then generate a plan to see a simple summary of how your pipeline will work.'
-            : 'Generate a plan to see a simple summary of how your pipeline will work. Our AI will analyse your data source and build the best flow for you.'}
+          Generate a plan to see a simple summary of how your pipeline will work. Our AI will analyse your data source and build the best flow for you.
         </Text>
         <Button
           size="lg"
@@ -103,7 +135,6 @@ export function PlanSummaryView({
           borderRadius="lg"
           _hover={{ bg: 'purple.700' }}
           onClick={handleGenerate}
-          disabled={isNewConfig}
           data-testid="generate-plan-button"
         >
           ✨ Generate Plan

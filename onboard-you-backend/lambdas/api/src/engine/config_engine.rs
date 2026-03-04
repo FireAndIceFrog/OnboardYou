@@ -40,6 +40,13 @@ pub async fn upsert(
     config.customer_company_id = customer_company_id.to_string();
     config.last_edited = chrono::Utc::now().to_rfc3339();
 
+    // Preserve existing plan_summary if the request didn't supply one
+    if config.plan_summary.is_none() {
+        if let Ok(Some(existing)) = deps.config_repo.get(organization_id, customer_company_id).await {
+            config.plan_summary = existing.plan_summary;
+        }
+    }
+
     validate(&config)?;
 
     deps.config_repo.put(&config).await?;

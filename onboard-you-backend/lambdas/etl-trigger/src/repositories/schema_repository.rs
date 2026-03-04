@@ -5,6 +5,7 @@ use gh_models::types::ChatMessage;
 use lambda_runtime::Error;
 use std::collections::HashMap;
 use std::sync::Arc;
+use tokio::time::{sleep, Duration};
 
 use crate::dependancies::Dependancies;
 use onboard_you_models::{
@@ -70,6 +71,20 @@ impl ISchemaRepo for SchemaRepository {
         schema_diff: &str,
         egress_schema: &HashMap<String, String>,
     ) -> Result<(PlanSummary, Manifest), Error> {
+        if egress_schema.is_empty() {
+            tracing::warn!(
+                source_system,
+                "Egress schema is empty — preview 'after' fields will be unconstrained"
+            );
+        } else {
+            tracing::info!(
+                source_system,
+                egress_field_count = egress_schema.len(),
+                egress_fields = ?egress_schema.keys().collect::<Vec<_>>(),
+                "Egress schema fields for plan generation"
+            );
+        }
+
         let prompt = PlanPrompt {
             source_system,
             final_columns,
@@ -107,11 +122,26 @@ impl ISchemaRepo for SchemaRepository {
         for attempt in 1..=MAX_ATTEMPTS {
             tracing::info!(attempt, max = MAX_ATTEMPTS, "Plan generation attempt");
 
-            // Call LLM
-            let content = deps
+            // Call LLM — retry on transient API errors instead of failing immediately
+            let content = match deps
                 .llm_repo
                 .chat_completion(AI_MODEL, &conversation, 0.7, 4096, 1.0)
-                .await?;
+                .await
+            {
+                Ok(c) => c,
+                Err(api_err) => {
+                    last_error = format!("API error: {api_err}");
+                    tracing::warn!(
+                        attempt,
+                        error = %api_err,
+                        "LLM API call failed — will retry"
+                    );
+                    // Exponential backoff: 2s, 4s, 8s, 16s …
+                    let backoff = Duration::from_secs(2u64.pow(attempt as u32));
+                    sleep(backoff).await;
+                    continue;
+                }
+            };
 
             tracing::info!(
                 attempt,
@@ -318,16 +348,32 @@ fn validate_plan(
         }
     }
 
-    // 5. Egress schema fields must be accounted for in the api_dispatcher config
+    // 5. Preview "after" keys must be ONLY egress schema destination fields (the keys)
+    if !egress_schema.is_empty() {
+        let egress_destination_fields: std::collections::HashSet<&str> =
+            egress_schema.keys().map(|k| k.as_str()).collect();
+        for key in summary.preview.after.keys() {
+            if !egress_destination_fields.contains(key.as_str()) {
+                errors.push(format!(
+                    "Preview 'after' contains field '{}' which is not a destination field in the EGRESS SCHEMA. \
+                     Only these destination fields are allowed: [{}]",
+                    key,
+                    egress_destination_fields.iter().copied().collect::<Vec<_>>().join(", "),
+                ));
+            }
+        }
+    }
+
+    // 6. Egress schema fields must be accounted for in the api_dispatcher config
     if !egress_schema.is_empty() {
         if let Some(egress_action) = manifest.actions.iter().find(|a| a.action_type == ActionType::ApiDispatcher) {
             if let ActionConfigPayload::ApiDispatcher(cfg) = &egress_action.config {
                 let dispatcher_schema = cfg.get_schema();
-                for (src, target) in egress_schema {
-                    if !dispatcher_schema.values().any(|v| v == target) && !dispatcher_schema.keys().any(|k| k == src) {
+                for (field_name, _field_type) in egress_schema {
+                    if !dispatcher_schema.contains_key(field_name) {
                         errors.push(format!(
-                            "Egress schema field '{src}' → '{target}' is not accounted for in the api_dispatcher schema. \
-                             The api_dispatcher must map all destination fields from the egress schema."
+                            "Egress schema field '{field_name}' is not accounted for in the api_dispatcher schema. \
+                             The api_dispatcher must include all destination fields from the egress schema."
                         ));
                     }
                 }

@@ -105,6 +105,10 @@ fn run_validation(
 }
 
 /// Format schema diff as a human-readable string for the AI prompt.
+///
+/// The egress schema has field names as keys and types as values
+/// (e.g. {"employee_id": "string"}). The diff compares pipeline columns
+/// against the egress field names (keys).
 fn format_schema_diff(
     final_columns: &[String],
     egress_schema: &HashMap<String, String>,
@@ -112,10 +116,10 @@ fn format_schema_diff(
     let mut lines = Vec::new();
 
     for col in final_columns {
-        if let Some(target) = egress_schema.get(col) {
-            lines.push(format!("  MAPPED: {col} → {target}"));
+        if egress_schema.contains_key(col.as_str()) {
+            lines.push(format!("  MAPPED: {col} → {col}"));
         } else {
-            lines.push(format!("  UNMAPPED SOURCE: {col} (no destination mapping)"));
+            lines.push(format!("  UNMAPPED SOURCE: {col} (no matching destination field)"));
         }
     }
 
@@ -139,15 +143,16 @@ mod tests {
     #[test]
     fn test_format_schema_diff() {
         let columns = vec!["name".into(), "email".into(), "extra".into()];
+        // Schema keys are destination field names, values are types
         let egress: HashMap<String, String> = [
-            ("name".into(), "fullName".into()),
-            ("missing".into(), "missingTarget".into()),
+            ("name".into(), "string".into()),
+            ("missing".into(), "string".into()),
         ]
         .into_iter()
         .collect();
 
         let diff = format_schema_diff(&columns, &egress);
-        assert!(diff.contains("MAPPED: name → fullName"));
+        assert!(diff.contains("MAPPED: name → name"));
         assert!(diff.contains("UNMAPPED SOURCE: email"));
         assert!(diff.contains("UNMAPPED SOURCE: extra"));
         assert!(diff.contains("UNMAPPED TARGET: missing"));

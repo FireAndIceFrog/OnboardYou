@@ -12,7 +12,9 @@
 use std::sync::Arc;
 
 use lambda_runtime::Error;
-use onboard_you_models::{ActionType, DynamicEgressModel};
+use onboard_you_models::{
+    ActionType, DynamicEgressModel, PlanPreview, PlanSummary, SchemaGenerationStatus,
+};
 
 use crate::dependancies::Dependancies;
 
@@ -25,7 +27,52 @@ fn source_system_from_pipeline(pipeline: &onboard_you_models::Manifest) -> &'sta
 }
 
 /// Run plan generation for the given organization + customer company.
+///
+/// On success, writes the plan summary + manifest to DynamoDB.
+/// On failure, writes `SchemaGenerationStatus::Failed(reason)` so the
+/// frontend can show the error instead of timing out.
 pub async fn run(
+    deps: Arc<Dependancies>,
+    organization_id: &str,
+    customer_company_id: &str,
+) -> Result<(), Error> {
+    match run_inner(deps.clone(), organization_id, customer_company_id).await {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            tracing::error!(
+                %organization_id,
+                %customer_company_id,
+                error = %e,
+                "Plan generation failed — persisting Failed status"
+            );
+            // Best-effort: write Failed status so the frontend stops polling
+            if let Ok(mut config) = deps.config_repo.get(organization_id, customer_company_id).await {
+                config.plan_summary = Some(PlanSummary {
+                    headline: String::new(),
+                    description: String::new(),
+                    features: vec![],
+                    preview: PlanPreview {
+                        source_label: String::new(),
+                        target_label: String::new(),
+                        before: Default::default(),
+                        after: Default::default(),
+                    },
+                    generation_status: SchemaGenerationStatus::Failed(e.to_string()),
+                });
+                if let Err(put_err) = deps.config_repo.put(&config).await {
+                    tracing::error!(
+                        error = %put_err,
+                        "Failed to persist Failed status to DynamoDB"
+                    );
+                }
+            }
+            Err(e)
+        }
+    }
+}
+
+/// Inner implementation — all errors propagate via `?` and are caught by `run()`.
+async fn run_inner(
     deps: Arc<Dependancies>,
     organization_id: &str,
     customer_company_id: &str,

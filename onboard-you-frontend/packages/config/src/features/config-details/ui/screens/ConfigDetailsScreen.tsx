@@ -189,12 +189,33 @@ function ConfigDetailsContent({
     dispatch(setViewMode('advanced'));
   }, [dispatch]);
 
-  const handleGeneratePlan = useCallback(() => {
+  const handleGeneratePlan = useCallback(async () => {
     if (!config) return;
-    const realId = config.customerCompanyId || customerCompanyId;
-    if (!realId || realId === 'new') return;
-    dispatch(generatePlanThunk({ customerCompanyId: realId }));
-  }, [config, customerCompanyId, dispatch]);
+    try {
+      let realId: string;
+      if (isNewConfig) {
+        const newId = config.name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '')
+          || 'new-config';
+        const result = await dispatch(
+          createConfigThunk({ customerCompanyId: newId, data: config }),
+        ).unwrap();
+        realId = result.customerCompanyId;
+        showNotification(t('configDetails.createSuccess'), 'success');
+        navigate(`/config/${realId}`, { replace: true });
+      } else {
+        realId = config.customerCompanyId || customerCompanyId;
+        await dispatch(
+          saveConfigThunk({ customerCompanyId: realId, data: config }),
+        ).unwrap();
+      }
+      dispatch(generatePlanThunk({ customerCompanyId: realId }));
+    } catch {
+      // Save/create failed — error already in Redux state, don't generate
+    }
+  }, [config, isNewConfig, customerCompanyId, dispatch, navigate, showNotification, t]);
 
   const handleBack = useCallback(() => {
     navigate(-1);
@@ -322,7 +343,6 @@ function ConfigDetailsContent({
               isSaving={isSaving}
               isGenerating={isGeneratingPlan}
               isStale={planStale}
-              isNewConfig={isNewConfig}
               onToggleFeature={handleToggleFeature}
               onApplyPlan={handleApplyPlan}
               onMakeChanges={handleMakeChanges}

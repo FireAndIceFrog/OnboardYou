@@ -157,7 +157,7 @@ RULES:
 5. Each action has "disabled": false by default.
 6. The "config" object for each action MUST conform to the schema above.
 7. Generate a summary with toggleable features, each referencing the action IDs it controls.
-8. Generate a synthetic preview with realistic sample data.
+8. Generate a synthetic preview where "before" keys are ONLY column names from PIPELINE COLUMNS and "after" keys are ONLY the field names (the keys) from the EGRESS SCHEMA. The EGRESS SCHEMA format is {{"field_name": "type"}} — use the KEYS as destination field names. Use realistic sample values for each field. Do NOT invent field names that are not in PIPELINE COLUMNS or EGRESS SCHEMA.
 9. Return ONLY valid JSON matching the response schema below. No markdown, no explanation.
 
 RESPONSE SCHEMA:
@@ -183,8 +183,8 @@ RESPONSE SCHEMA:
     "preview": {{
       "sourceLabel": "string",
       "targetLabel": "string",
-      "before": {{ "field": "value" }},
-      "after": {{ "field": "value" }}
+      "before": {{ "<PIPELINE_COLUMN>": "<sample_value>", ... }},
+      "after": {{ "<EGRESS_SCHEMA_DESTINATION_FIELD>": "<sample_value>", ... }}
     }}
   }}
 }}"#,

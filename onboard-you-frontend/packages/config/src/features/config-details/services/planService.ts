@@ -37,8 +37,11 @@ export async function pollForPlanCompletion(
     });
 
     const status = config.planSummary?.generationStatus;
-    if (status === 'completed' || (typeof status === 'object' && status !== null && 'failed' in status)) {
+    if (status === 'completed') {
       return config;
+    }
+    if (typeof status === 'object' && status !== null && 'failed' in status) {
+      throw new Error((status as { failed: string }).failed);
     }
 
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
