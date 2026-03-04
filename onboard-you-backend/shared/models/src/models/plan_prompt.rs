@@ -177,12 +177,12 @@ RESPONSE SCHEMA:
         "icon": "string (calendar|users|shield|filter|columns|globe|phone|lock|edit|zap)",
         "label": "string",
         "description": "string",
-        "action_ids": ["string"]
+        "actionIds": ["string"]
       }}
     ],
     "preview": {{
-      "source_label": "string",
-      "target_label": "string",
+      "sourceLabel": "string",
+      "targetLabel": "string",
       "before": {{ "field": "value" }},
       "after": {{ "field": "value" }}
     }}

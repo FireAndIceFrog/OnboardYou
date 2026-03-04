@@ -72,18 +72,28 @@ impl ISchemaRepo for SchemaRepository {
             schema_diff,
             egress_schema,
         };
+        tracing::info!("Building LLM prompt");
         let messages = prompt.generate_prompt();
+        tracing::info!(
+            system_prompt_len = messages.system.len(),
+            user_prompt_len = messages.user.len(),
+            "Prompt built — calling LLM"
+        );
 
         match call_ai_and_parse(&deps.llm_repo, &messages).await {
             Ok(plan) => {
-                tracing::info!("AI plan generation succeeded");
+                tracing::info!(
+                    headline = %plan.headline,
+                    feature_count = plan.features.len(),
+                    "LLM plan generation succeeded"
+                );
                 PlanSummary {
                     generation_status: SchemaGenerationStatus::Completed,
                     ..plan
                 }
             }
             Err(e) => {
-                tracing::error!(error = %e, "AI plan generation failed — using fallback");
+                tracing::error!(error = %e, "LLM plan generation failed — using fallback");
                 generate_fallback_plan(source_system, final_columns, egress_schema)
             }
         }
@@ -108,11 +118,13 @@ async fn call_ai_and_parse(
         },
     ];
 
+    tracing::info!(model = AI_MODEL, "Sending chat completion request to LLM");
     let content = llm_repo
         .chat_completion(AI_MODEL, &chat_messages, 0.7, 4096, 1.0)
         .await?;
 
-    tracing::info!(response_len = content.len(), "AI response received");
+    tracing::info!(response_len = content.len(), "LLM response received");
+    tracing::info!(llm_output = %content, "Raw LLM output");
 
     // Strip markdown code fences if present
     let json_str = content
@@ -123,11 +135,14 @@ async fn call_ai_and_parse(
         .unwrap_or(content.trim());
 
     // Parse the AI response
+    tracing::info!("Parsing LLM response as JSON");
     let parsed: serde_json::Value = serde_json::from_str(json_str).map_err(|e| {
+        tracing::error!(error = %e, json_snippet = &json_str[..json_str.len().min(500)], "JSON parse failed");
         Error::from(format!(
             "Failed to parse AI response as JSON: {e}\nResponse: {json_str}"
         ))
     })?;
+    tracing::info!("LLM response parsed successfully");
 
     // Extract summary section
     let summary = parsed
@@ -145,12 +160,20 @@ async fn call_ai_and_parse(
 
     let features: Vec<PlanFeature> = summary
         .get("features")
-        .and_then(|f| serde_json::from_value(f.clone()).ok())
+        .and_then(|f| {
+            serde_json::from_value(f.clone())
+                .map_err(|e| tracing::warn!(error = %e, "Failed to parse features — using empty list"))
+                .ok()
+        })
         .unwrap_or_default();
 
     let preview: PlanPreview = summary
         .get("preview")
-        .and_then(|p| serde_json::from_value(p.clone()).ok())
+        .and_then(|p| {
+            serde_json::from_value(p.clone())
+                .map_err(|e| tracing::warn!(error = %e, "Failed to parse preview — using defaults"))
+                .ok()
+        })
         .unwrap_or_else(|| PlanPreview {
             source_label: "Source".into(),
             target_label: "Destination".into(),
@@ -161,9 +184,15 @@ async fn call_ai_and_parse(
     Ok(PlanSummary {
         headline,
         description,
-        features,
+        features: features.clone(),
         preview,
         generation_status: SchemaGenerationStatus::Completed,
+    })
+    .inspect(|_| {
+        tracing::info!(
+            feature_count = features.len(),
+            "PlanSummary serialization complete"
+        );
     })
 }
 

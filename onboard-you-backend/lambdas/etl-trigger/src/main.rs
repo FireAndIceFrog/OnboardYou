@@ -1,6 +1,10 @@
 //! ETL Trigger Lambda
 //!
-//! Bootstrap only. Read engine/pipeline_engine.rs for what the pipeline does.
+//! Handles two invocation paths:
+//! - **EventBridge Scheduler** → direct invocation with `ScheduledEvent` JSON
+//! - **SQS** → `{ "Records": [{ "body": "<ScheduledEvent JSON>" }] }`
+//!
+//! Read engine/pipeline_engine.rs for what the pipeline does.
 
 mod dependancies;
 mod engine;
@@ -23,49 +27,57 @@ async fn main() -> Result<(), Error> {
     let env = dependancies::Env::from_env();
     let deps = Arc::new(dependancies::Dependancies::new(env.clone()).await);
 
-    lambda_runtime::run(service_fn(|event: LambdaEvent<ScheduledEvent>| {
+    lambda_runtime::run(service_fn(|event: LambdaEvent<serde_json::Value>| {
         let deps = deps.clone();
         async move {
+            tracing::info!(payload = %event.payload, "Lambda invoked");
 
-            match event.payload {
-                ScheduledEvent::Etl(payload) => {
-                    tracing::info!("Received ETL event: {:?}", payload);
-                    match engine::pipeline_engine::run(
-                        deps,
-                        &payload.organization_id,
-                        &payload.customer_company_id,
-                    )
-                    .await {
-                        Ok(result) => {
-                            tracing::info!("Pipeline executed successfully: {:?}", result);
-                            Ok::<(), Error>(())
+            let events = models::parse_events(event.payload)?;
+
+            for scheduled in events {
+                match scheduled {
+                    ScheduledEvent::Etl(payload) => {
+                        tracing::info!(?payload, "Received ETL event");
+                        match engine::pipeline_engine::run(
+                            deps.clone(),
+                            &payload.organization_id,
+                            &payload.customer_company_id,
+                        )
+                        .await {
+                            Ok(result) => {
+                                tracing::info!("Pipeline executed successfully: {:?}", result);
+                            }
+                            Err(e) => {
+                                tracing::error!("Pipeline execution failed: {e}");
+                            }
                         }
-                        Err(e) => {
-                            tracing::error!("Pipeline execution failed: {e}");
-                            Ok::<(), Error>(())
+                    },
+                    ScheduledEvent::GeneratePlan(payload) => {
+                        tracing::info!(
+                            organization_id = %payload.organization_id,
+                            customer_company_id = %payload.customer_company_id,
+                            source_system = %payload.source_system,
+                            "Starting plan generation"
+                        );
+                        match engine::plan_generation_engine::run(
+                            deps.clone(),
+                            &payload.organization_id,
+                            &payload.customer_company_id,
+                            &payload.source_system,
+                        )
+                        .await {
+                            Ok(()) => {
+                                tracing::info!("Plan generation completed successfully");
+                            }
+                            Err(e) => {
+                                tracing::error!(error = %e, "Plan generation failed");
+                            }
                         }
-                    }
-                },
-                ScheduledEvent::GeneratePlan(payload) => {
-                    tracing::info!("Received plan generation event: {:?}", payload);
-                    match engine::plan_generation_engine::run(
-                        deps,
-                        &payload.organization_id,
-                        &payload.customer_company_id,
-                        &payload.source_system,
-                    )
-                    .await {
-                        Ok(()) => {
-                            tracing::info!("Plan generation completed successfully");
-                            Ok::<(), Error>(())
-                        }
-                        Err(e) => {
-                            tracing::error!("Plan generation failed: {e}");
-                            Ok::<(), Error>(())
-                        }
-                    }
-                },
+                    },
+                }
             }
+
+            Ok::<(), Error>(())
         }
     }))
     .await

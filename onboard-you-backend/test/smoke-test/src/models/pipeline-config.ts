@@ -37,6 +37,26 @@ export interface Manifest {
   actions: ActionConfig[];
 }
 
+/** AI-generated plan summary. */
+export interface PlanSummary {
+  headline: string;
+  description: string;
+  generationStatus: 'notStarted' | 'completed' | 'failed' | 'inProgress';
+  features: {
+    id: string;
+    icon: string;
+    label: string;
+    description: string;
+    actionIds: string[];
+  }[];
+  preview: {
+    sourceLabel: string;
+    targetLabel: string;
+    before: Record<string, string>;
+    after: Record<string, string>;
+  };
+}
+
 /** The pipeline config as stored in DynamoDB and exchanged via the API. */
 export interface PipelineConfig {
   /** Name of the pipeline. */
@@ -53,4 +73,6 @@ export interface PipelineConfig {
   lastEdited?: string;
   /** The full ETL pipeline manifest. */
   pipeline: Manifest;
+  /** AI-generated plan summary (set by plan generation). */
+  planSummary?: PlanSummary;
 }
