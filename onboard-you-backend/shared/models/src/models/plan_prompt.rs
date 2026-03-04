@@ -219,7 +219,8 @@ Return the JSON plan."#,
             egress = if self.egress_schema.is_empty() {
                 "(not yet configured — generate reasonable defaults)".to_string()
             } else {
-                serde_json::to_string_pretty(self.egress_schema).unwrap_or_default()
+                let sorted: std::collections::BTreeMap<_, _> = self.egress_schema.iter().collect();
+                serde_json::to_string_pretty(&sorted).unwrap_or_default()
             },
             schema_diff = if self.schema_diff.is_empty() {
                 "(no diff available)"
@@ -343,12 +344,13 @@ mod tests {
 
     #[test]
     fn snapshot_user_prompt() {
-        let egress: HashMap<String, String> = [
-            ("name".into(), "fullName".into()),
-            ("email".into(), "workEmail".into()),
-        ]
-        .into_iter()
-        .collect();
+        let egress: HashMap<String, String> =
+            std::collections::BTreeMap::from([
+                ("email".into(), "workEmail".into()),
+                ("name".into(), "fullName".into()),
+            ])
+            .into_iter()
+            .collect();
 
         let prompt = PlanPrompt {
             source_system: "Workday",

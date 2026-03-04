@@ -11,11 +11,10 @@ import type { PipelineConfig, GeneratePlanResponse } from '@/generated/api';
  */
 export async function triggerPlanGeneration(
   customerCompanyId: string,
-  sourceSystem: string,
 ): Promise<GeneratePlanResponse> {
   const { data } = await generatePlanApi({
     path: { customer_company_id: customerCompanyId },
-    body: { sourceSystem },
+    body: {},
     throwOnError: true,
   });
   return data;

@@ -193,9 +193,7 @@ function ConfigDetailsContent({
     if (!config) return;
     const realId = config.customerCompanyId || customerCompanyId;
     if (!realId || realId === 'new') return;
-    const firstAction = config.pipeline.actions[0]?.action_type;
-    const sourceSystem = firstAction === 'workday_hris_connector' ? 'Workday' : 'CSV';
-    dispatch(generatePlanThunk({ customerCompanyId: realId, sourceSystem }));
+    dispatch(generatePlanThunk({ customerCompanyId: realId }));
   }, [config, customerCompanyId, dispatch]);
 
   const handleBack = useCallback(() => {

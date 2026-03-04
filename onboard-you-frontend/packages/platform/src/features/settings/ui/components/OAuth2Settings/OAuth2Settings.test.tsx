@@ -3,6 +3,7 @@ import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/shared/test/testWrapper';
 import { OAuth2Settings } from './OAuth2Settings';
 import { DEFAULT_EGRESS_SETTINGS } from '../../../domain/types';
+import { LoadingStatus } from '../../../state/settingsSlice';
 
 describe('OAuth2Settings', () => {
   it('renders fields for oauth2 configuration', () => {
@@ -14,9 +15,11 @@ describe('OAuth2Settings', () => {
         },
         saved: false,
         dirty: false,
-        isLoading: false,
+        loadingStatus: LoadingStatus.Idle,
         isSaving: false,
         error: null,
+        showAdvanced: false,
+        wizardStep: 0,
       },
     };
 

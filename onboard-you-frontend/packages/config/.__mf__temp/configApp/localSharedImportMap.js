@@ -9,11 +9,6 @@
             return pkg;
         }
       ,
-        "@emotion/react": async () => {
-          let pkg = await import("__mf__virtual/configApp__prebuild___mf_0_emotion_mf_1_react__prebuild__.js");
-            return pkg;
-        }
-      ,
         "@reduxjs/toolkit": async () => {
           let pkg = await import("__mf__virtual/configApp__prebuild___mf_0_reduxjs_mf_1_toolkit__prebuild__.js");
             return pkg;
@@ -78,36 +73,6 @@
             shareConfig: {
               singleton: true,
               requiredVersion: "^3.33.0",
-              
-            }
-          }
-        ,
-          "@emotion/react": {
-            name: "@emotion/react",
-            version: "11.14.0",
-            scope: ["default"],
-            loaded: false,
-            from: "configApp",
-            async get () {
-              if (false) {
-                throw new Error(`Shared module '${"@emotion/react"}' must be provided by host`);
-              }
-              usedShared["@emotion/react"].loaded = true
-              const {"@emotion/react": pkgDynamicImport} = importMap
-              const res = await pkgDynamicImport()
-              const exportModule = {...res}
-              // All npm packages pre-built by vite will be converted to esm
-              Object.defineProperty(exportModule, "__esModule", {
-                value: true,
-                enumerable: false
-              })
-              return function () {
-                return exportModule
-              }
-            },
-            shareConfig: {
-              singleton: true,
-              requiredVersion: "^11.14.0",
               
             }
           }

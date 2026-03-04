@@ -56,14 +56,12 @@ async fn main() -> Result<(), Error> {
                         tracing::info!(
                             organization_id = %payload.organization_id,
                             customer_company_id = %payload.customer_company_id,
-                            source_system = %payload.source_system,
                             "Starting plan generation"
                         );
                         match engine::plan_generation_engine::run(
                             deps.clone(),
                             &payload.organization_id,
                             &payload.customer_company_id,
-                            &payload.source_system,
                         )
                         .await {
                             Ok(()) => {

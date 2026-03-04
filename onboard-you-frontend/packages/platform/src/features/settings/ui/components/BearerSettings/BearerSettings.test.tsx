@@ -3,6 +3,7 @@ import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/shared/test/testWrapper';
 import { BearerSettings } from './BearerSettings';
 import { DEFAULT_EGRESS_SETTINGS } from '../../../domain/types';
+import { LoadingStatus } from '../../../state/settingsSlice';
 
 describe('BearerSettings', () => {
   it('renders fields for bearer configuration', () => {
@@ -11,9 +12,11 @@ describe('BearerSettings', () => {
         settings: DEFAULT_EGRESS_SETTINGS,
         saved: false,
         dirty: false,
-        isLoading: false,
+        loadingStatus: LoadingStatus.Idle,
         isSaving: false,
         error: null,
+        showAdvanced: false,
+        wizardStep: 0,
       },
     };
 

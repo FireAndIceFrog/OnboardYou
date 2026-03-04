@@ -70,7 +70,7 @@ describe('POST /config/{id}/generate-plan', () => {
   it('triggers plan generation and returns 202', async () => {
     const { status, body } = await client.post<{ status: string }>(
       `/config/${companyId}/generate-plan`,
-      { sourceSystem: 'Workday' },
+      {},
     );
 
     expect(status).toBe(202);
@@ -80,7 +80,7 @@ describe('POST /config/{id}/generate-plan', () => {
   it('is idempotent while in progress', async () => {
     const { status, body } = await client.post<{ status: string }>(
       `/config/${companyId}/generate-plan`,
-      { sourceSystem: 'Workday' },
+      {},
     );
 
     // Should return 202 without queuing a second job

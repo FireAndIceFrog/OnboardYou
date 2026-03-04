@@ -28,8 +28,6 @@ pub struct ScheduledEtlEvent {
 pub struct GeneratePlanEvent {
     pub organization_id: String,
     pub customer_company_id: String,
-    /// Source system name — "Workday" or "CSV"
-    pub source_system: String,
 }
 
 
@@ -48,7 +46,6 @@ mod tests {
             ScheduledEvent::GeneratePlan(GeneratePlanEvent {
                 organization_id: "org123".to_string(),
                 customer_company_id: "comp456".to_string(),
-                source_system: "Workday".to_string(),
             }),
         ];
 
@@ -71,11 +68,9 @@ mod tests {
         let event = GeneratePlanEvent {
             organization_id: "org-1".into(),
             customer_company_id: "comp-1".into(),
-            source_system: "CSV".into(),
         };
         let json = serde_json::to_string(&event).unwrap();
         let back: GeneratePlanEvent = serde_json::from_str(&json).unwrap();
         assert_eq!(back.organization_id, "org-1");
-        assert_eq!(back.source_system, "CSV");
     }
 }

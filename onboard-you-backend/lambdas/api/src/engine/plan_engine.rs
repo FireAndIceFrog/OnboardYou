@@ -19,7 +19,6 @@ pub async fn generate_plan(
     deps: &Dependancies,
     organization_id: &str,
     customer_company_id: &str,
-    source_system: &str,
 ) -> Result<(), ApiError> {
     // 1. Fetch the current config
     let mut config = deps
@@ -61,7 +60,6 @@ pub async fn generate_plan(
     let event = ScheduledEvent::GeneratePlan(GeneratePlanEvent {
         organization_id: organization_id.to_string(),
         customer_company_id: customer_company_id.to_string(),
-        source_system: source_system.to_string(),
     });
 
     let message_body = serde_json::to_string(&event)
@@ -91,20 +89,17 @@ mod tests {
         let event = ScheduledEvent::GeneratePlan(GeneratePlanEvent {
             organization_id: "org-1".into(),
             customer_company_id: "comp-1".into(),
-            source_system: "Workday".into(),
         });
 
         let json = serde_json::to_string(&event).unwrap();
         assert!(json.contains("GeneratePlanEvent"));
         assert!(json.contains("org-1"));
-        assert!(json.contains("Workday"));
 
         // Can deserialize back
         let back: ScheduledEvent = serde_json::from_str(&json).unwrap();
         match back {
             ScheduledEvent::GeneratePlan(e) => {
                 assert_eq!(e.organization_id, "org-1");
-                assert_eq!(e.source_system, "Workday");
             }
             _ => panic!("wrong variant"),
         }

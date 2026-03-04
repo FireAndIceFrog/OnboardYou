@@ -4,12 +4,13 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 /// Request body for `POST /config/{id}/generate-plan`.
+///
+/// Currently empty — source system is derived from the pipeline's ingress
+/// connector. Kept as a struct so future fields can be added without a
+/// breaking API change.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct GeneratePlanRequest {
-    /// Source system name — "Workday" or "CSV"
-    pub source_system: String,
-}
+pub struct GeneratePlanRequest {}
 
 /// Response body for `POST /config/{id}/generate-plan` (202 Accepted).
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]

@@ -217,7 +217,7 @@ pub async fn validate_config(
     ),
     request_body(
         content = GeneratePlanRequest,
-        description = "Source system information for plan generation",
+        description = "Optional request body (currently empty — source system is derived from the pipeline)",
     ),
     responses(
         (status = 202, description = "Plan generation started", body = GeneratePlanResponse),
@@ -230,13 +230,12 @@ pub async fn generate_plan(
     State(state): State<Dependancies>,
     claims: Claims,
     Path(customer_company_id): Path<String>,
-    Json(body): Json<GeneratePlanRequest>,
+    Json(_body): Json<GeneratePlanRequest>,
 ) -> Result<impl IntoResponse, ApiError> {
     engine::plan_engine::generate_plan(
         &state,
         &claims.organization_id,
         &customer_company_id,
-        &body.source_system,
     )
     .await?;
 

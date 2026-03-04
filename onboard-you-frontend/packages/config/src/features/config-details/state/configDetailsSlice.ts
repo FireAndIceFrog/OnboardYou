@@ -164,13 +164,13 @@ export const validateConfigThunk = createAsyncThunk<
  */
 export const generatePlanThunk = createAsyncThunk<
   PipelineConfig,
-  { customerCompanyId: string; sourceSystem: string },
+  { customerCompanyId: string },
   { extra: ThunkExtra }
 >(
   'configDetails/generatePlan',
-  async ({ customerCompanyId, sourceSystem }, { rejectWithValue }) => {
+  async ({ customerCompanyId }, { rejectWithValue }) => {
     try {
-      await triggerPlanGeneration(customerCompanyId, sourceSystem);
+      await triggerPlanGeneration(customerCompanyId);
       const config = await pollForPlanCompletion(customerCompanyId);
       return config;
     } catch (err) {

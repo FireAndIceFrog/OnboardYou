@@ -2,30 +2,37 @@
 //!
 //! Delegates all work to repositories:
 //! 1. Fetch the `PipelineConfig` via `IConfigRepo`
-//! 2. Validate the pipeline via `IValidationRepo`
-//! 3. Resolve egress schema (from pipeline or org settings)
-//! 4. Generate plan summary + manifest via `ISchemaRepo` (which internally calls the LLM)
-//! 5. Merge AI-generated manifest actions into the pipeline
-//! 6. Write back to DynamoDB
+//! 2. Derive source system from the pipeline's ingress connector
+//! 3. Validate the pipeline via `IValidationRepo`
+//! 4. Resolve egress schema (from pipeline or org settings)
+//! 5. Generate plan summary + manifest via `ISchemaRepo` (which internally calls the LLM)
+//! 6. Merge AI-generated manifest actions into the pipeline
+//! 7. Write back to DynamoDB
 
 use std::sync::Arc;
 
 use lambda_runtime::Error;
-use onboard_you_models::DynamicEgressModel;
+use onboard_you_models::{ActionType, DynamicEgressModel};
 
 use crate::dependancies::Dependancies;
+
+/// Derive the source system label from the pipeline's first (ingress) action.
+fn source_system_from_pipeline(pipeline: &onboard_you_models::Manifest) -> &'static str {
+    match pipeline.actions.first().map(|a| &a.action_type) {
+        Some(ActionType::WorkdayHrisConnector) => "Workday",
+        _ => "CSV",
+    }
+}
 
 /// Run plan generation for the given organization + customer company.
 pub async fn run(
     deps: Arc<Dependancies>,
     organization_id: &str,
     customer_company_id: &str,
-    source_system: &str,
 ) -> Result<(), Error> {
     tracing::info!(
         %organization_id,
         %customer_company_id,
-        %source_system,
         "Plan generation started"
     );
 
@@ -37,7 +44,11 @@ pub async fn run(
         .await?;
     tracing::info!("Pipeline config fetched successfully");
 
-    // 2. Run validation + schema diff for context
+    // 2. Derive source system from the ingress connector
+    let source_system = source_system_from_pipeline(&config.pipeline);
+    tracing::info!(%source_system, "Source system derived from pipeline");
+
+    // 3. Run validation + schema diff for context
     tracing::info!("Running pipeline validation");
     let validation = deps.validation_repo.validate(&config.pipeline);
     tracing::info!(
@@ -46,7 +57,7 @@ pub async fn run(
         "Validation complete"
     );
 
-    // 3. Extract egress schema info — prefer pipeline actions, fall back to org settings
+    // 4. Extract egress schema info — prefer pipeline actions, fall back to org settings
     let mut egress_schema = deps.schema_repo.extract_egress_schema(&config.pipeline);
     if egress_schema.is_empty() {
         tracing::info!("No ApiDispatcher in pipeline — checking org settings for egress schema");
@@ -74,7 +85,7 @@ pub async fn run(
         "Egress schema resolved"
     );
 
-    // 4. Generate plan summary + manifest (calls AI internally)
+    // 5. Generate plan summary + manifest (calls AI internally)
     tracing::info!("Starting LLM plan generation");
     let (plan_summary, manifest) = deps
         .schema_repo
@@ -93,14 +104,14 @@ pub async fn run(
         "Plan summary + manifest generated"
     );
 
-    // 5. Replace pipeline actions with the AI-generated manifest
+    // 6. Replace pipeline actions with the AI-generated manifest
     tracing::info!(
         action_count = manifest.actions.len(),
         "Replacing pipeline actions with AI-generated manifest"
     );
     config.pipeline = manifest;
 
-    // 6. Write back to DynamoDB
+    // 7. Write back to DynamoDB
     tracing::info!("Writing plan summary to DynamoDB");
     config.plan_summary = Some(plan_summary);
     deps.config_repo.put(&config).await?;
