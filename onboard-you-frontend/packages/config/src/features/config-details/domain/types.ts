@@ -22,6 +22,8 @@ export interface ConfigDetailsState {
   isGeneratingPlan: boolean;
   /** Normal = plan summary UI, Advanced = React Flow editor */
   viewMode: ViewMode;
+  /** Whether the plan is out of sync with the advanced config */
+  planStale: boolean;
 }
 
 /* ── Connection wizard types ─────────────────────────────── */

@@ -28,6 +28,7 @@ export {
   selectPlanSummary,
   selectIsGeneratingPlan,
   selectViewMode,
+  selectPlanStale,
 } from './configDetailsSlice';
 export { default as configDetailsReducer } from './configDetailsSlice';
 export { useConnectionForm } from './useConnectionForm';

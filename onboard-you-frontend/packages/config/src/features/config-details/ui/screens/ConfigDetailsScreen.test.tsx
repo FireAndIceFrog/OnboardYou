@@ -29,6 +29,7 @@ function makeState(overrides: Partial<ConfigDetailsState> = {}) {
       planSummary: null,
       isGeneratingPlan: false,
       viewMode: 'advanced',
+      planStale: false,
       ...overrides,
     } as ConfigDetailsState,
   };

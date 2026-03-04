@@ -50,7 +50,8 @@ const initialState: ConfigDetailsState = {
   validationResult: null,
   planSummary: null,
   isGeneratingPlan: false,
-  viewMode: 'advanced',
+  viewMode: 'normal',
+  planStale: false,
 };
 
 /* ── Async thunks ──────────────────────────────────────────── */
@@ -250,6 +251,9 @@ const configDetailsSlice = createSlice({
         state.config.pipeline.actions.push(actionCfg);
       }
 
+      // Plan is now out of sync
+      if (state.planSummary) state.planStale = true;
+
       const newNode: Node = {
         id: actionCfg.id,
         type: category,
@@ -325,6 +329,9 @@ const configDetailsSlice = createSlice({
       if (state.selectedNode?.id === actionId) {
         state.selectedNode = null;
       }
+
+      // Plan is now out of sync
+      if (state.planSummary) state.planStale = true;
     },
     updateFlowActionConfig(
       state,
@@ -350,6 +357,9 @@ const configDetailsSlice = createSlice({
       if (state.selectedNode?.id === actionId) {
         (state.selectedNode.data as Record<string, unknown>).config = newConfig;
       }
+
+      // Plan is now out of sync
+      if (state.planSummary) state.planStale = true;
     },
     setViewMode(state, action: PayloadAction<'normal' | 'advanced'>) {
       state.viewMode = action.payload;
@@ -512,6 +522,7 @@ const configDetailsSlice = createSlice({
         state.isGeneratingPlan = false;
         state.config = action.payload;
         state.planSummary = action.payload.planSummary ?? null;
+        state.planStale = false;
         // Switch to Normal mode now that the plan is ready
         if (action.payload.planSummary) {
           state.viewMode = 'normal';
@@ -578,6 +589,7 @@ export const selectIsValidating = (state: RootState) => state.configDetails.isVa
 export const selectPlanSummary = (state: RootState) => state.configDetails.planSummary;
 export const selectIsGeneratingPlan = (state: RootState) => state.configDetails.isGeneratingPlan;
 export const selectViewMode = (state: RootState) => state.configDetails.viewMode;
+export const selectPlanStale = (state: RootState) => state.configDetails.planStale;
 
 /**
  * Returns the columns available as input to a given action.

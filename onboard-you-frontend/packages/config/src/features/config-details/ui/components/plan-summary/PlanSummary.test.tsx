@@ -70,17 +70,24 @@ const mockActions: ActionConfig[] = [
 
 /* ── Component Tests ─────────────────────────────────────── */
 
+const defaultViewProps = {
+  actions: mockActions,
+  isSaving: false,
+  isGenerating: false,
+  isStale: false,
+  isNewConfig: false,
+  onToggleFeature: vi.fn(),
+  onApplyPlan: vi.fn(),
+  onMakeChanges: vi.fn(),
+  onGeneratePlan: vi.fn(),
+};
+
 describe('PlanSummaryView', () => {
   it('renders with mock PlanSummary data', () => {
     renderWithProviders(
       <PlanSummaryView
         planSummary={mockPlanSummary}
-        actions={mockActions}
-        isSaving={false}
-        isGenerating={false}
-        onToggleFeature={vi.fn()}
-        onApplyPlan={vi.fn()}
-        onMakeChanges={vi.fn()}
+        {...defaultViewProps}
       />,
     );
 
@@ -97,17 +104,80 @@ describe('PlanSummaryView', () => {
   it('shows loading state when generating', () => {
     renderWithProviders(
       <PlanSummaryView
-        planSummary={mockPlanSummary}
-        actions={mockActions}
-        isSaving={false}
+        planSummary={null}
+        {...defaultViewProps}
         isGenerating={true}
-        onToggleFeature={vi.fn()}
-        onApplyPlan={vi.fn()}
-        onMakeChanges={vi.fn()}
       />,
     );
 
-    expect(screen.getByText(/generating your plan/i)).toBeInTheDocument();
+    expect(screen.getByTestId('plan-generating')).toBeInTheDocument();
+  });
+
+  it('shows empty state when no plan exists', () => {
+    renderWithProviders(
+      <PlanSummaryView
+        planSummary={null}
+        {...defaultViewProps}
+      />,
+    );
+
+    expect(screen.getByTestId('plan-empty-state')).toBeInTheDocument();
+    expect(screen.getByText('No plan yet')).toBeInTheDocument();
+    expect(screen.getByTestId('generate-plan-button')).toBeInTheDocument();
+  });
+
+  it('disables generate button for new unsaved configs', () => {
+    renderWithProviders(
+      <PlanSummaryView
+        planSummary={null}
+        {...defaultViewProps}
+        isNewConfig={true}
+      />,
+    );
+
+    expect(screen.getByTestId('generate-plan-button')).toBeDisabled();
+  });
+
+  it('calls onGeneratePlan when "Generate Plan" is clicked', () => {
+    const onGeneratePlan = vi.fn();
+    renderWithProviders(
+      <PlanSummaryView
+        planSummary={null}
+        {...defaultViewProps}
+        onGeneratePlan={onGeneratePlan}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('generate-plan-button'));
+    expect(onGeneratePlan).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows stale banner with Regenerate button when plan is stale', () => {
+    renderWithProviders(
+      <PlanSummaryView
+        planSummary={mockPlanSummary}
+        {...defaultViewProps}
+        isStale={true}
+      />,
+    );
+
+    expect(screen.getByTestId('plan-stale-banner')).toBeInTheDocument();
+    expect(screen.getByTestId('regenerate-plan-button')).toBeInTheDocument();
+  });
+
+  it('calls onGeneratePlan when Regenerate is clicked', () => {
+    const onGeneratePlan = vi.fn();
+    renderWithProviders(
+      <PlanSummaryView
+        planSummary={mockPlanSummary}
+        {...defaultViewProps}
+        isStale={true}
+        onGeneratePlan={onGeneratePlan}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('regenerate-plan-button'));
+    expect(onGeneratePlan).toHaveBeenCalledTimes(1);
   });
 
   it('"Looks Good" triggers onApplyPlan', () => {
@@ -115,12 +185,8 @@ describe('PlanSummaryView', () => {
     renderWithProviders(
       <PlanSummaryView
         planSummary={mockPlanSummary}
-        actions={mockActions}
-        isSaving={false}
-        isGenerating={false}
-        onToggleFeature={vi.fn()}
+        {...defaultViewProps}
         onApplyPlan={onApplyPlan}
-        onMakeChanges={vi.fn()}
       />,
     );
 
@@ -133,11 +199,7 @@ describe('PlanSummaryView', () => {
     renderWithProviders(
       <PlanSummaryView
         planSummary={mockPlanSummary}
-        actions={mockActions}
-        isSaving={false}
-        isGenerating={false}
-        onToggleFeature={vi.fn()}
-        onApplyPlan={vi.fn()}
+        {...defaultViewProps}
         onMakeChanges={onMakeChanges}
       />,
     );
@@ -250,6 +312,7 @@ describe('toggleFeature reducer', () => {
       planSummary: mockPlanSummary,
       isGeneratingPlan: false,
       viewMode: 'normal',
+      planStale: false,
     };
   }
 

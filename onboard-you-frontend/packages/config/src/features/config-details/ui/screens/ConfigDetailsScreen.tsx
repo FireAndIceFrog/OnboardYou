@@ -50,6 +50,7 @@ import {
   selectPlanSummary,
   selectIsGeneratingPlan,
   selectViewMode,
+  selectPlanStale,
 } from '../../state/configDetailsSlice';
 import { selectLastFlowAction } from '@/features/chat/state/chatSlice';
 import { ActionEditPanel, AddStepPanel, PipelineNode, NormalAdvancedToggle, PlanSummaryView } from '../components';
@@ -89,6 +90,7 @@ function ConfigDetailsContent({
   const planSummary = useAppSelector(selectPlanSummary);
   const isGeneratingPlan = useAppSelector(selectIsGeneratingPlan);
   const viewMode = useAppSelector(selectViewMode);
+  const planStale = useAppSelector(selectPlanStale);
 
   // ── Fetch existing config or initialise a blank one ───────
   useEffect(() => {
@@ -98,27 +100,6 @@ function ConfigDetailsContent({
       dispatch(fetchConfigDetails({ customerCompanyId }));
     }
   }, [dispatch, customerCompanyId, isNewConfig, connectionForm]);
-
-  // ── Auto-trigger plan generation after the config has been saved ──
-  // For new configs the backend doesn't have a record yet (customerCompanyId
-  // is "new"), so we wait until createConfigThunk succeeds and writes a real
-  // customerCompanyId before calling generate-plan.
-  const planTriggeredRef = useRef(false);
-  useEffect(() => {
-    if (
-      config?.customerCompanyId &&
-      config.customerCompanyId !== '' &&
-      !isNewConfig &&
-      !config.planSummary &&
-      !planTriggeredRef.current
-    ) {
-      planTriggeredRef.current = true;
-      // Derive source system from the first action type
-      const firstAction = config.pipeline.actions[0]?.action_type;
-      const sourceSystem = firstAction === 'workday_hris_connector' ? 'Workday' : 'CSV';
-      dispatch(generatePlanThunk({ customerCompanyId, sourceSystem }));
-    }
-  }, [config, isNewConfig, customerCompanyId, dispatch]);
 
   // ── Show error notifications ──────────────────────────────
   useEffect(() => {
@@ -207,6 +188,15 @@ function ConfigDetailsContent({
   const handleMakeChanges = useCallback(() => {
     dispatch(setViewMode('advanced'));
   }, [dispatch]);
+
+  const handleGeneratePlan = useCallback(() => {
+    if (!config) return;
+    const realId = config.customerCompanyId || customerCompanyId;
+    if (!realId || realId === 'new') return;
+    const firstAction = config.pipeline.actions[0]?.action_type;
+    const sourceSystem = firstAction === 'workday_hris_connector' ? 'Workday' : 'CSV';
+    dispatch(generatePlanThunk({ customerCompanyId: realId, sourceSystem }));
+  }, [config, customerCompanyId, dispatch]);
 
   const handleBack = useCallback(() => {
     navigate(-1);
@@ -298,10 +288,8 @@ function ConfigDetailsContent({
           </Button>
           <Heading size="md" fontWeight="600">{config.name}</Heading>
           <Badge colorPalette="blue">{humanFrequency(config.cron)}</Badge>
-          {/* Normal/Advanced toggle — only show if plan exists or is generating */}
-          {(planSummary || isGeneratingPlan) && (
-            <NormalAdvancedToggle viewMode={viewMode} onToggle={handleViewModeToggle} />
-          )}
+          {/* Normal/Advanced toggle — always visible */}
+          <NormalAdvancedToggle viewMode={viewMode} onToggle={handleViewModeToggle} />
         </Flex>
         <Flex align="center" gap="2">
           {viewMode === 'advanced' && (
@@ -327,17 +315,20 @@ function ConfigDetailsContent({
 
       {/* Body */}
       <Flex flex="1" overflow="hidden">
-        {viewMode === 'normal' && (planSummary || isGeneratingPlan) ? (
+        {viewMode === 'normal' ? (
           /* ── Normal Mode: Plan Summary ──────────────────── */
           <Box flex="1" overflow="auto">
             <PlanSummaryView
-              planSummary={planSummary!}
+              planSummary={planSummary}
               actions={config.pipeline.actions}
               isSaving={isSaving}
               isGenerating={isGeneratingPlan}
+              isStale={planStale}
+              isNewConfig={isNewConfig}
               onToggleFeature={handleToggleFeature}
               onApplyPlan={handleApplyPlan}
               onMakeChanges={handleMakeChanges}
+              onGeneratePlan={handleGeneratePlan}
             />
           </Box>
         ) : (
