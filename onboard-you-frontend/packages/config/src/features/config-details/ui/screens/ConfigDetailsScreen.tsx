@@ -17,7 +17,7 @@ import { Box, Flex, Heading, Text, Button, Spinner, Badge } from '@chakra-ui/rea
 import { useAppDispatch, useAppSelector } from '@/store';
 import { useGlobal } from '@/shared/hooks';
 import { humanFrequency } from '@/shared/domain/types';
-import type { ConnectionForm } from '../../domain/types';
+import type { ConnectionForm, ViewMode } from '../../domain/types';
 import {
   fetchConfigDetails,
   initNewConfig,
@@ -25,6 +25,8 @@ import {
   createConfigThunk,
   deleteConfigThunk,
   validateConfigThunk,
+  generatePlanThunk,
+  applyPlanThunk,
   onNodesChange as onNodesChangeAction,
   onEdgesChange as onEdgesChangeAction,
   selectNode as selectNodeAction,
@@ -32,6 +34,8 @@ import {
   toggleChat,
   toggleAddStepPanel,
   setAddStepPanelOpen,
+  setViewMode,
+  toggleFeature,
   addFlowAction,
   selectConfig,
   selectNodes,
@@ -43,9 +47,12 @@ import {
   selectConfigDetailsSaving,
   selectConfigDetailsDeleting,
   selectConfigDetailsError,
+  selectPlanSummary,
+  selectIsGeneratingPlan,
+  selectViewMode,
 } from '../../state/configDetailsSlice';
 import { selectLastFlowAction } from '@/features/chat/state/chatSlice';
-import { ActionEditPanel, AddStepPanel, PipelineNode } from '../components';
+import { ActionEditPanel, AddStepPanel, PipelineNode, NormalAdvancedToggle, PlanSummaryView } from '../components';
 import { ChatWindow } from '@/features/chat/ui';
 
 const nodeTypes = {
@@ -79,6 +86,9 @@ function ConfigDetailsContent({
   const chatOpen = useAppSelector(selectIsChatOpen);
   const addStepOpen = useAppSelector(selectAddStepPanelOpen);
   const lastFlowAction = useAppSelector(selectLastFlowAction);
+  const planSummary = useAppSelector(selectPlanSummary);
+  const isGeneratingPlan = useAppSelector(selectIsGeneratingPlan);
+  const viewMode = useAppSelector(selectViewMode);
 
   // ── Fetch existing config or initialise a blank one ───────
   useEffect(() => {
@@ -88,6 +98,27 @@ function ConfigDetailsContent({
       dispatch(fetchConfigDetails({ customerCompanyId }));
     }
   }, [dispatch, customerCompanyId, isNewConfig, connectionForm]);
+
+  // ── Auto-trigger plan generation after the config has been saved ──
+  // For new configs the backend doesn't have a record yet (customerCompanyId
+  // is "new"), so we wait until createConfigThunk succeeds and writes a real
+  // customerCompanyId before calling generate-plan.
+  const planTriggeredRef = useRef(false);
+  useEffect(() => {
+    if (
+      config?.customerCompanyId &&
+      config.customerCompanyId !== '' &&
+      !isNewConfig &&
+      !config.planSummary &&
+      !planTriggeredRef.current
+    ) {
+      planTriggeredRef.current = true;
+      // Derive source system from the first action type
+      const firstAction = config.pipeline.actions[0]?.action_type;
+      const sourceSystem = firstAction === 'workday_hris_connector' ? 'Workday' : 'CSV';
+      dispatch(generatePlanThunk({ customerCompanyId, sourceSystem }));
+    }
+  }, [config, isNewConfig, customerCompanyId, dispatch]);
 
   // ── Show error notifications ──────────────────────────────
   useEffect(() => {
@@ -152,6 +183,29 @@ function ConfigDetailsContent({
 
   const handleCloseAddStep = useCallback(() => {
     dispatch(setAddStepPanelOpen(false));
+  }, [dispatch]);
+
+  const handleViewModeToggle = useCallback((mode: ViewMode) => {
+    dispatch(setViewMode(mode));
+  }, [dispatch]);
+
+  const handleToggleFeature = useCallback((featureId: string) => {
+    dispatch(toggleFeature(featureId));
+  }, [dispatch]);
+
+  const handleApplyPlan = useCallback(async () => {
+    if (!config) return;
+    try {
+      await dispatch(applyPlanThunk({ customerCompanyId })).unwrap();
+      showNotification(t('configDetails.saveSuccess'), 'success');
+      navigate('/config', { replace: true });
+    } catch {
+      // Error is already set in Redux state
+    }
+  }, [config, customerCompanyId, dispatch, navigate, showNotification, t]);
+
+  const handleMakeChanges = useCallback(() => {
+    dispatch(setViewMode('advanced'));
   }, [dispatch]);
 
   const handleBack = useCallback(() => {
@@ -244,17 +298,25 @@ function ConfigDetailsContent({
           </Button>
           <Heading size="md" fontWeight="600">{config.name}</Heading>
           <Badge colorPalette="blue">{humanFrequency(config.cron)}</Badge>
+          {/* Normal/Advanced toggle — only show if plan exists or is generating */}
+          {(planSummary || isGeneratingPlan) && (
+            <NormalAdvancedToggle viewMode={viewMode} onToggle={handleViewModeToggle} />
+          )}
         </Flex>
         <Flex align="center" gap="2">
-          <Button variant="ghost" size="sm" onClick={handleToggleAddStep}>
-            ➕ {t('configDetails.addStep')}
-          </Button>
-          <Button variant="ghost" size="sm" onClick={handleToggleChat}>
-            💬 {chatOpen ? t('configDetails.closeChat') : t('configDetails.openChat')}
-          </Button>
-          <Button colorPalette="blue" size="sm" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? t('configDetails.saving') : t('configDetails.save')}
-          </Button>
+          {viewMode === 'advanced' && (
+            <>
+              <Button variant="ghost" size="sm" onClick={handleToggleAddStep}>
+                ➕ {t('configDetails.addStep')}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleToggleChat}>
+                💬 {chatOpen ? t('configDetails.closeChat') : t('configDetails.openChat')}
+              </Button>
+              <Button colorPalette="blue" size="sm" onClick={handleSave} disabled={isSaving}>
+                {isSaving ? t('configDetails.saving') : t('configDetails.save')}
+              </Button>
+            </>
+          )}
           {!isNewConfig && (
             <Button colorPalette="red" variant="outline" size="sm" onClick={handleDelete} disabled={isDeleting}>
               {isDeleting ? t('configDetails.deleting') : t('configDetails.delete')}
@@ -265,43 +327,60 @@ function ConfigDetailsContent({
 
       {/* Body */}
       <Flex flex="1" overflow="hidden">
-        {/* Canvas */}
-        <Box flex="1" position="relative" role="application" aria-label="Pipeline flow editor">
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            nodeTypes={memoizedNodeTypes}
-            defaultEdgeOptions={defaultEdgeOptions}
-            onNodesChange={handleNodesChange}
-            onEdgesChange={handleEdgesChange}
-            onNodeClick={handleNodeClick}
-            onPaneClick={handlePaneClick}
-            fitView
-            fitViewOptions={{ padding: 0.2 }}
-            proOptions={{ hideAttribution: true }}
-          >
-            <MiniMap nodeStrokeWidth={3} zoomable pannable />
-            <Controls />
-            <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
-          </ReactFlow>
+        {viewMode === 'normal' && (planSummary || isGeneratingPlan) ? (
+          /* ── Normal Mode: Plan Summary ──────────────────── */
+          <Box flex="1" overflow="auto">
+            <PlanSummaryView
+              planSummary={planSummary!}
+              actions={config.pipeline.actions}
+              isSaving={isSaving}
+              isGenerating={isGeneratingPlan}
+              onToggleFeature={handleToggleFeature}
+              onApplyPlan={handleApplyPlan}
+              onMakeChanges={handleMakeChanges}
+            />
+          </Box>
+        ) : (
+          /* ── Advanced Mode: React Flow Editor ────────────── */
+          <>
+            <Box flex="1" position="relative" role="application" aria-label="Pipeline flow editor">
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                nodeTypes={memoizedNodeTypes}
+                defaultEdgeOptions={defaultEdgeOptions}
+                onNodesChange={handleNodesChange}
+                onEdgesChange={handleEdgesChange}
+                onNodeClick={handleNodeClick}
+                onPaneClick={handlePaneClick}
+                fitView
+                fitViewOptions={{ padding: 0.2 }}
+                proOptions={{ hideAttribution: true }}
+              >
+                <MiniMap nodeStrokeWidth={3} zoomable pannable />
+                <Controls />
+                <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
+              </ReactFlow>
 
-          {selectedNode && <ActionEditPanel />}
-          {addStepOpen && <AddStepPanel onClose={handleCloseAddStep} />}
-        </Box>
+              {selectedNode && <ActionEditPanel />}
+              {addStepOpen && <AddStepPanel onClose={handleCloseAddStep} />}
+            </Box>
 
-        {/* Chat Panel */}
-        <Box
-          as="aside"
-          w={chatOpen ? '380px' : '0px'}
-          overflow="hidden"
-          transition="width 0.2s ease"
-          borderLeft={chatOpen ? '1px solid' : 'none'}
-          borderColor="gray.200"
-          bg="white"
-          flexShrink={0}
-        >
-          {chatOpen && <ChatWindow onClose={handleToggleChat} />}
-        </Box>
+            {/* Chat Panel */}
+            <Box
+              as="aside"
+              w={chatOpen ? '380px' : '0px'}
+              overflow="hidden"
+              transition="width 0.2s ease"
+              borderLeft={chatOpen ? '1px solid' : 'none'}
+              borderColor="gray.200"
+              bg="white"
+              flexShrink={0}
+            >
+              {chatOpen && <ChatWindow onClose={handleToggleChat} />}
+            </Box>
+          </>
+        )}
       </Flex>
     </Flex>
   );

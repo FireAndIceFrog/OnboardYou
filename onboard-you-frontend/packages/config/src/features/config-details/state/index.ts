@@ -3,6 +3,8 @@ export {
   saveConfigThunk,
   deleteConfigThunk,
   validateConfigThunk,
+  generatePlanThunk,
+  applyPlanThunk,
   setNodes,
   setEdges,
   onNodesChange,
@@ -13,6 +15,8 @@ export {
   setChatOpen,
   addFlowAction,
   resetConfigDetails,
+  setViewMode,
+  toggleFeature,
   selectConfigDetails,
   selectConfig,
   selectNodes,
@@ -21,6 +25,9 @@ export {
   selectIsChatOpen,
   selectConfigDetailsLoading,
   selectConfigDetailsError,
+  selectPlanSummary,
+  selectIsGeneratingPlan,
+  selectViewMode,
 } from './configDetailsSlice';
 export { default as configDetailsReducer } from './configDetailsSlice';
 export { useConnectionForm } from './useConnectionForm';

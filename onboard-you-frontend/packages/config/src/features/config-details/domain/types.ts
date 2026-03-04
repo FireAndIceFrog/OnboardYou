@@ -1,5 +1,7 @@
 import type { Node, Edge } from '@xyflow/react';
-import type { PipelineConfig, ValidationResult, WorkdayResponseGroup } from '@/generated/api';
+import type { PipelineConfig, PlanSummary, ValidationResult, WorkdayResponseGroup } from '@/generated/api';
+
+export type ViewMode = 'normal' | 'advanced';
 
 export interface ConfigDetailsState {
   config: PipelineConfig | null;
@@ -14,6 +16,12 @@ export interface ConfigDetailsState {
   chatOpen: boolean;
   addStepPanelOpen: boolean;
   validationResult: ValidationResult | null;
+  /** AI-generated plan summary (Normal mode) */
+  planSummary: PlanSummary | null;
+  /** Whether plan generation is currently running */
+  isGeneratingPlan: boolean;
+  /** Normal = plan summary UI, Advanced = React Flow editor */
+  viewMode: ViewMode;
 }
 
 /* ── Connection wizard types ─────────────────────────────── */

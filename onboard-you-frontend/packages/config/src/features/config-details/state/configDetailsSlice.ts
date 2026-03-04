@@ -18,6 +18,7 @@ import { actionCategory, businessLabel } from '@/shared/domain/types';
 import type { ConfigDetailsState, ConnectionForm } from '../domain/types';
 import { buildResponseGroup } from '../domain/types';
 import { fetchConfig, createConfig as createConfigService, saveConfig as saveConfigService, deleteConfig as deleteConfigService, validateConfig as validateConfigService } from '../services/configDetailsService';
+import { triggerPlanGeneration, pollForPlanCompletion } from '../services/planService';
 import { convertToFlow } from '../services/pipelineLayoutService';
 
 /* ── Layout constants ──────────────────────────────────────── */
@@ -47,6 +48,9 @@ const initialState: ConfigDetailsState = {
   chatOpen: false,
   addStepPanelOpen: false,
   validationResult: null,
+  planSummary: null,
+  isGeneratingPlan: false,
+  viewMode: 'advanced',
 };
 
 /* ── Async thunks ──────────────────────────────────────────── */
@@ -148,6 +152,57 @@ export const validateConfigThunk = createAsyncThunk<
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to validate configuration';
+      return rejectWithValue(message);
+    }
+  },
+);
+
+/**
+ * Trigger async plan generation: POST generate-plan, then poll
+ * GET /config/{id} until generationStatus is completed or failed.
+ */
+export const generatePlanThunk = createAsyncThunk<
+  PipelineConfig,
+  { customerCompanyId: string; sourceSystem: string },
+  { extra: ThunkExtra }
+>(
+  'configDetails/generatePlan',
+  async ({ customerCompanyId, sourceSystem }, { rejectWithValue }) => {
+    try {
+      await triggerPlanGeneration(customerCompanyId, sourceSystem);
+      const config = await pollForPlanCompletion(customerCompanyId);
+      return config;
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to generate plan';
+      return rejectWithValue(message);
+    }
+  },
+);
+
+/**
+ * Save the manifest (with current disabled flags) as the pipeline config.
+ * Used by "Looks Good, Start Syncing" in Normal mode.
+ */
+export const applyPlanThunk = createAsyncThunk<
+  PipelineConfig,
+  { customerCompanyId: string },
+  { state: RootState; extra: ThunkExtra }
+>(
+  'configDetails/applyPlan',
+  async ({ customerCompanyId }, { getState, rejectWithValue }) => {
+    try {
+      const config = getState().configDetails.config;
+      if (!config) throw new Error('No config to save');
+      return await saveConfigService(customerCompanyId, {
+        name: config.name,
+        cron: config.cron,
+        pipeline: config.pipeline,
+        image: config.image,
+      });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to apply plan';
       return rejectWithValue(message);
     }
   },
@@ -296,6 +351,33 @@ const configDetailsSlice = createSlice({
         (state.selectedNode.data as Record<string, unknown>).config = newConfig;
       }
     },
+    setViewMode(state, action: PayloadAction<'normal' | 'advanced'>) {
+      state.viewMode = action.payload;
+    },
+    /**
+     * Toggle a plan feature on/off. Looks up the feature's action_ids
+     * and flips `disabled` on those manifest actions. No actions added/removed.
+     */
+    toggleFeature(state, action: PayloadAction<string>) {
+      const featureId = action.payload;
+      const feature = state.planSummary?.features.find((f) => f.id === featureId);
+      if (!feature || !state.config) return;
+
+      // Determine current enabled state by checking if ALL linked actions are NOT disabled
+      const linkedActions = state.config.pipeline.actions.filter((a) =>
+        feature.actionIds.includes(a.id),
+      );
+      const isCurrentlyEnabled = linkedActions.every((a) => !a.disabled);
+
+      // Toggle: if currently enabled → disable, if disabled → enable
+      const newDisabled = isCurrentlyEnabled;
+
+      for (const a of state.config.pipeline.actions) {
+        if (feature.actionIds.includes(a.id)) {
+          a.disabled = newDisabled;
+        }
+      }
+    },
     resetConfigDetails() {
       return initialState;
     },
@@ -365,6 +447,11 @@ const configDetailsSlice = createSlice({
         state.nodes = action.payload.nodes as typeof state.nodes;
         state.edges = action.payload.edges as typeof state.edges;
         state.error = null;
+        // Populate plan summary & default to Normal mode if plan exists
+        state.planSummary = action.payload.config.planSummary ?? null;
+        if (action.payload.config.planSummary) {
+          state.viewMode = 'normal';
+        }
       })
       .addCase(fetchConfigDetails.rejected, (state, action) => {
         state.isLoading = false;
@@ -416,6 +503,39 @@ const configDetailsSlice = createSlice({
         state.isValidating = false;
         // Don't set state.error — validation failure is non-blocking.
         // The user can still retry via the Validate button.
+      })
+      .addCase(generatePlanThunk.pending, (state) => {
+        state.isGeneratingPlan = true;
+        state.error = null;
+      })
+      .addCase(generatePlanThunk.fulfilled, (state, action) => {
+        state.isGeneratingPlan = false;
+        state.config = action.payload;
+        state.planSummary = action.payload.planSummary ?? null;
+        // Switch to Normal mode now that the plan is ready
+        if (action.payload.planSummary) {
+          state.viewMode = 'normal';
+        }
+        // Re-sync flow nodes/edges from the new manifest
+        const { nodes, edges } = convertToFlow(action.payload.pipeline);
+        state.nodes = nodes as typeof state.nodes;
+        state.edges = edges as typeof state.edges;
+      })
+      .addCase(generatePlanThunk.rejected, (state, action) => {
+        state.isGeneratingPlan = false;
+        state.error = (action.payload as string) ?? 'Failed to generate plan';
+      })
+      .addCase(applyPlanThunk.pending, (state) => {
+        state.isSaving = true;
+        state.error = null;
+      })
+      .addCase(applyPlanThunk.fulfilled, (state, action) => {
+        state.isSaving = false;
+        state.config = action.payload;
+      })
+      .addCase(applyPlanThunk.rejected, (state, action) => {
+        state.isSaving = false;
+        state.error = (action.payload as string) ?? 'Failed to apply plan';
       });
   },
 });
@@ -436,6 +556,8 @@ export const {
   setAddStepPanelOpen,
   resetConfigDetails,
   initNewConfig,
+  setViewMode,
+  toggleFeature,
 } = configDetailsSlice.actions;
 
 /* ── Selectors ─────────────────────────────────────────────── */
@@ -453,6 +575,9 @@ export const selectConfigDetailsDeleting = (state: RootState) => state.configDet
 export const selectConfigDetailsError = (state: RootState) => state.configDetails.error;
 export const selectValidationResult = (state: RootState) => state.configDetails.validationResult;
 export const selectIsValidating = (state: RootState) => state.configDetails.isValidating;
+export const selectPlanSummary = (state: RootState) => state.configDetails.planSummary;
+export const selectIsGeneratingPlan = (state: RootState) => state.configDetails.isGeneratingPlan;
+export const selectViewMode = (state: RootState) => state.configDetails.viewMode;
 
 /**
  * Returns the columns available as input to a given action.

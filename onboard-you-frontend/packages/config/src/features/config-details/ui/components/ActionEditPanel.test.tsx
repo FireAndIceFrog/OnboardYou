@@ -33,6 +33,9 @@ function makeState(overrides: Partial<ConfigDetailsState> = {}): {
       chatOpen: false,
       addStepPanelOpen: false,
       validationResult: null,
+      planSummary: null,
+      isGeneratingPlan: false,
+      viewMode: 'advanced',
       ...overrides,
     },
   };

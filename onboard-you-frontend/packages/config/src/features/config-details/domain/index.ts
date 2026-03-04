@@ -1,4 +1,4 @@
-export type { ConfigDetailsState } from './types';
+export type { ConfigDetailsState, ViewMode } from './types';
 
 // Connection wizard
 export type { SystemId, WorkdayFields, CsvFields, ConnectionForm } from './types';
