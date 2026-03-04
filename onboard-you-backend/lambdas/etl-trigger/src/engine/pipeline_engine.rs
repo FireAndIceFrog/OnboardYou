@@ -190,7 +190,7 @@ mod tests {
             _final_columns: &[String],
             _schema_diff: &str,
             _egress_schema: &HashMap<String, String>,
-        ) -> onboard_you_models::PlanSummary {
+        ) -> Result<(onboard_you_models::PlanSummary, onboard_you_models::Manifest), Error> {
             unreachable!("not called in pipeline tests")
         }
     }

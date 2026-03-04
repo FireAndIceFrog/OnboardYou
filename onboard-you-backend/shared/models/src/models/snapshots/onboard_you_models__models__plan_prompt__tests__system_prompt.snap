@@ -10,7 +10,7 @@ AVAILABLE ACTIONS AND CONFIG SCHEMAS:
 
 ## INGRESS ACTIONS (pick ONE as the first action)
 
-### csv_hris_connector
+### action_type: csv_hris_connector
 Ingests employee data from a CSV file.
 Config schema:
 {
@@ -35,7 +35,7 @@ Config schema:
   }
 }
 
-### workday_hris_connector
+### action_type: workday_hris_connector
 Ingests employee data from the Workday SOAP API.
 Config schema:
 {
@@ -74,7 +74,7 @@ Config schema:
 
 ## TRANSFORMATION ACTIONS (zero or more, in any order)
 
-### scd_type_2
+### action_type: scd_type_2
 Slowly Changing Dimension Type 2 — tracks historical changes to entities.
 Config schema:
 {
@@ -94,7 +94,7 @@ Config schema:
   }
 }
 
-### pii_masking
+### action_type: pii_masking
 Masks PII fields (e.g. SSN, salary) using configurable strategies.
 Config schema:
 {
@@ -113,7 +113,7 @@ Config schema:
   }
 }
 
-### identity_deduplicator
+### action_type: identity_deduplicator
 Deduplicates records based on matching columns.
 Config schema:
 {
@@ -139,7 +139,7 @@ Config schema:
   }
 }
 
-### regex_replace
+### action_type: regex_replace
 Applies regex find-and-replace on a column.
 Config schema:
 {
@@ -166,7 +166,7 @@ Config schema:
   }
 }
 
-### iso_country_sanitizer
+### action_type: iso_country_sanitizer
 Normalizes country codes to ISO 3166 format.
 Config schema:
 {
@@ -193,7 +193,7 @@ Config schema:
   }
 }
 
-### cellphone_sanitizer
+### action_type: cellphone_sanitizer
 Normalizes phone numbers to E.164 format.
 Config schema:
 {
@@ -223,7 +223,7 @@ Config schema:
   }
 }
 
-### handle_diacritics
+### action_type: handle_diacritics
 Normalizes diacritical characters (e.g. é → e, ñ → n).
 Config schema:
 {
@@ -247,7 +247,7 @@ Config schema:
   }
 }
 
-### rename_column
+### action_type: rename_column
 Renames columns via a source → target mapping.
 Config schema:
 {
@@ -270,7 +270,7 @@ Config schema:
   }
 }
 
-### drop_column
+### action_type: drop_column
 Drops specified columns from the dataset.
 Config schema:
 {
@@ -290,7 +290,7 @@ Config schema:
   }
 }
 
-### filter_by_value
+### action_type: filter_by_value
 Filters rows by regex. Matching rows are kept.
 Config schema:
 {
@@ -315,7 +315,7 @@ Config schema:
 
 ## EGRESS ACTION (must be the LAST action)
 
-### api_dispatcher
+### action_type: api_dispatcher
 Sends transformed data to the destination API. Auth variants: Bearer, OAuth 1.0, OAuth 2.0, or Default (org-level settings). Config is one of:
 Config schema:
 Bearer: {
@@ -619,7 +619,7 @@ RESPONSE SCHEMA:
   "manifest": {
     "version": "1.0",
     "actions": [
-      { "id": "string", "action_type": "string", "disabled": false, "config": {...} }
+      { "id": "string", "action_type": "<action_type>", "disabled": false, "config": {...} }
     ]
   },
   "summary": {
@@ -631,12 +631,12 @@ RESPONSE SCHEMA:
         "icon": "string (calendar|users|shield|filter|columns|globe|phone|lock|edit|zap)",
         "label": "string",
         "description": "string",
-        "action_ids": ["string"]
+        "actionIds": ["string"]
       }
     ],
     "preview": {
-      "source_label": "string",
-      "target_label": "string",
+      "sourceLabel": "string",
+      "targetLabel": "string",
       "before": { "field": "value" },
       "after": { "field": "value" }
     }

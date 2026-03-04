@@ -23,9 +23,11 @@ pub trait ISchemaRepo: Send + Sync {
     /// from the manifest's ApiDispatcher action, if present.
     fn extract_egress_schema(&self, manifest: &Manifest) -> HashMap<String, String>;
 
-    /// Generate a `PlanSummary` by calling the LLM with pipeline context.
+    /// Generate a `PlanSummary` and the full AI-generated `Manifest` by
+    /// calling the LLM with pipeline context.
     ///
-    /// Falls back to a deterministic plan if the AI call fails.
+    /// Returns an error if the AI fails to produce a valid manifest —
+    /// a summary without a manifest is considered a hallucination.
     async fn create_plan_summary(
         &self,
         deps: &Dependancies,
@@ -33,7 +35,7 @@ pub trait ISchemaRepo: Send + Sync {
         final_columns: &[String],
         schema_diff: &str,
         egress_schema: &HashMap<String, String>,
-    ) -> PlanSummary;
+    ) -> Result<(PlanSummary, Manifest), Error>;
 }
 
 /// Concrete implementation that delegates LLM calls to `deps.llm_repo`.
@@ -65,7 +67,7 @@ impl ISchemaRepo for SchemaRepository {
         final_columns: &[String],
         schema_diff: &str,
         egress_schema: &HashMap<String, String>,
-    ) -> PlanSummary {
+    ) -> Result<(PlanSummary, Manifest), Error> {
         let prompt = PlanPrompt {
             source_system,
             final_columns,
@@ -80,33 +82,31 @@ impl ISchemaRepo for SchemaRepository {
             "Prompt built — calling LLM"
         );
 
-        match call_ai_and_parse(&deps.llm_repo, &messages).await {
-            Ok(plan) => {
-                tracing::info!(
-                    headline = %plan.headline,
-                    feature_count = plan.features.len(),
-                    "LLM plan generation succeeded"
-                );
-                PlanSummary {
-                    generation_status: SchemaGenerationStatus::Completed,
-                    ..plan
-                }
-            }
-            Err(e) => {
-                tracing::error!(error = %e, "LLM plan generation failed — using fallback");
-                generate_fallback_plan(source_system, final_columns, egress_schema)
-            }
-        }
+        let (plan, manifest) = call_ai_and_parse(&deps.llm_repo, &messages).await?;
+
+        tracing::info!(
+            headline = %plan.headline,
+            feature_count = plan.features.len(),
+            manifest_action_count = manifest.actions.len(),
+            "LLM plan generation succeeded"
+        );
+
+        let summary = PlanSummary {
+            generation_status: SchemaGenerationStatus::Completed,
+            ..plan
+        };
+        Ok((summary, manifest))
     }
 }
 
 // ── Private helpers ────────────────────────────────────────────────
 
-/// Call the AI model via `ILlmRepo` and parse the response into a `PlanSummary`.
+/// Call the AI model via `ILlmRepo` and parse the response into a `PlanSummary`
+/// plus the AI-generated `Manifest` (pipeline actions).
 async fn call_ai_and_parse(
     llm_repo: &Arc<dyn ILlmRepo>,
     messages: &onboard_you_models::PromptMessages,
-) -> Result<PlanSummary, Error> {
+) -> Result<(PlanSummary, Manifest), Error> {
     let chat_messages = vec![
         ChatMessage {
             role: "system".into(),
@@ -181,81 +181,41 @@ async fn call_ai_and_parse(
             after: HashMap::new(),
         });
 
-    Ok(PlanSummary {
-        headline,
-        description,
-        features: features.clone(),
-        preview,
-        generation_status: SchemaGenerationStatus::Completed,
-    })
-    .inspect(|_| {
-        tracing::info!(
-            feature_count = features.len(),
-            "PlanSummary serialization complete"
-        );
-    })
-}
+    // Extract the manifest (pipeline actions) from the AI response.
+    // A summary without a manifest is a hallucination — fail hard.
+    let manifest_value = parsed
+        .get("manifest")
+        .ok_or_else(|| {
+            tracing::error!("AI response missing 'manifest' key — this is a hallucination");
+            Error::from("AI response missing required 'manifest' key")
+        })?;
 
-/// Generate a deterministic fallback plan when AI fails.
-fn generate_fallback_plan(
-    source_system: &str,
-    final_columns: &[String],
-    egress_schema: &HashMap<String, String>,
-) -> PlanSummary {
-    let mut features = Vec::new();
+    let manifest: Manifest = serde_json::from_value(manifest_value.clone()).map_err(|e| {
+        tracing::error!(error = %e, "Failed to parse manifest from AI response");
+        Error::from(format!("Failed to parse manifest from AI response: {e}"))
+    })?;
 
-    if !egress_schema.is_empty() {
-        features.push(PlanFeature {
-            id: "rename_fields".into(),
-            icon: "columns".into(),
-            label: "Map Fields to Destination".into(),
-            description: format!(
-                "Rename {} source columns to match your destination API.",
-                egress_schema.len()
-            ),
-            action_ids: vec!["step_rename".into()],
-        });
+    if manifest.actions.is_empty() {
+        tracing::error!("AI returned a manifest with zero actions — hallucination");
+        return Err(Error::from("AI returned an empty manifest (zero actions)"));
     }
 
-    features.push(PlanFeature {
-        id: "sync_data".into(),
-        icon: "zap".into(),
-        label: format!("Sync from {source_system}"),
-        description: format!("Pull employee data from {source_system} and send to your app."),
-        action_ids: vec!["step_ingress".into(), "step_egress".into()],
-    });
+    tracing::info!(
+        feature_count = features.len(),
+        manifest_action_count = manifest.actions.len(),
+        "PlanSummary + Manifest parsed from LLM response"
+    );
 
-    let mut before = HashMap::new();
-    let mut after = HashMap::new();
-    before.insert("name".into(), "Jane Doe".into());
-    before.insert("email".into(), "jane.doe@example.com".into());
-    after.insert("name".into(), "Jane Doe".into());
-    after.insert("email".into(), "jane.doe@example.com".into());
-
-    for (src, dst) in egress_schema.iter().take(3) {
-        before.insert(src.clone(), format!("(sample {src})"));
-        after.insert(dst.clone(), format!("(sample {dst})"));
-    }
-
-    PlanSummary {
-        headline: format!("Here's the plan to connect {source_system} to your App."),
-        description: format!(
-            "We'll sync employee data from {source_system}, mapping {} fields to your destination.",
-            if egress_schema.is_empty() {
-                final_columns.len()
-            } else {
-                egress_schema.len()
-            }
-        ),
-        features,
-        preview: PlanPreview {
-            source_label: format!("In {source_system}"),
-            target_label: "In Your App".into(),
-            before,
-            after,
+    Ok((
+        PlanSummary {
+            headline,
+            description,
+            features,
+            preview,
+            generation_status: SchemaGenerationStatus::Completed,
         },
-        generation_status: SchemaGenerationStatus::Completed,
-    }
+        manifest,
+    ))
 }
 
 #[cfg(test)]
@@ -271,35 +231,5 @@ mod tests {
         };
         let schema = repo.extract_egress_schema(&manifest);
         assert!(schema.is_empty());
-    }
-
-    #[test]
-    fn test_fallback_plan_generates_valid_summary() {
-        let egress: HashMap<String, String> = [
-            ("name".into(), "fullName".into()),
-            ("email".into(), "workEmail".into()),
-        ]
-        .into_iter()
-        .collect();
-
-        let plan = generate_fallback_plan("Workday", &["name".into(), "email".into()], &egress);
-
-        assert!(plan.headline.contains("Workday"));
-        assert!(!plan.features.is_empty());
-        assert!(matches!(
-            plan.generation_status,
-            SchemaGenerationStatus::Completed
-        ));
-
-        let json = serde_json::to_string(&plan).unwrap();
-        let back: PlanSummary = serde_json::from_str(&json).unwrap();
-        assert_eq!(back.headline, plan.headline);
-    }
-
-    #[test]
-    fn test_fallback_plan_with_empty_egress() {
-        let plan = generate_fallback_plan("CSV", &["col_a".into()], &HashMap::new());
-        assert!(plan.headline.contains("CSV"));
-        assert!(!plan.features.is_empty());
     }
 }

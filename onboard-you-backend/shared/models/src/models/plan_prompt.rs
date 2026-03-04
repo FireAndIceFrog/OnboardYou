@@ -165,7 +165,7 @@ RESPONSE SCHEMA:
   "manifest": {{
     "version": "1.0",
     "actions": [
-      {{ "id": "string", "action_type": "string", "disabled": false, "config": {{...}} }}
+      {{ "id": "string", "action_type": "<action_type>", "disabled": false, "config": {{...}} }}
     ]
   }},
   "summary": {{
@@ -240,7 +240,7 @@ Return the JSON plan."#,
             out.push_str(&format!("\n## {category}\n\n"));
             for def in actions {
                 out.push_str(&format!(
-                    "### {action_type}\n{description}\nConfig schema:\n{schema}\n\n",
+                    "### action_type: {action_type}\n{description}\nConfig schema:\n{schema}\n\n",
                     action_type = def.action_type,
                     description = def.description,
                     schema = def.config_schema,
@@ -251,7 +251,7 @@ Return the JSON plan."#,
         out.push_str("\n## REFERENCED TYPES\n\n");
         out.push_str("The schemas above reference these component types via `$ref`:\n\n");
         for (name, schema) in referenced_type_schemas() {
-            out.push_str(&format!("### {name}\n{schema}\n\n"));
+            out.push_str(&format!("### {name}\n{schema}\n\n", name = name, schema = schema));
         }
 
         out
