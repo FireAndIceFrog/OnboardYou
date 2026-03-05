@@ -36,7 +36,7 @@ impl RenameConfig {
         for target in self.mapping.values() {
             if !seen.insert(target) {
                 return Err(Error::LogicError(format!(
-                    "rename_column: duplicate target column name '{target}'"
+                    "duplicate target column name '{target}'"
                 )));
             }
         }

@@ -1,6 +1,8 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { useTranslation } from 'react-i18next';
 import { Box, Flex, Text } from '@chakra-ui/react';
+import { useAppSelector } from '@/store';
+import type { RootState } from '@/store';
 import { businessLabel } from '@/shared/domain/types';
 
 /* ── Style lookup by category ──────────────────────────────── */
@@ -56,16 +58,23 @@ export function PipelineNode({ data }: NodeProps) {
   const category = (data.category as string) ?? 'logic';
   const style = CATEGORY_STYLES[category] ?? DEFAULT_STYLE;
   const friendly = businessLabel(data.actionType as string);
+  const actionId = (data.actionId as string) ?? '';
+
+  // Select only this action's error (primitive string|undefined) to avoid
+  // re-renders when the validationErrors object reference changes.
+  const error = useAppSelector(
+    (state: RootState) => state.configDetails.validationErrors[actionId],
+  );
 
   return (
     <Box
-      bg="white"
+      bg={error ? 'red.50' : 'white'}
       border="1px solid"
-      borderColor="gray.200"
+      borderColor={error ? 'red.300' : 'gray.200'}
       borderRadius="lg"
       borderLeft="4px solid"
-      borderLeftColor={style.color}
-      shadow="sm"
+      borderLeftColor={error ? 'red.500' : style.color}
+      shadow={error ? 'md' : 'sm'}
       minW="180px"
       p="3"
       data-testid={`pipeline-node-${category}`}
@@ -97,6 +106,11 @@ export function PipelineNode({ data }: NodeProps) {
       >
         {friendly}
       </Box>
+      {error && (
+        <Text fontSize="xs" color="red.600" mt="2" lineClamp={2}>
+          ⚠️ {error}
+        </Text>
+      )}
       <Handle type="target" position={Position.Left} />
       <Handle type="source" position={Position.Right} />
     </Box>

@@ -34,14 +34,14 @@ impl RegexReplaceConfig {
     pub fn validate(&self) -> Result<SafeRegex> {
         if self.column.is_empty() {
             return Err(Error::ConfigurationError(
-                "regex_replace: 'column' must not be empty".into(),
+                "'column' must not be empty".into(),
             ));
         }
 
         // Replacement length
         if self.replacement.len() > MAX_REPLACEMENT_LEN {
             return Err(Error::ConfigurationError(format!(
-                "regex_replace: replacement length {} exceeds maximum of {MAX_REPLACEMENT_LEN}",
+                "replacement length {} exceeds maximum of {MAX_REPLACEMENT_LEN}",
                 self.replacement.len()
             )));
         }

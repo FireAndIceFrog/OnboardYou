@@ -29,7 +29,7 @@ impl FilterByValueConfig {
     pub fn validate(&self) -> Result<SafeRegex> {
         if self.column.is_empty() {
             return Err(Error::ConfigurationError(
-                "filter_by_value: 'column' must not be empty".into(),
+                "'column' must not be empty".into(),
             ));
         }
 

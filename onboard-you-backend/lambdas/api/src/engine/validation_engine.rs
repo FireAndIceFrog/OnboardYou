@@ -36,8 +36,7 @@ pub async fn validate_pipeline(
         .map(|ac| {
             action_factory.create(ac).map_err(|e| {
                 ApiError::Validation(format!(
-                    "Action '{}' (type '{}'): {e}",
-                    ac.id, ac.action_type
+                    "Step '{}' ({}) => {e}", ac.id, ac.action_type
                 ))
             })
         })
@@ -49,15 +48,22 @@ pub async fn validate_pipeline(
 
     for (action, ac) in actions.iter().zip(manifest.actions.iter()) {
         context = action.calculate_columns(context).map_err(|e| {
+            let msg = e.to_string();
+            let short = msg.split(';').next().unwrap_or(&msg);
             ApiError::Validation(format!(
-                "Column calculation failed at '{}' (type '{}'): {e}",
+                "Step '{}' ({}): {short}",
                 ac.id, ac.action_type
             ))
         })?;
 
         // Collect the schema from the lazy frame (cheap — no data)
         let schema = context.data.collect_schema().map_err(|e| {
-            ApiError::Validation(format!("Schema resolution failed at '{}': {e}", ac.id))
+            let msg = e.to_string();
+            let short = msg.split(';').next().unwrap_or(&msg);
+            ApiError::Validation(format!(
+                "Step '{}' ({}): {short}",
+                ac.id, ac.action_type
+            ))
         })?;
 
         let columns_after: Vec<String> = schema.iter_names().map(|n| n.to_string()).collect();
@@ -83,17 +89,17 @@ pub async fn validate_pipeline(
                         let settings = deps.settings_repo.get(&org_id).await?;
 
                         if settings.is_none(){
-                            return Err(ApiError::Validation(format!(
-                                "Egress validation failed: There are no settings saved for default config"
-                            )))
+                            return Err(ApiError::Validation(
+                                "No API dispatcher settings configured — go to Settings to set up a default auth method".into()
+                            ))
                         }
 
                         let settings = settings.unwrap();
                         match settings.default_auth {
 
-                            ApiDispatcherConfig::Default => return Err(ApiError::Validation(format!(
-                                "Egress validation failed: Settings has default auth instead of a well defined one"
-                            ))),
+                            ApiDispatcherConfig::Default => return Err(ApiError::Validation(
+                                "Default auth in Settings is not configured — choose Bearer, OAuth, or OAuth2 in Settings".into()
+                            )),
                             cfg => cfg 
                         }
                         
@@ -103,35 +109,31 @@ pub async fn validate_pipeline(
 
                 match pre_settings {
                     ApiDispatcherConfig::Default => 
-                        return Err(ApiError::Validation(format!(
-                            "Egress validation failed: There are no settings saved for default config"
-                        ))),
+                        return Err(ApiError::Validation(
+                            "No API dispatcher settings configured — go to Settings to set up a default auth method".into()
+                        )),
                     ApiDispatcherConfig::Bearer(curr) => Ok(Box::new(curr.clone()) as Box<dyn DynamicEgressModel>),
                     ApiDispatcherConfig::OAuth(curr) => Ok(Box::new(curr.clone()) as Box<dyn DynamicEgressModel>),
                     ApiDispatcherConfig::OAuth2(curr) => Ok(Box::new(curr.clone()) as Box<dyn DynamicEgressModel>)
                 }
             },
             _ => return Err(ApiError::Validation(format!(
-                "Egress validation failed: last action must be 'api_dispatcher', found '{}'",
+                "Last step must be an API Dispatcher, found '{}'",
                 last_action.action_type
             ))),
         }?;
 
         let egress_schema = egress_config.get_schema();
-        let error = egress_schema.keys().map(|k| {
-            if !final_columns.contains(k) {
-                return Some(format!(
-                    "Egress validation failed: column '{}' required by API dispatcher config is not produced by the pipeline",
-                    k
-                ));
-            }
-            None
-        })
-        .filter_map(|e| e)
-        .fold("".to_string(), |init, curr| init + "\n" + &curr);
+        let missing: Vec<String> = egress_schema.keys()
+            .filter(|k| !final_columns.contains(k))
+            .cloned()
+            .collect();
 
-        if error != "".to_string() {
-            return Err(ApiError::Validation(error))
+        if !missing.is_empty() {
+            return Err(ApiError::Validation(format!(
+                "API Dispatcher requires columns not produced by the pipeline: {}",
+                missing.join(", ")
+            )))
         }
 
     }

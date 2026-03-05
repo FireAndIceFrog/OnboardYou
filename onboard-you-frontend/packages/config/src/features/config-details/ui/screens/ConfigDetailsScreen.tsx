@@ -15,6 +15,7 @@ import '@xyflow/react/dist/style.css';
 import { Box, Flex, Heading, Text, Button, Spinner, Badge } from '@chakra-ui/react';
 
 import { useAppDispatch, useAppSelector } from '@/store';
+import type { RootState } from '@/store';
 import { useGlobal } from '@/shared/hooks';
 import { humanFrequency } from '@/shared/domain/types';
 import type { ConnectionForm } from '../../domain/types';
@@ -79,6 +80,11 @@ function ConfigDetailsContent({
   const chatOpen = useAppSelector(selectIsChatOpen);
   const addStepOpen = useAppSelector(selectAddStepPanelOpen);
   const lastFlowAction = useAppSelector(selectLastFlowAction);
+
+  // Derive a stable boolean so we don't re-render on every new {} reference.
+  const hasValidationErrors = useAppSelector(
+    (state: RootState) => Object.keys(state.configDetails.validationErrors).length > 0,
+  );
 
   // ── Fetch existing config or initialise a blank one ───────
   useEffect(() => {
@@ -161,6 +167,14 @@ function ConfigDetailsContent({
   const handleSave = useCallback(async () => {
     if (!config) return;
 
+    if (hasValidationErrors) {
+      showNotification(
+        t('configDetails.validationBlocksSave', 'Cannot save: fix validation errors first'),
+        'error',
+      );
+      return;
+    }
+
     try {
       if (isNewConfig) {
         const newId = config.name
@@ -182,10 +196,11 @@ function ConfigDetailsContent({
 
         showNotification(t('configDetails.saveSuccess'), 'success');
       }
-    } catch {
-      // Error is already set in Redux state by the rejected thunk
+    } catch (err) {
+      const message = typeof err === 'string' ? err : t('configDetails.saveFailed', 'Save failed');
+      showNotification(message, 'error');
     }
-  }, [config, isNewConfig, customerCompanyId, dispatch, navigate, showNotification, t]);
+  }, [config, isNewConfig, customerCompanyId, dispatch, navigate, showNotification, t, hasValidationErrors]);
 
   const handleDelete = useCallback(async () => {
     if (isNewConfig) return;
@@ -196,8 +211,9 @@ function ConfigDetailsContent({
       await dispatch(deleteConfigThunk({ customerCompanyId })).unwrap();
       showNotification(t('configDetails.deleteSuccess'), 'success');
       navigate('/config', { replace: true });
-    } catch {
-      // Error is already set in Redux state by the rejected thunk
+    } catch (err) {
+      const message = typeof err === 'string' ? err : t('configDetails.deleteFailed', 'Delete failed');
+      showNotification(message, 'error');
     }
   }, [isNewConfig, customerCompanyId, dispatch, navigate, showNotification, t]);
 

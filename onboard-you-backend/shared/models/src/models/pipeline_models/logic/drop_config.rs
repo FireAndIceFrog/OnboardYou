@@ -31,7 +31,7 @@ impl DropConfig {
         for col in &self.columns {
             if !seen.insert(col) {
                 return Err(Error::LogicError(format!(
-                    "drop_column: duplicate column name '{col}'"
+                    "duplicate column name '{col}'"
                 )));
             }
         }

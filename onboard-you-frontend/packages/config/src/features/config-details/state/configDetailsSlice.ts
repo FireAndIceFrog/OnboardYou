@@ -14,6 +14,43 @@ import {
 } from '@xyflow/react';
 import type { RootState, ThunkExtra } from '@/store';
 import type { PipelineConfig, ActionConfig, ActionConfigPayload, ValidationResult, ActionType, WorkdayConfig, CsvHrisConnectorConfig } from '@/generated/api';
+
+/* ── API error extraction ──────────────────────────────────── */
+
+/**
+ * hey-api's throwOnError throws the parsed JSON body (e.g. `{ error: "..." }`),
+ * NOT an Error instance. This helper handles both cases.
+ */
+function extractApiError(err: unknown, fallback: string): string {
+  if (err && typeof err === 'object' && 'error' in err) {
+    return (err as { error: string }).error;
+  }
+  if (err instanceof Error) return err.message;
+  return fallback;
+}
+
+/**
+ * Parse a validation error message and map it to the action that caused it.
+ */
+function parseValidationErrors(
+  error: string,
+  actions: ActionConfig[],
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+  if (!error || !actions.length) return errors;
+
+  // Match "Step '{id}' ..." pattern and strip the prefix for display
+  const stepMatch = error.match(/^Step '([^']+)' \([^)]+\)[: =>]+(.+)$/s);
+  if (stepMatch && actions.some((a) => a.id === stepMatch[1])) {
+    errors[stepMatch[1]] = stepMatch[2].trim();
+    return errors;
+  }
+
+  // Fallback: attribute to the last action, show message as-is
+  const last = actions[actions.length - 1];
+  errors[last.id] = error;
+  return errors;
+}
 import { actionCategory, businessLabel } from '@/shared/domain/types';
 import type { ConfigDetailsState, ConnectionForm } from '../domain/types';
 import { buildResponseGroup } from '../domain/types';
@@ -47,6 +84,7 @@ const initialState: ConfigDetailsState = {
   chatOpen: false,
   addStepPanelOpen: false,
   validationResult: null,
+  validationErrors: {},
 };
 
 /* ── Async thunks ──────────────────────────────────────────── */
@@ -85,8 +123,7 @@ export const saveConfigThunk = createAsyncThunk<
         image: data.image,
       });
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Failed to save configuration';
+      const message = extractApiError(err, 'Failed to save configuration');
       return rejectWithValue(message);
     }
   },
@@ -107,8 +144,7 @@ export const createConfigThunk = createAsyncThunk<
         image: data.image,
       });
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Failed to create configuration';
+      const message = extractApiError(err, 'Failed to create configuration');
       return rejectWithValue(message);
     }
   },
@@ -146,8 +182,7 @@ export const validateConfigThunk = createAsyncThunk<
         image: data.image,
       });
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Failed to validate configuration';
+      const message = extractApiError(err, 'Failed to validate configuration');
       return rejectWithValue(message);
     }
   },
@@ -372,38 +407,44 @@ const configDetailsSlice = createSlice({
       })
       .addCase(saveConfigThunk.pending, (state) => {
         state.isSaving = true;
-        state.error = null;
       })
       .addCase(saveConfigThunk.fulfilled, (state, action) => {
         state.isSaving = false;
         state.config = action.payload;
+        state.validationErrors = {};
       })
       .addCase(saveConfigThunk.rejected, (state, action) => {
         state.isSaving = false;
-        state.error = (action.payload as string) ?? 'Failed to save configuration';
+        const msg = (action.payload as string) ?? '';
+        state.validationErrors = parseValidationErrors(
+          msg,
+          state.config?.pipeline?.actions ?? [],
+        );
       })
       .addCase(createConfigThunk.pending, (state) => {
         state.isSaving = true;
-        state.error = null;
       })
       .addCase(createConfigThunk.fulfilled, (state, action) => {
         state.isSaving = false;
         state.config = action.payload;
+        state.validationErrors = {};
       })
       .addCase(createConfigThunk.rejected, (state, action) => {
         state.isSaving = false;
-        state.error = (action.payload as string) ?? 'Failed to create configuration';
+        const msg = (action.payload as string) ?? '';
+        state.validationErrors = parseValidationErrors(
+          msg,
+          state.config?.pipeline?.actions ?? [],
+        );
       })
       .addCase(deleteConfigThunk.pending, (state) => {
         state.isDeleting = true;
-        state.error = null;
       })
       .addCase(deleteConfigThunk.fulfilled, () => {
         return initialState;
       })
-      .addCase(deleteConfigThunk.rejected, (state, action) => {
+      .addCase(deleteConfigThunk.rejected, (state) => {
         state.isDeleting = false;
-        state.error = (action.payload as string) ?? 'Failed to delete configuration';
       })
       .addCase(validateConfigThunk.pending, (state) => {
         state.isValidating = true;
@@ -411,11 +452,15 @@ const configDetailsSlice = createSlice({
       .addCase(validateConfigThunk.fulfilled, (state, action) => {
         state.isValidating = false;
         state.validationResult = action.payload;
+        state.validationErrors = {};
       })
-      .addCase(validateConfigThunk.rejected, (state) => {
+      .addCase(validateConfigThunk.rejected, (state, action) => {
         state.isValidating = false;
-        // Don't set state.error — validation failure is non-blocking.
-        // The user can still retry via the Validate button.
+        const msg = (action.payload as string) ?? '';
+        state.validationErrors = parseValidationErrors(
+          msg,
+          state.config?.pipeline?.actions ?? [],
+        );
       });
   },
 });
@@ -453,6 +498,7 @@ export const selectConfigDetailsDeleting = (state: RootState) => state.configDet
 export const selectConfigDetailsError = (state: RootState) => state.configDetails.error;
 export const selectValidationResult = (state: RootState) => state.configDetails.validationResult;
 export const selectIsValidating = (state: RootState) => state.configDetails.isValidating;
+export const selectValidationErrors = (state: RootState) => state.configDetails.validationErrors;
 
 /**
  * Returns the columns available as input to a given action.

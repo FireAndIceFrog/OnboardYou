@@ -63,6 +63,10 @@ export function ActionEditPanel() {
     (state: RootState) => selectAvailableColumnsForAction(state, actionId ?? ''),
   );
 
+  const validationError = useAppSelector(
+    (state: RootState) => actionId ? state.configDetails.validationErrors[actionId] : undefined,
+  );
+
   const catalogEntry = useMemo(
     () => ACTION_CATALOG.find((a) => a.actionType === actionType),
     [actionType],
@@ -174,6 +178,25 @@ export function ActionEditPanel() {
         >
           {catalogEntry.description}
         </Text>
+      )}
+
+      {/* Validation error */}
+      {validationError && (
+        <Box
+          px="4"
+          py="2"
+          bg="red.50"
+          borderBottom="1px solid"
+          borderColor="red.200"
+          data-testid="action-validation-error"
+        >
+          <Text fontSize="xs" fontWeight="600" color="red.700" mb="0.5">
+            ⚠️ Validation Error
+          </Text>
+          <Text fontSize="xs" color="red.600" whiteSpace="pre-wrap">
+            {validationError}
+          </Text>
+        </Box>
       )}
 
       {/* Fields — either a custom panel, generic schema-driven fields, or raw fallback */}

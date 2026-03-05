@@ -14,6 +14,8 @@ export interface ConfigDetailsState {
   chatOpen: boolean;
   addStepPanelOpen: boolean;
   validationResult: ValidationResult | null;
+  /** Per-action validation errors: actionId → error message */
+  validationErrors: Record<string, string>;
 }
 
 /* ── Connection wizard types ─────────────────────────────── */

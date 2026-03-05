@@ -28,24 +28,24 @@ impl CellphoneSanitizerConfig {
     pub fn validate(&self) -> Result<()> {
         if self.phone_column.is_empty() {
             return Err(Error::ConfigurationError(
-                "cellphone_sanitizer: 'phone_column' must not be empty".into(),
+                "'phone_column' must not be empty".into(),
             ));
         }
         if self.country_columns.is_empty() {
             return Err(Error::ConfigurationError(
-                "cellphone_sanitizer: 'country_columns' must contain at least one column".into(),
+                "'country_columns' must contain at least one column".into(),
             ));
         }
         for (i, col_name) in self.country_columns.iter().enumerate() {
             if col_name.is_empty() {
                 return Err(Error::ConfigurationError(format!(
-                    "cellphone_sanitizer: country_columns[{i}] must not be empty"
+                    "country_columns[{i}] must not be empty"
                 )));
             }
         }
         if self.output_column.is_empty() {
             return Err(Error::ConfigurationError(
-                "cellphone_sanitizer: 'output_column' must not be empty".into(),
+                "'output_column' must not be empty".into(),
             ));
         }
         Ok(())

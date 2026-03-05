@@ -34,12 +34,12 @@ impl IsoCountrySanitizerConfig {
     pub fn validate(&self) -> Result<()> {
         if self.source_column.is_empty() {
             return Err(Error::ConfigurationError(
-                "iso_country_sanitizer: 'source_column' must not be empty".into(),
+                "'source_column' must not be empty".into(),
             ));
         }
         if self.output_column.is_empty() {
             return Err(Error::ConfigurationError(
-                "iso_country_sanitizer: 'output_column' must not be empty".into(),
+                "'output_column' must not be empty".into(),
             ));
         }
         Ok(())
