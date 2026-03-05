@@ -32,7 +32,9 @@ function makeState(overrides: Partial<ConfigDetailsState> = {}): {
       error: null,
       chatOpen: false,
       addStepPanelOpen: false,
+      insertIndex: null,
       validationResult: null,
+      validationErrors: {},
       ...overrides,
     },
   };
