@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateConfigData, CreateConfigErrors, CreateConfigResponses, CsvColumnsData, CsvColumnsErrors, CsvColumnsResponses, CsvPresignedUploadData, CsvPresignedUploadErrors, CsvPresignedUploadResponses, DeleteConfigData, DeleteConfigErrors, DeleteConfigResponses, GetConfigData, GetConfigErrors, GetConfigResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, ListConfigsData, ListConfigsErrors, ListConfigsResponses, LoginData, LoginErrors, LoginResponses, UpdateConfigData, UpdateConfigErrors, UpdateConfigResponses, UpsertSettingsData, UpsertSettingsErrors, UpsertSettingsResponses, ValidateConfigData, ValidateConfigErrors, ValidateConfigResponses } from './types.gen';
+import type { CreateConfigData, CreateConfigErrors, CreateConfigResponses, CsvColumnsData, CsvColumnsErrors, CsvColumnsResponses, CsvPresignedUploadData, CsvPresignedUploadErrors, CsvPresignedUploadResponses, DeleteConfigData, DeleteConfigErrors, DeleteConfigResponses, GeneratePlanData, GeneratePlanErrors, GeneratePlanResponses, GetConfigData, GetConfigErrors, GetConfigResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, ListConfigsData, ListConfigsErrors, ListConfigsResponses, LoginData, LoginErrors, LoginResponses, UpdateConfigData, UpdateConfigErrors, UpdateConfigResponses, UpsertSettingsData, UpsertSettingsErrors, UpsertSettingsResponses, ValidateConfigData, ValidateConfigErrors, ValidateConfigResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -127,6 +127,24 @@ export const csvPresignedUpload = <ThrowOnError extends boolean = false>(options
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/config/{customer_company_id}/csv-upload',
     ...options
+});
+
+/**
+ * POST /config/{customerCompanyId}/generate-plan
+ *
+ * Trigger async AI plan generation for a pipeline configuration.
+ * Sets the generation status to InProgress, sends an SQS message to the
+ * etl-trigger lambda, and returns 202 immediately. The frontend polls
+ * `GET /config/{id}` until `planSummary.generationStatus` is `Completed`.
+ */
+export const generatePlan = <ThrowOnError extends boolean = false>(options: Options<GeneratePlanData, ThrowOnError>) => (options.client ?? client).post<GeneratePlanResponses, GeneratePlanErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/config/{customer_company_id}/generate-plan',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**
