@@ -68,6 +68,15 @@ export function PlanPreviewCard({ preview }: PlanPreviewCardProps) {
     (preview.warnings ?? []).map((w) => [w.field, w.message]),
   );
 
+  // Ensure every warned field appears in `after` with the sentinel value,
+  // even if the AI omitted it or set a different value.
+  const afterWithWarnings = { ...preview.after };
+  for (const field of warningMap.keys()) {
+    if (afterWithWarnings[field] !== NEEDS_MAPPING_SENTINEL) {
+      afterWithWarnings[field] = NEEDS_MAPPING_SENTINEL;
+    }
+  }
+
   return (
     <Box data-testid="plan-preview-card">
       <Text fontWeight="600" fontSize="md" color="gray.800" mb="3">
@@ -94,7 +103,7 @@ export function PlanPreviewCard({ preview }: PlanPreviewCardProps) {
 
         <RecordCard
           label={preview.targetLabel}
-          data={preview.after}
+          data={afterWithWarnings}
           borderColorValue="purple.400"
           warnings={warningMap}
         />

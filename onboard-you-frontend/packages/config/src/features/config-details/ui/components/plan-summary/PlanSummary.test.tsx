@@ -281,6 +281,35 @@ describe('PlanPreviewCard', () => {
     expect(screen.getByText(/1 field could not be auto-mapped/)).toBeInTheDocument();
   });
 
+  it('highlights fields when warnings exist but sentinel is missing from after', () => {
+    const previewWithMissingSentinel: PlanPreview = {
+      sourceLabel: 'In CSV',
+      targetLabel: 'In Your App',
+      before: {
+        name: 'John Smith',
+      },
+      after: {
+        fullName: 'John Smith',
+      },
+      warnings: [
+        {
+          field: 'workEmail',
+          message: 'No source column contains email data.',
+        },
+      ],
+    };
+
+    renderWithProviders(<PlanPreviewCard preview={previewWithMissingSentinel} />);
+
+    // Warning badge should appear even though workEmail was not in `after`
+    expect(screen.getByTestId('warning-badge-workEmail')).toBeInTheDocument();
+    expect(screen.getByText('⚠ Needs mapping')).toBeInTheDocument();
+
+    // The warnings banner should appear
+    expect(screen.getByTestId('preview-warnings-banner')).toBeInTheDocument();
+    expect(screen.getByText(/1 field could not be auto-mapped/)).toBeInTheDocument();
+  });
+
   it('does not show warnings banner when there are no warnings', () => {
     renderWithProviders(<PlanPreviewCard preview={mockPreview} />);
 
