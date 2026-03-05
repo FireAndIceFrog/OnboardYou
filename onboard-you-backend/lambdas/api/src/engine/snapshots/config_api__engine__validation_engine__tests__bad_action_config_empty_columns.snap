@@ -1,0 +1,5 @@
+---
+source: onboard-you-backend/lambdas/api/src/engine/validation_engine.rs
+expression: output
+---
+ERR Validation: Action 'ingest' (type 'csv_hris_connector'): Configuration error: CsvHrisConnector requires at least one declared column

@@ -1,0 +1,6 @@
+---
+source: onboard-you-backend/lambdas/api/src/engine/validation_engine.rs
+expression: output
+---
+ERR Validation: 
+Egress validation failed: column 'not_here' required by API dispatcher config is not produced by the pipeline

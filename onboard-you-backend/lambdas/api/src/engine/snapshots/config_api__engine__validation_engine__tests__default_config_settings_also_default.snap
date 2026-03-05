@@ -1,0 +1,5 @@
+---
+source: onboard-you-backend/lambdas/api/src/engine/validation_engine.rs
+expression: output
+---
+ERR Validation: Egress validation failed: Settings has default auth instead of a well defined one

@@ -1,0 +1,20 @@
+---
+source: onboard-you-backend/lambdas/api/src/engine/validation_engine.rs
+expression: output
+---
+{
+  "steps": [
+    {
+      "action_id": "ingest",
+      "action_type": "csv_hris_connector",
+      "columns_after": [
+        "a",
+        "b"
+      ]
+    }
+  ],
+  "final_columns": [
+    "a",
+    "b"
+  ]
+}

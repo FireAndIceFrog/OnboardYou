@@ -8,17 +8,18 @@ use crate::{
     dependancies::Dependancies,
     models::{ApiError, StepValidation, ValidationResult},
 };
-use onboard_you::ActionFactoryTrait;
-use onboard_you_models::{Manifest, RosterContext};
+use onboard_you::{ActionFactoryTrait};
+use onboard_you_models::{ActionConfigPayload, ApiDispatcherConfig, DynamicEgressModel, Manifest, RosterContext};
 use polars::prelude::*;
 
 /// Validate a pipeline manifest by propagating columns through every step.
 ///
 /// Returns the column set at each step, or an `ApiError` on the first failure.
-pub fn validate_pipeline(
+pub async fn validate_pipeline(
     deps: &Dependancies,
     pipeline_json: &Manifest,
-) -> Result<ValidationResult, ApiError> {
+    organization_id: Option<String>
+)  -> Result<ValidationResult, ApiError> {
     let manifest: Manifest = pipeline_json.clone();
 
     if manifest.actions.is_empty() {
@@ -73,6 +74,68 @@ pub fn validate_pipeline(
         .map(|s| s.columns_after.clone())
         .unwrap_or_default();
 
+    if let Some(org_id) = organization_id {
+        let last_action = manifest.actions.last().unwrap();
+        let egress_config: Box<dyn DynamicEgressModel> = match last_action.config.clone() {
+            ActionConfigPayload::ApiDispatcher(cfg) => {
+                let pre_settings = match cfg {
+                    ApiDispatcherConfig::Default => {
+                        let settings = deps.settings_repo.get(&org_id).await?;
+
+                        if settings.is_none(){
+                            return Err(ApiError::Validation(format!(
+                                "Egress validation failed: There are no settings saved for default config"
+                            )))
+                        }
+
+                        let settings = settings.unwrap();
+                        match settings.default_auth {
+
+                            ApiDispatcherConfig::Default => return Err(ApiError::Validation(format!(
+                                "Egress validation failed: Settings has default auth instead of a well defined one"
+                            ))),
+                            cfg => cfg 
+                        }
+                        
+                    },
+                    cfg => cfg
+                };
+
+                match pre_settings {
+                    ApiDispatcherConfig::Default => 
+                        return Err(ApiError::Validation(format!(
+                            "Egress validation failed: There are no settings saved for default config"
+                        ))),
+                    ApiDispatcherConfig::Bearer(curr) => Ok(Box::new(curr.clone()) as Box<dyn DynamicEgressModel>),
+                    ApiDispatcherConfig::OAuth(curr) => Ok(Box::new(curr.clone()) as Box<dyn DynamicEgressModel>),
+                    ApiDispatcherConfig::OAuth2(curr) => Ok(Box::new(curr.clone()) as Box<dyn DynamicEgressModel>)
+                }
+            },
+            _ => return Err(ApiError::Validation(format!(
+                "Egress validation failed: last action must be 'api_dispatcher', found '{}'",
+                last_action.action_type
+            ))),
+        }?;
+
+        let egress_schema = egress_config.get_schema();
+        let error = egress_schema.keys().map(|k| {
+            if !final_columns.contains(k) {
+                return Some(format!(
+                    "Egress validation failed: column '{}' required by API dispatcher config is not produced by the pipeline",
+                    k
+                ));
+            }
+            None
+        })
+        .filter_map(|e| e)
+        .fold("".to_string(), |init, curr| init + "\n" + &curr);
+
+        if error != "".to_string() {
+            return Err(ApiError::Validation(error))
+        }
+
+    }
+
     Ok(ValidationResult {
         steps,
         final_columns,
@@ -83,57 +146,241 @@ pub fn validate_pipeline(
 mod tests {
     use super::*;
     use crate::dependancies::{Dependancies, Env};
+    use crate::repositories::settings_repository::SettingsRepo;
+    use async_trait::async_trait;
+    use onboard_you_models::{ApiDispatcherConfig, OrgSettings};
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
 
-    #[tokio::test(flavor = "multi_thread")]
-    async fn validate_empty_manifest_returns_empty() {
-        let state = Dependancies::new(Env::default()).await;
-        let manifest = Manifest {
-            version: "1.0".into(),
-            actions: vec![],
+    #[derive(Default)]
+    struct InMemorySettingsRepo {
+        store: RwLock<Option<OrgSettings>>,
+    }
+
+    #[async_trait]
+    impl SettingsRepo for InMemorySettingsRepo {
+        async fn put(&self, settings: &OrgSettings) -> Result<(), ApiError> {
+            self.store.write().await.replace(settings.clone());
+            Ok(())
+        }
+
+        async fn get(&self, _organization_id: &str) -> Result<Option<OrgSettings>, ApiError> {
+            let guard = self.store.read().await;
+            Ok(guard.clone())
+        }
+    }
+
+    async fn test_state_with_settings(settings: Option<OrgSettings>) -> Dependancies {
+        let repo = InMemorySettingsRepo::default();
+        if let Some(s) = settings {
+            repo.store.write().await.replace(s);
+        }
+        let mut deps = Dependancies::new(Env::default()).await;
+        deps.settings_repo = Arc::new(repo);
+        deps
+    }
+
+    fn bearer_config_with_schema(schema: std::collections::HashMap<String, String>) -> ApiDispatcherConfig {
+        let schema_json: serde_json::Value = schema.iter()
+            .map(|(k, v)| (k.clone(), serde_json::Value::String(v.clone())))
+            .collect::<serde_json::Map<String, serde_json::Value>>()
+            .into();
+
+        let json = serde_json::json!({
+            "auth_type": "bearer",
+            "destination_url": "https://api.example.com/employees",
+            "token": "sk-live-abc123",
+            "schema": schema_json,
+            "body_path": "id"
+        });
+        serde_json::from_value(json).unwrap()
+    }
+
+    /// Helper: CSV ingest + api_dispatcher manifest JSON
+    fn pipeline_with_dispatcher(columns: &[&str], dispatcher_config: serde_json::Value) -> String {
+        let cols: Vec<String> = columns.iter().map(|c| format!("\"{}\"", c)).collect();
+        format!(
+            r#"{{
+                "version": "1.0",
+                "actions": [
+                    {{ "id": "ingest", "action_type": "csv_hris_connector", "config": {{ "filename": "data.csv", "columns": [{}] }} }},
+                    {{ "id": "dispatch", "action_type": "api_dispatcher", "config": {} }}
+                ]
+            }}"#,
+            cols.join(","),
+            dispatcher_config
+        )
+    }
+
+    /// Describes one validation scenario.
+    struct Case {
+        name: &'static str,
+        /// Raw manifest JSON. If `None`, built from `columns` + `dispatcher`.
+        manifest_json: Option<&'static str>,
+        /// Pipeline input columns (fed to csv_hris_connector). Ignored when `manifest_json` is set.
+        columns: &'static [&'static str],
+        /// Dispatcher config JSON — `None` means CSV-only pipeline.
+        dispatcher: Option<serde_json::Value>,
+        /// Organization id passed to `validate_pipeline`.
+        org_id: Option<&'static str>,
+        /// Pre-seeded OrgSettings for the in-memory repo.
+        settings: Option<OrgSettings>,
+    }
+
+    impl Default for Case {
+        fn default() -> Self {
+            Self {
+                name: "",
+                manifest_json: None,
+                columns: &[],
+                dispatcher: None,
+                org_id: None,
+                settings: None,
+            }
+        }
+    }
+
+    fn all_cases() -> Vec<Case> {
+        let bearer = |keys: &[&str]| serde_json::json!({
+            "auth_type": "bearer",
+            "destination_url": "https://api.example.com/employees",
+            "token": "tok",
+            "schema": keys.iter().map(|k| (k.to_string(), serde_json::Value::String("string".into()))).collect::<serde_json::Map<_,_>>(),
+            "body_path": keys.first().unwrap_or(&"id")
+        });
+
+        let bearer_settings = |keys: &[&str]| -> OrgSettings {
+            let schema: std::collections::HashMap<String, String> =
+                keys.iter().map(|k| (k.to_string(), "string".into())).collect();
+            OrgSettings {
+                organization_id: "org-1".into(),
+                default_auth: bearer_config_with_schema(schema),
+            }
         };
 
-        let res = validate_pipeline(&state, &manifest).expect("should succeed");
-        assert!(res.steps.is_empty());
-        assert!(res.final_columns.is_empty());
+        vec![
+            // ── Basic pipeline validation ──
+            Case {
+                name: "empty_manifest",
+                manifest_json: Some(r#"{ "version": "1.0", "actions": [] }"#),
+                ..Default::default()
+            },
+            Case {
+                name: "csv_column_propagation",
+                columns: &["a", "b"],
+                ..Default::default()
+            },
+            Case {
+                name: "bad_action_config_empty_columns",
+                manifest_json: Some(r#"{
+                    "version": "1.0",
+                    "actions": [
+                        { "id": "ingest", "action_type": "csv_hris_connector", "config": { "filename": "data.csv", "columns": [] } }
+                    ]
+                }"#),
+                ..Default::default()
+            },
+            // ── Egress validation ──
+            Case {
+                name: "last_action_not_dispatcher",
+                columns: &["a"],
+                org_id: Some("org-1"),
+                ..Default::default()
+            },
+            Case {
+                name: "default_config_no_settings",
+                columns: &["a", "b"],
+                dispatcher: Some(serde_json::json!({ "auth_type": "default" })),
+                org_id: Some("org-1"),
+                ..Default::default()
+            },
+            Case {
+                name: "default_config_settings_also_default",
+                columns: &["a", "b"],
+                dispatcher: Some(serde_json::json!({ "auth_type": "default" })),
+                org_id: Some("org-1"),
+                settings: Some(OrgSettings {
+                    organization_id: "org-1".into(),
+                    default_auth: ApiDispatcherConfig::Default,
+                }),
+                ..Default::default()
+            },
+            Case {
+                name: "default_resolved_from_settings_ok",
+                columns: &["a", "b"],
+                dispatcher: Some(serde_json::json!({ "auth_type": "default" })),
+                org_id: Some("org-1"),
+                settings: Some(bearer_settings(&["a", "b"])),
+                ..Default::default()
+            },
+            Case {
+                name: "bearer_schema_columns_match",
+                columns: &["a", "b"],
+                dispatcher: Some(bearer(&["a", "b"])),
+                org_id: Some("org-1"),
+                ..Default::default()
+            },
+            Case {
+                name: "bearer_schema_column_missing",
+                columns: &["a", "b"],
+                dispatcher: Some(bearer(&["a", "missing_col"])),
+                org_id: Some("org-1"),
+                ..Default::default()
+            },
+            Case {
+                name: "egress_skipped_when_no_org_id",
+                columns: &["x"],
+                ..Default::default()
+            },
+            Case {
+                name: "default_resolved_to_bearer_missing_column",
+                columns: &["a", "b"],
+                dispatcher: Some(serde_json::json!({ "auth_type": "default" })),
+                org_id: Some("org-1"),
+                settings: Some(bearer_settings(&["a", "not_here"])),
+                ..Default::default()
+            },
+        ]
+    }
+
+    fn build_manifest_json(case: &Case) -> String {
+        if let Some(raw) = case.manifest_json {
+            return raw.to_string();
+        }
+        match &case.dispatcher {
+            Some(d) => pipeline_with_dispatcher(case.columns, d.clone()),
+            None => {
+                let cols: Vec<String> = case.columns.iter().map(|c| format!("\"{}\"", c)).collect();
+                format!(
+                    r#"{{ "version": "1.0", "actions": [
+                        {{ "id": "ingest", "action_type": "csv_hris_connector", "config": {{ "filename": "data.csv", "columns": [{}] }} }}
+                    ] }}"#,
+                    cols.join(",")
+                )
+            }
+        }
+    }
+
+    fn format_result(res: &Result<ValidationResult, ApiError>) -> String {
+        match res {
+            Ok(v) => serde_json::to_string_pretty(v).unwrap(),
+            Err(ApiError::Validation(msg)) => format!("ERR Validation: {msg}"),
+            Err(other) => format!("ERR: {other:?}"),
+        }
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    async fn validate_propagates_csv_columns() {
-        let state = Dependancies::new(Env::default()).await;
+    async fn validate_pipeline_cases() {
+        for case in all_cases() {
+            let manifest_json = build_manifest_json(&case);
+            let state = test_state_with_settings(case.settings).await;
+            let manifest = Manifest::from_json(&manifest_json).expect("parse manifest");
+            let org_id = case.org_id.map(String::from);
 
-        let json = r#"{
-            "version": "1.0",
-            "actions": [
-                { "id": "ingest", "action_type": "csv_hris_connector", "config": { "filename": "data.csv", "columns": ["a","b"] } }
-            ]
-        }"#;
+            let result = validate_pipeline(&state, &manifest, org_id).await;
+            let output = format_result(&result);
 
-        let manifest = Manifest::from_json(json).expect("parse manifest");
-
-        let res = validate_pipeline(&state, &manifest).expect("validation should succeed");
-        assert_eq!(res.steps.len(), 1);
-        let step = &res.steps[0];
-        assert_eq!(step.action_id, "ingest");
-        assert_eq!(step.action_type, "csv_hris_connector");
-        assert_eq!(step.columns_after, vec!["a".to_string(), "b".to_string()]);
-        assert_eq!(res.final_columns, vec!["a".to_string(), "b".to_string()]);
-    }
-
-    #[tokio::test(flavor = "multi_thread")]
-    async fn validate_rejects_bad_action_config() {
-        let state = Dependancies::new(Env::default()).await;
-
-        // Csv connector with empty columns -> factory.create should fail
-        let json = r#"{
-            "version": "1.0",
-            "actions": [
-                { "id": "ingest", "action_type": "csv_hris_connector", "config": { "filename": "data.csv", "columns": [] } }
-            ]
-        }"#;
-
-        let manifest = Manifest::from_json(json).expect("parse manifest");
-
-        let err = validate_pipeline(&state, &manifest).expect_err("should error");
-        assert!(matches!(err, ApiError::Validation(_)));
+            insta::assert_snapshot!(case.name, output);
+        }
     }
 }
