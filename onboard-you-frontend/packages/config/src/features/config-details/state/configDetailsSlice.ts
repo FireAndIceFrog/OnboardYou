@@ -83,6 +83,7 @@ const initialState: ConfigDetailsState = {
   error: null,
   chatOpen: false,
   addStepPanelOpen: false,
+  insertIndex: null,
   validationResult: null,
   validationErrors: {},
 };
@@ -210,6 +211,7 @@ const configDetailsSlice = createSlice({
     },
     selectNode(state, action: PayloadAction<Node>) {
       state.selectedNode = action.payload as typeof state.selectedNode;
+      state.addStepPanelOpen = false;
     },
     deselectNode(state) {
       state.selectedNode = null;
@@ -223,17 +225,21 @@ const configDetailsSlice = createSlice({
     addFlowAction(state, action: PayloadAction<ActionConfig>) {
       const actionCfg = action.payload;
       const category = actionCategory(actionCfg.action_type);
-      const idx = state.nodes.length;
+      const insertAt = state.insertIndex;
 
-      // Keep pipeline config in sync so the action is included in save/validate
+      // Insert into pipeline config
       if (state.config) {
-        state.config.pipeline.actions.push(actionCfg);
+        if (insertAt != null) {
+          state.config.pipeline.actions.splice(insertAt, 0, actionCfg);
+        } else {
+          state.config.pipeline.actions.push(actionCfg);
+        }
       }
 
       const newNode: Node = {
         id: actionCfg.id,
         type: category,
-        position: { x: START_X + idx * NODE_GAP_X, y: START_Y },
+        position: { x: 0, y: START_Y }, // repositioned below
         data: {
           actionId: actionCfg.id,
           label: businessLabel(actionCfg.action_type),
@@ -243,26 +249,52 @@ const configDetailsSlice = createSlice({
         },
       };
 
-      if (state.nodes.length > 0) {
-        const prevNode = state.nodes[state.nodes.length - 1];
-        const edgeColor = CATEGORY_STYLES[category] ?? CATEGORY_STYLES.logic;
-        state.edges.push({
-          id: `edge-${prevNode.id}-${actionCfg.id}`,
-          source: prevNode.id,
-          target: actionCfg.id,
-          type: 'default',
-          animated: true,
-          style: { stroke: edgeColor.stroke, strokeWidth: 2 },
-        } as typeof state.edges[number]);
+      if (insertAt != null) {
+        state.nodes.splice(insertAt, 0, newNode as typeof state.nodes[number]);
+      } else {
+        state.nodes.push(newNode as typeof state.nodes[number]);
       }
 
-      state.nodes.push(newNode as typeof state.nodes[number]);
+      // Rebuild all edges and reposition all nodes
+      const plainNodes = current(state).nodes;
+      const newEdges: typeof state.edges = [];
+      for (let i = 0; i < plainNodes.length; i++) {
+        const n = plainNodes[i];
+        // Reposition
+        state.nodes[i] = { ...n, position: { x: START_X + i * NODE_GAP_X, y: START_Y } } as typeof state.nodes[number];
+
+        if (i > 0) {
+          const prev = plainNodes[i - 1];
+          const cat = (n.data as Record<string, unknown>).category as string;
+          const edgeColor = CATEGORY_STYLES[cat] ?? CATEGORY_STYLES.logic;
+          newEdges.push({
+            id: `edge-${prev.id}-${n.id}`,
+            source: prev.id,
+            target: n.id,
+            type: 'addButton',
+            animated: true,
+            style: { stroke: edgeColor.stroke, strokeWidth: 2 },
+          } as typeof state.edges[number]);
+        }
+      }
+      state.edges = newEdges;
+      state.insertIndex = null;
     },
     toggleAddStepPanel(state) {
       state.addStepPanelOpen = !state.addStepPanelOpen;
+      if (state.addStepPanelOpen) {
+        state.selectedNode = null;
+        state.insertIndex = null;
+      }
     },
     setAddStepPanelOpen(state, action: PayloadAction<boolean>) {
       state.addStepPanelOpen = action.payload;
+      if (!action.payload) state.insertIndex = null;
+    },
+    openAddStepAtIndex(state, action: PayloadAction<number>) {
+      state.addStepPanelOpen = true;
+      state.selectedNode = null;
+      state.insertIndex = action.payload;
     },
     removeFlowAction(state, action: PayloadAction<string>) {
       const actionId = action.payload;
@@ -294,7 +326,7 @@ const configDetailsSlice = createSlice({
           id: `edge-${prev.id}-${curr.id}`,
           source: prev.id,
           target: curr.id,
-          type: 'default',
+          type: 'addButton',
           animated: true,
           style: { stroke: edgeColor.stroke, strokeWidth: 2 },
         } as typeof state.edges[number]);
@@ -479,6 +511,7 @@ export const {
   updateFlowActionConfig,
   toggleAddStepPanel,
   setAddStepPanelOpen,
+  openAddStepAtIndex,
   resetConfigDetails,
   initNewConfig,
 } = configDetailsSlice.actions;

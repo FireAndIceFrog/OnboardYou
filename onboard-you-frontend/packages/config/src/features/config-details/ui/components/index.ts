@@ -1,4 +1,5 @@
 export { ActionEditPanel } from './ActionEditPanel';
+export { AddButtonEdge } from './AddButtonEdge';
 export { AddStepPanel } from './AddStepPanel';
 export { FieldEditor, type FieldEditorProps } from './FieldEditor';
 export { FieldError } from './FieldError';

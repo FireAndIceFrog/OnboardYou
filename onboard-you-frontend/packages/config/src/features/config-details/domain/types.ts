@@ -13,6 +13,8 @@ export interface ConfigDetailsState {
   error: string | null;
   chatOpen: boolean;
   addStepPanelOpen: boolean;
+  /** Index at which the next added step will be inserted (null = append) */
+  insertIndex: number | null;
   validationResult: ValidationResult | null;
   /** Per-action validation errors: actionId → error message */
   validationErrors: Record<string, string>;
