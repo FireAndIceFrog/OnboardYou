@@ -357,12 +357,13 @@ export type FilterByValueConfig = {
 
 /**
  * Request body for `POST /config/{id}/generate-plan`.
+ *
+ * Currently empty — source system is derived from the pipeline's ingress
+ * connector. Kept as a struct so future fields can be added without a
+ * breaking API change.
  */
 export type GeneratePlanRequest = {
-    /**
-     * Source system name — "Workday" or "CSV"
-     */
-    sourceSystem: string;
+    [key: string]: unknown;
 };
 
 /**
@@ -743,6 +744,12 @@ export type PlanPreview = {
      * Label for the target side (e.g. "In Your App")
      */
     targetLabel: string;
+    /**
+     * Warnings for destination fields that could not be mapped from the source.
+     * Each warning uses the sentinel value `__NEEDS_MAPPING__` in `after`
+     * and surfaces a human-readable message for user intervention.
+     */
+    warnings?: Array<PreviewWarning>;
 };
 
 /**
@@ -790,6 +797,23 @@ export type PresignedUploadResponse = {
      * Presigned PUT URL — the frontend uses this to upload the CSV directly.
      */
     upload_url: string;
+};
+
+/**
+ * A warning for a destination field that has no matching source column.
+ *
+ * The corresponding entry in `PlanPreview::after` will have the sentinel
+ * value `__NEEDS_MAPPING__` to signal the UI that user action is required.
+ */
+export type PreviewWarning = {
+    /**
+     * The destination field name that could not be mapped
+     */
+    field: string;
+    /**
+     * Human-readable explanation of why the mapping is missing
+     */
+    message: string;
 };
 
 /**
@@ -1299,7 +1323,7 @@ export type CsvPresignedUploadResponse = CsvPresignedUploadResponses[keyof CsvPr
 
 export type GeneratePlanData = {
     /**
-     * Source system information for plan generation
+     * Optional request body (currently empty — source system is derived from the pipeline)
      */
     body: GeneratePlanRequest;
     path: {

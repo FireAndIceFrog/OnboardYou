@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { screen, fireEvent } from '@testing-library/react';
 import { renderWithProviders, createTestStore } from '@/shared/test/testWrapper';
-import type { PlanSummary, ActionConfig, ActionConfigPayload, PlanFeature, PlanPreview } from '@/generated/api';
+import type { PlanSummary, ActionConfig, ActionConfigPayload, PlanFeature, PlanPreview, PreviewWarning } from '@/generated/api';
 import type { ConfigDetailsState } from '../../../domain/types';
 import { PlanSummaryView } from '../plan-summary/PlanSummaryView';
 import { PlanFeatureCard } from '../plan-summary/PlanFeatureCard';
@@ -249,6 +249,42 @@ describe('PlanPreviewCard', () => {
     // Jane Doe appears in both before and after cards
     expect(screen.getAllByText('Jane Doe')).toHaveLength(2);
     expect(screen.getByText('Northeast Sales')).toBeInTheDocument();
+  });
+
+  it('renders warning badges for __NEEDS_MAPPING__ fields', () => {
+    const previewWithWarnings: PlanPreview = {
+      sourceLabel: 'In CSV',
+      targetLabel: 'In Your App',
+      before: {
+        name: 'John Smith',
+      },
+      after: {
+        fullName: 'John Smith',
+        workEmail: '__NEEDS_MAPPING__',
+      },
+      warnings: [
+        {
+          field: 'workEmail',
+          message: 'No source column contains email data.',
+        },
+      ],
+    };
+
+    renderWithProviders(<PlanPreviewCard preview={previewWithWarnings} />);
+
+    // Warning badge should appear for the unmapped field
+    expect(screen.getByTestId('warning-badge-workEmail')).toBeInTheDocument();
+    expect(screen.getByText('⚠ Needs mapping')).toBeInTheDocument();
+
+    // The warnings banner should appear
+    expect(screen.getByTestId('preview-warnings-banner')).toBeInTheDocument();
+    expect(screen.getByText(/1 field could not be auto-mapped/)).toBeInTheDocument();
+  });
+
+  it('does not show warnings banner when there are no warnings', () => {
+    renderWithProviders(<PlanPreviewCard preview={mockPreview} />);
+
+    expect(screen.queryByTestId('preview-warnings-banner')).not.toBeInTheDocument();
   });
 });
 

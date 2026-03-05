@@ -1,7 +1,6 @@
 //! Validation repository — propagates columns through the pipeline and computes schema diffs.
 
 use async_trait::async_trait;
-use lambda_runtime::Error;
 use std::collections::HashMap;
 use std::sync::Arc;
 

@@ -4,6 +4,8 @@ use async_trait::async_trait;
 use gh_models::types::ChatMessage;
 use gh_models::GHModels;
 use lambda_runtime::Error;
+use reqwest::StatusCode;
+use std::error::Error as StdError;
 use std::sync::Arc;
 
 /// Repository trait for LLM interactions.
@@ -50,7 +52,10 @@ impl ILlmRepo for GHModelsLlmRepository {
             .client
             .chat_completion(model, messages, temperature, max_tokens, top_p)
             .await
-            .map_err(|e| Error::from(format!("AI API call failed: {e}")))?;
+            .map_err(|e: reqwest::Error| Error::from(format!("AI API call failed: {e} status = {status} source = {source}", 
+                status = e.status().unwrap_or(StatusCode::NO_CONTENT),
+                source = e.source().map(|s| s.to_string()).unwrap_or_else(|| "No additional error info".to_string())
+            )))?;
 
         let content = response
             .choices

@@ -122,6 +122,10 @@ frontend-url:
 	@echo "▸ Fetching frontend URL from Terraform outputs…"
 	cd infra && tofu output -raw frontend_url
 
+frontend-local:
+	@echo "▸ Frontend URL for local development: http://localhost:5174"
+	cd onboard-you-frontend && pnpm dev
+
 ##──────────────────────────────────────────────────────────────
 ## All-in-one
 ##──────────────────────────────────────────────────────────────

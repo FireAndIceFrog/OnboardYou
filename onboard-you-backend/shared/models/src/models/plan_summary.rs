@@ -63,6 +63,24 @@ pub struct PlanPreview {
     pub before: HashMap<String, String>,
     /// Sample record after pipeline transforms
     pub after: HashMap<String, String>,
+    /// Warnings for destination fields that could not be mapped from the source.
+    /// Each warning uses the sentinel value `__NEEDS_MAPPING__` in `after`
+    /// and surfaces a human-readable message for user intervention.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub warnings: Vec<PreviewWarning>,
+}
+
+/// A warning for a destination field that has no matching source column.
+///
+/// The corresponding entry in `PlanPreview::after` will have the sentinel
+/// value `__NEEDS_MAPPING__` to signal the UI that user action is required.
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PreviewWarning {
+    /// The destination field name that could not be mapped
+    pub field: String,
+    /// Human-readable explanation of why the mapping is missing
+    pub message: String,
 }
 
 #[cfg(test)]
@@ -86,6 +104,7 @@ mod tests {
                 target_label: "In Your App".into(),
                 before: [("name".into(), "Jane Doe".into())].into_iter().collect(),
                 after: [("name".into(), "Jane Doe".into())].into_iter().collect(),
+                warnings: vec![],
             },
             generation_status: SchemaGenerationStatus::Completed,
         };
@@ -114,6 +133,7 @@ mod tests {
                     target_label: "t".into(),
                     before: HashMap::new(),
                     after: HashMap::new(),
+                    warnings: vec![],
                 },
                 generation_status: status,
             };

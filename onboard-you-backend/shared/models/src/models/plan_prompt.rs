@@ -149,16 +149,23 @@ the format expected by the customer's destination API.
 
 {etl_schema}
 
-RULES:
+STRICT RULES:
 1. The first action MUST be the appropriate ingress connector ({source_system}).
 2. The last action MUST be api_dispatcher (egress).
 3. Include transformation actions between ingress and egress as needed.
 4. Each action must have a unique "id" (e.g. "step_1", "step_2").
 5. Each action has "disabled": false by default.
-6. The "config" object for each action MUST conform to the schema above.
-7. Generate a summary with toggleable features, each referencing the action IDs it controls.
-8. Generate a synthetic preview where "before" keys are ONLY column names from PIPELINE COLUMNS and "after" keys are ONLY the field names (the keys) from the EGRESS SCHEMA. The EGRESS SCHEMA format is {{"field_name": "type"}} — use the KEYS as destination field names. Use realistic sample values for each field. Do NOT invent field names that are not in PIPELINE COLUMNS or EGRESS SCHEMA.
-9. Return ONLY valid JSON matching the response schema below. No markdown, no explanation.
+7. The "config" object for each action MUST conform to the schema above.
+8. Generate a summary with toggleable features, each referencing the action IDs it controls.
+9. Generate a synthetic preview where "before" keys are ONLY column names from PIPELINE COLUMNS and "after" keys are ONLY the field names (the keys) from the EGRESS SCHEMA. The EGRESS SCHEMA format is {{"field_name": "type"}} — use the KEYS as destination field names. Use realistic sample values for each field. Do NOT invent field names that are not in PIPELINE COLUMNS or EGRESS SCHEMA.
+10. Wrap your final JSON response inside <output></output> tags. Do NOT include any text outside those tags except optional thinking.
+
+OTHER RULES:
+1. Phone number and country code must be normalized using the iso_country_sanitizer and cellphone_sanitizer actions where applicable. the country code should be first, it doesnt matter if you use the 3 char country format or two char country format. 
+2. If the source system is known to have diacritics in employee names (e.g. Workday), use the handle_diacritics action to normalize them.
+3. Aggressively drop columns that are not needed in the destination API to minimize data handling and improve performance.
+4. Do not map data types that are incorrect for the destination field. For example, if the source column is phone-number and the destination field is workEmail, do not map those — instead, drop the phone-number column and do not include it in the preview. This mapping should fail because there is no source email
+5. If there is no source column that reasonably maps to a required destination field, do NOT silently drop it. Instead, include the destination field in the "after" preview with the sentinel value "__NEEDS_MAPPING__" and add an entry to the "warnings" array explaining which destination field has no source match and why. This surfaces the gap to the user so they can provide a manual mapping.
 
 RESPONSE SCHEMA:
 {{
@@ -184,7 +191,13 @@ RESPONSE SCHEMA:
       "sourceLabel": "string",
       "targetLabel": "string",
       "before": {{ "<PIPELINE_COLUMN>": "<sample_value>", ... }},
-      "after": {{ "<EGRESS_SCHEMA_DESTINATION_FIELD>": "<sample_value>", ... }}
+      "after": {{ "<EGRESS_SCHEMA_DESTINATION_FIELD>": "<sample_value_or___NEEDS_MAPPING__>", ... }},
+      "warnings": [
+        {{
+          "field": "<destination_field_name>",
+          "message": "<human-readable explanation of why this field could not be mapped>"
+        }}
+      ]
     }}
   }}
 }}"#,
@@ -346,8 +359,8 @@ mod tests {
     fn snapshot_user_prompt() {
         let egress: HashMap<String, String> =
             std::collections::BTreeMap::from([
-                ("email".into(), "workEmail".into()),
-                ("name".into(), "fullName".into()),
+                ("email".into(), "string".into()),
+                ("name".into(), "string".into()),
             ])
             .into_iter()
             .collect();

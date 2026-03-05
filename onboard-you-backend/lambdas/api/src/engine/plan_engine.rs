@@ -51,6 +51,7 @@ pub async fn generate_plan(
             target_label: String::new(),
             before: Default::default(),
             after: Default::default(),
+            warnings: vec![],
         },
         generation_status: SchemaGenerationStatus::InProgress,
     });

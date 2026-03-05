@@ -13,7 +13,7 @@ describe('PUT /settings', () => {
         auth_type: 'bearer',
         destination_url: 'https://httpbin.org/post',
         token: 'smoke-test-token',
-        schema: { foo: 'string' },
+        schema: { employee_id: 'string', f_name: 'string', l_name: 'string', country: 'string', phone: "string" },
         body_path: 'foo',
       },
     };
@@ -24,7 +24,7 @@ describe('PUT /settings', () => {
     expect(body.organizationId).toBeTruthy();
     const respAuth = body.defaultAuth as Record<string, unknown>;
     expect(respAuth.auth_type).toBe('bearer');
-    expect(respAuth.schema).toEqual({ foo: 'string' });
+    expect(respAuth.schema).toEqual({ employee_id: 'string', f_name: 'string', l_name: 'string', country: 'string', phone: "string" });
     expect(respAuth.body_path).toBe('foo');
   });
 });

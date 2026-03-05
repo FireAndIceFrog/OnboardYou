@@ -56,6 +56,7 @@ pub async fn run(
                         target_label: String::new(),
                         before: Default::default(),
                         after: Default::default(),
+                        warnings: vec![],
                     },
                     generation_status: SchemaGenerationStatus::Failed(e.to_string()),
                 });

@@ -13,8 +13,32 @@ use onboard_you_models::{
     PlanPrompt, PlanSummary, SchemaGenerationStatus,
 };
 
-/// The AI model to use for plan generation.
-const AI_MODEL: &str = "openai/gpt-4o";
+/// Returns the AI model to use for plan generation.
+///
+/// Reads `AI_MODEL` from the environment, falling back to `"mistral-ai/ministral-3b"`.
+fn ai_model() -> String {
+    std::env::var("AI_MODEL").unwrap_or_else(|_| "openai/gpt-4o".into())
+}
+
+/// Returns the sampling temperature for plan generation.
+///
+/// Reads `AI_TEMPERATURE` from the environment, falling back to `0.7`.
+fn ai_temperature() -> f32 {
+    std::env::var("AI_TEMPERATURE")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0.7)
+}
+
+/// Returns the top-p (nucleus sampling) value for plan generation.
+///
+/// Reads `AI_TOP_P` from the environment, falling back to `1.0`.
+fn ai_top_p() -> f32 {
+    std::env::var("AI_TOP_P")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0.5)
+}
 
 /// Maximum number of generate → validate → retry cycles.
 const MAX_ATTEMPTS: usize = 5;
@@ -123,9 +147,10 @@ impl ISchemaRepo for SchemaRepository {
             tracing::info!(attempt, max = MAX_ATTEMPTS, "Plan generation attempt");
 
             // Call LLM — retry on transient API errors instead of failing immediately
+            let model = ai_model();
             let content = match deps
                 .llm_repo
-                .chat_completion(AI_MODEL, &conversation, 0.7, 4096, 1.0)
+                .chat_completion(&model, &conversation, ai_temperature(), 4096, ai_top_p())
                 .await
             {
                 Ok(c) => c,
@@ -165,8 +190,8 @@ impl ISchemaRepo for SchemaRepository {
                         role: "user".into(),
                         content: format!(
                             "Your response failed validation:\n{parse_err}\n\n\
-                             Please fix these issues and return the corrected JSON. \
-                             Remember: return ONLY valid JSON, no markdown."
+                             Please fix these issues and return the corrected JSON \
+                             wrapped in <output></output> tags."
                         ),
                     });
                     continue;
@@ -208,8 +233,8 @@ impl ISchemaRepo for SchemaRepository {
                 role: "user".into(),
                 content: format!(
                     "Your response failed validation with {} error(s):\n{}\n\n\
-                     Please fix ALL of these issues and return the corrected JSON. \
-                     Remember: return ONLY valid JSON, no markdown.",
+                     Please fix ALL of these issues and return the corrected JSON \
+                     wrapped in <output></output> tags.",
                     errors.len(),
                     error_report,
                 ),
@@ -224,18 +249,36 @@ impl ISchemaRepo for SchemaRepository {
 
 // ── Private helpers ────────────────────────────────────────────────
 
+/// Extract the text inside `<output>…</output>` tags.
+///
+/// Reasoning models (e.g. Phi-4-reasoning) emit `<thinking>…</thinking>`
+/// followed by `<output>…</output>`.  We only care about the output block.
+/// If no `<output>` tag is found, the full input is returned unchanged.
+fn extract_output_tag(text: &str) -> &str {
+    if let Some(start) = text.find("<output>") {
+        let after_tag = &text[start + "<output>".len()..];
+        if let Some(end) = after_tag.find("</output>") {
+            return after_tag[..end].trim();
+        }
+    }
+    text
+}
+
 /// Parse the raw LLM text into a `(PlanSummary, Manifest)`.
 ///
 /// Strips markdown fences, extracts both `summary` and `manifest` keys,
 /// and deserialises into the model types.
 fn parse_ai_response(content: &str) -> Result<(PlanSummary, Manifest), String> {
+    // Reasoning models wrap their answer in <output>…</output> tags.
+    // Extract the inner content if present, otherwise use the full response.
+    let inner = extract_output_tag(content.trim());
+
     // Strip markdown code fences if present
-    let json_str = content
-        .trim()
+    let json_str = inner
         .strip_prefix("```json")
-        .or_else(|| content.trim().strip_prefix("```"))
+        .or_else(|| inner.strip_prefix("```"))
         .and_then(|s| s.strip_suffix("```"))
-        .unwrap_or(content.trim());
+        .unwrap_or(inner);
 
     let parsed: serde_json::Value = serde_json::from_str(json_str)
         .map_err(|e| format!("Invalid JSON: {e}"))?;
@@ -267,6 +310,7 @@ fn parse_ai_response(content: &str) -> Result<(PlanSummary, Manifest), String> {
             target_label: "Destination".into(),
             before: HashMap::new(),
             after: HashMap::new(),
+            warnings: vec![],
         });
 
     // ── Extract manifest ───────────────────────────────────────
@@ -495,5 +539,47 @@ mod tests {
         let (summary, manifest) = parse_ai_response(json).unwrap();
         let errors = validate_plan(&summary, &manifest, &ActionType::WorkdayHrisConnector, &HashMap::new());
         assert!(errors.iter().any(|e| e.contains("step_99")), "Should flag dangling ref: {errors:?}");
+    }
+
+    #[test]
+    fn test_extract_output_tag() {
+        // With thinking + output tags
+        let input = "<thinking>some reasoning</thinking><output>{\"key\": 1}</output>";
+        assert_eq!(extract_output_tag(input), r#"{"key": 1}"#);
+
+        // Output tags only
+        assert_eq!(extract_output_tag("<output>hello</output>"), "hello");
+
+        // No tags — returns input unchanged
+        let plain = r#"{"key": 1}"#;
+        assert_eq!(extract_output_tag(plain), plain);
+
+        // Handles whitespace inside output tags
+        let padded = "<output>  {\"key\": 1}  </output>";
+        assert_eq!(extract_output_tag(padded), r#"{"key": 1}"#);
+    }
+
+    #[test]
+    fn test_parse_ai_response_with_output_tags() {
+        let wrapped = r#"<thinking>Let me reason about this...</thinking>
+<output>{
+            "manifest": {
+                "version": "1.0",
+                "actions": [
+                    { "id": "step_1", "action_type": "workday_hris_connector", "disabled": false, "config": { "tenant_url": "https://example.com", "tenant_id": "t1", "username": "u", "password": "p", "worker_count_limit": 200, "response_group": { "include_personal_information": true, "include_employment_information": true, "include_compensation": false, "include_organizations": false, "include_roles": false } } },
+                    { "id": "step_2", "action_type": "api_dispatcher", "disabled": false, "config": { "auth_type": "bearer", "destination_url": "https://api.example.com", "token": "tok", "schema": { "name": "fullName" } } }
+                ]
+            },
+            "summary": {
+                "headline": "Tagged plan",
+                "description": "Parsed from output tags",
+                "features": [],
+                "preview": { "sourceLabel": "S", "targetLabel": "T", "before": {}, "after": {} }
+            }
+        }</output>"#;
+
+        let (summary, manifest) = parse_ai_response(wrapped).expect("should parse output-tagged response");
+        assert_eq!(summary.headline, "Tagged plan");
+        assert_eq!(manifest.actions.len(), 2);
     }
 }

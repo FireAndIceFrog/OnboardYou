@@ -532,7 +532,7 @@
           }
         ],
         "requestBody": {
-          "description": "Source system information for plan generation",
+          "description": "Optional request body (currently empty — source system is derived from the pipeline)",
           "content": {
             "application/json": {
               "schema": {
@@ -1221,16 +1221,7 @@
       },
       "GeneratePlanRequest": {
         "type": "object",
-        "description": "Request body for `POST /config/{id}/generate-plan`.",
-        "required": [
-          "sourceSystem"
-        ],
-        "properties": {
-          "sourceSystem": {
-            "type": "string",
-            "description": "Source system name — \"Workday\" or \"CSV\""
-          }
-        }
+        "description": "Request body for `POST /config/{id}/generate-plan`.\n\nCurrently empty — source system is derived from the pipeline's ingress\nconnector. Kept as a struct so future fields can be added without a\nbreaking API change."
       },
       "GeneratePlanResponse": {
         "type": "object",
@@ -1679,6 +1670,13 @@
           "targetLabel": {
             "type": "string",
             "description": "Label for the target side (e.g. \"In Your App\")"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PreviewWarning"
+            },
+            "description": "Warnings for destination fields that could not be mapped from the source.\nEach warning uses the sentinel value `__NEEDS_MAPPING__` in `after`\nand surfaces a human-readable message for user intervention."
           }
         }
       },
@@ -1738,6 +1736,24 @@
           "upload_url": {
             "type": "string",
             "description": "Presigned PUT URL — the frontend uses this to upload the CSV directly."
+          }
+        }
+      },
+      "PreviewWarning": {
+        "type": "object",
+        "description": "A warning for a destination field that has no matching source column.\n\nThe corresponding entry in `PlanPreview::after` will have the sentinel\nvalue `__NEEDS_MAPPING__` to signal the UI that user action is required.",
+        "required": [
+          "field",
+          "message"
+        ],
+        "properties": {
+          "field": {
+            "type": "string",
+            "description": "The destination field name that could not be mapped"
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable explanation of why the mapping is missing"
           }
         }
       },
