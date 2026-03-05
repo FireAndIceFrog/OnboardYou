@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 import { Box } from '@chakra-ui/react';
 import { useAppSelector } from '@/store';
 import { selectSidebarCollapsed } from '@/features/layout/state/layoutSlice';
+import { useWebMCP } from '@/features/webmcp/useWebMCP';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 
@@ -11,6 +12,7 @@ const SIDEBAR_COLLAPSED_WIDTH = '64px';
 
 export function AppLayout() {
   const sidebarCollapsed = useAppSelector(selectSidebarCollapsed);
+  useWebMCP();
 
   return (
     <Box minH="100%" display="flex" flexDirection="column" height="100%">

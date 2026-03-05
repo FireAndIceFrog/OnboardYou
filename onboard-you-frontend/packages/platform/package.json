@@ -17,6 +17,7 @@
   "dependencies": {
     "@chakra-ui/react": "^3.33.0",
     "@emotion/react": "^11.14.0",
+    "@mcp-b/global": "^2.0.13",
     "@reduxjs/toolkit": "^2.11.2",
     "i18next": "^25.8.7",
     "react": "^19.0.0",
