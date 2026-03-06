@@ -1,0 +1,5 @@
+---
+source: onboard-you-backend/shared/ETL/src/capabilities/ingestion/engine/sage_hr_connector.rs
+expression: "format!(\"rows={} cols={} elapsed_under_100ms=true\", df.height(), df.width())"
+---
+rows=500 cols=23 elapsed_under_100ms=true

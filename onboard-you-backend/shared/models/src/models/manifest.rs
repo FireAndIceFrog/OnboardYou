@@ -16,6 +16,7 @@ use utoipa::ToSchema;
 /// |---------------------------|------------------------|
 /// | `"csv_hris_connector"`    | `CsvHrisConnector`     |
 /// | `"workday_hris_connector"`| `WorkdayHrisConnector` |
+/// | `"sage_hr_connector"`     | `SageHrConnector`      |
 /// | `"scd_type_2"`            | `ScdType2`             |
 /// | `"pii_masking"`           | `PiiMasking`           |
 /// | `"identity_deduplicator"` | `IdentityDeduplicator` |
@@ -32,6 +33,7 @@ use utoipa::ToSchema;
 pub enum ActionType {
     CsvHrisConnector,
     WorkdayHrisConnector,
+    SageHrConnector,
     #[serde(rename = "scd_type_2")]
     ScdType2,
     PiiMasking,
@@ -106,6 +108,9 @@ impl<'de> Deserialize<'de> for ActionConfig {
             ActionType::WorkdayHrisConnector => ActionConfigPayload::WorkdayHrisConnector(
                 serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
             ),
+            ActionType::SageHrConnector => ActionConfigPayload::SageHrConnector(
+                serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
+            ),
             ActionType::ScdType2 => ActionConfigPayload::ScdType2(
                 serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
             ),
@@ -160,6 +165,7 @@ impl<'de> Deserialize<'de> for ActionConfig {
 pub enum ActionConfigPayload {
     CsvHrisConnector(crate::CsvHrisConnectorConfig),
     WorkdayHrisConnector(crate::WorkdayConfig),
+    SageHrConnector(crate::SageHrConfig),
     
     ScdType2(crate::ScdType2Config),
     PiiMasking(crate::PIIMaskingConfig),

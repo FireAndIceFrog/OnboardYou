@@ -46,3 +46,4 @@ benchmark = []
 # Testing utilities
 criterion = { workspace = true }
 tempfile = { workspace = true }
+insta = { workspace = true }

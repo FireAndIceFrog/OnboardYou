@@ -1,0 +1,5 @@
+---
+source: onboard-you-backend/shared/ETL/src/capabilities/ingestion/engine/sage_hr_connector.rs
+expression: "columns.join(\", \")"
+---
+id, email, first_name, last_name, picture_url, employment_start_date, date_of_birth, team, team_id, position, position_id, reports_to_employee_id, work_phone, home_phone, mobile_phone, gender, street_first, street_second, city, post_code, country, employee_number, employment_status
