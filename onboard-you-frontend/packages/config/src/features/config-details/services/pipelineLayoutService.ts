@@ -45,7 +45,7 @@ export function convertToFlow(manifest: Manifest): { nodes: Node[]; edges: Edge[
         id: `edge-${prev.id}-${action.id}`,
         source: prev.id,
         target: action.id,
-        type: 'default',
+        type: 'addButton',
         animated: true,
         style: { stroke: edgeColor.stroke, strokeWidth: 2 },
       });

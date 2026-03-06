@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   ReactFlow,
-  MiniMap,
   Controls,
   Background,
   BackgroundVariant,
@@ -46,13 +45,17 @@ import {
   selectConfigDetailsError,
 } from '../../state/configDetailsSlice';
 import { selectLastFlowAction } from '@/features/chat/state/chatSlice';
-import { ActionEditPanel, AddStepPanel, PipelineNode } from '../components';
+import { ActionEditPanel, AddButtonEdge, AddStepPanel, PipelineNode } from '../components';
 import { ChatWindow } from '@/features/chat/ui';
 
 const nodeTypes = {
   ingestion: PipelineNode,
   logic: PipelineNode,
   egress: PipelineNode,
+};
+
+const edgeTypes = {
+  addButton: AddButtonEdge,
 };
 
 function ConfigDetailsContent({
@@ -218,6 +221,7 @@ function ConfigDetailsContent({
   }, [isNewConfig, customerCompanyId, dispatch, navigate, showNotification, t]);
 
   const memoizedNodeTypes = useMemo(() => nodeTypes, []);
+  const memoizedEdgeTypes = useMemo(() => edgeTypes, []);
 
   const defaultEdgeOptions = useMemo(
     () => ({
@@ -287,6 +291,7 @@ function ConfigDetailsContent({
             nodes={nodes}
             edges={edges}
             nodeTypes={memoizedNodeTypes}
+            edgeTypes={memoizedEdgeTypes}
             defaultEdgeOptions={defaultEdgeOptions}
             onNodesChange={handleNodesChange}
             onEdgesChange={handleEdgesChange}
@@ -296,7 +301,6 @@ function ConfigDetailsContent({
             fitViewOptions={{ padding: 0.2 }}
             proOptions={{ hideAttribution: true }}
           >
-            <MiniMap nodeStrokeWidth={3} zoomable pannable />
             <Controls />
             <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
           </ReactFlow>

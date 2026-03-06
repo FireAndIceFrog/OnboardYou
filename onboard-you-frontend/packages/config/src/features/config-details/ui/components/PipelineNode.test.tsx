@@ -1,56 +1,48 @@
 import { describe, it, expect, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import { ChakraProvider } from '@chakra-ui/react';
+import { I18nextProvider } from 'react-i18next';
+import { Provider } from 'react-redux';
+import i18n from '@/i18n';
+import { system } from '@/theme';
 import { ReactFlowProvider } from '@xyflow/react';
-import { renderWithProviders } from '@/shared/test/testWrapper';
+import { createTestStore } from '@/shared/test/testWrapper';
 import { PipelineNode } from './PipelineNode';
 
 /**
  * PipelineNode is rendered inside React Flow which requires a ReactFlowProvider.
- * We also wrap with renderWithProviders to supply the Redux store that
- * PipelineNode uses for validationErrors selection.
+ * We also wrap with Chakra + i18n + Redux to match the real runtime.
  */
 function renderNode(data: Record<string, unknown>) {
-  return renderWithProviders(
-    <ReactFlowProvider>
-      <PipelineNode
-        id="test-node"
-        data={data}
-        type="logic"
-        // minimal NodeProps stubs
-        {...({
-          dragging: false,
-          zIndex: 0,
-          isConnectable: true,
-          positionAbsoluteX: 0,
-          positionAbsoluteY: 0,
-          selected: false,
-          deletable: false,
-          selectable: true,
-          parentId: undefined,
-          sourcePosition: undefined,
-          targetPosition: undefined,
-        } as any)}
-      />
-    </ReactFlowProvider>,
-    {
-      preloadedState: {
-        configDetails: {
-          config: null,
-          nodes: [],
-          edges: [],
-          selectedNode: null,
-          isLoading: false,
-          isSaving: false,
-          isDeleting: false,
-          isValidating: false,
-          error: null,
-          chatOpen: false,
-          addStepPanelOpen: false,
-          validationResult: null,
-          validationErrors: {},
-        } as any,
-      },
-    },
+  const store = createTestStore();
+  return render(
+    <Provider store={store}>
+      <ChakraProvider value={system}>
+        <I18nextProvider i18n={i18n}>
+          <ReactFlowProvider>
+            <PipelineNode
+              id="test-node"
+              data={data}
+              type="logic"
+              // minimal NodeProps stubs
+              {...({
+                dragging: false,
+                zIndex: 0,
+                isConnectable: true,
+                positionAbsoluteX: 0,
+                positionAbsoluteY: 0,
+                selected: false,
+                deletable: false,
+                selectable: true,
+                parentId: undefined,
+                sourcePosition: undefined,
+                targetPosition: undefined,
+              } as any)}
+            />
+          </ReactFlowProvider>
+        </I18nextProvider>
+      </ChakraProvider>
+    </Provider>,
   );
 }
 

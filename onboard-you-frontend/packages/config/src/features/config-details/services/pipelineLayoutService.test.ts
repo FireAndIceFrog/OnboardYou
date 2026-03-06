@@ -43,6 +43,10 @@ describe('convertToFlow', () => {
     expect(edges[0].target).toBe('step-2');
     expect(edges[1].source).toBe('step-2');
     expect(edges[1].target).toBe('step-3');
+
+    // Edges use the custom addButton type
+    expect(edges[0].type).toBe('addButton');
+    expect(edges[1].type).toBe('addButton');
   });
 
   it('positions nodes with correct horizontal spacing', () => {
