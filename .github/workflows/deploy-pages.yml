@@ -13,9 +13,9 @@ env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: "-C link-arg=-fuse-ld=mold"
 
-# Required permissions for GitHub Pages deployment via Actions
+# Required permissions for GitHub Pages deployment and release publishing
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -45,6 +45,12 @@ jobs:
 
       - name: Build MCP binary
         run: cargo build --release -p onboardyou-mcp
+
+      - name: Upload MCP binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: onboardyou-mcp-linux-x86_64
+          path: target/release/onboardyou-mcp
 
       - name: Generate OpenAPI spec
         run: ./target/debug/config-api --openapi > openapi.json
@@ -98,6 +104,38 @@ jobs:
         with:
           name: pages-site
           path: _site
+
+  release-mcp:
+    name: Publish MCP binary to GitHub Releases
+    needs: backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: onboardyou-mcp-linux-x86_64
+          path: dist
+
+      - name: Rename binary with platform suffix
+        run: mv dist/onboardyou-mcp dist/onboardyou-mcp-linux-x86_64
+
+      - name: Create or update rolling release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: mcp-latest
+          name: OnboardYou MCP (latest)
+          body: |
+            Rolling release of the OnboardYou MCP server binary, built from `main`.
+
+            **Install (Linux x86_64)**
+            ```bash
+            curl -L https://github.com/${{ github.repository }}/releases/download/mcp-latest/onboardyou-mcp-linux-x86_64 \
+              -o onboardyou-mcp && chmod +x onboardyou-mcp
+            ```
+
+            Commit: ${{ github.sha }}
+          prerelease: true
+          make_latest: false
+          files: dist/onboardyou-mcp-linux-x86_64
 
   deploy:
     name: Deploy to Pages

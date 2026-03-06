@@ -33,8 +33,9 @@ function makeState(overrides: Partial<ConfigDetailsState> = {}): {
       chatOpen: false,
       addStepPanelOpen: false,
       validationResult: null,
+      validationErrors: {},
       ...overrides,
-    },
+    } as unknown as ConfigDetailsState,
   };
 }
 
