@@ -10,7 +10,7 @@ use rmcp::{
 };
 
 use crate::api::ApiClient;
-use crate::models::{ConfigRequest, CreateConfigArgs, ValidateConfigArgs, SaveConfigArgs, FetchConfigArgs};
+use crate::models::{ConfigRequest, CreateConfigArgs, ValidateConfigArgs, SaveConfigArgs, FetchConfigArgs, GetSchemaArgs};
 use crate::models::schema::{SchemaResource, build_schema_resources};
 
 /* ── Server struct ────────────────────────────────────────── */
@@ -149,6 +149,43 @@ impl OnboardYouMcp {
             serde_json::to_string_pretty(&body).unwrap_or_default(),
         )]))
     }
+
+    /// Retrieve pipeline-config JSON schemas.
+    ///
+    /// Call with no `name` (or empty) to list available schema names.
+    /// Call with a specific `name` (e.g. "Manifest") to get the full JSON Schema.
+    #[tool(name = "get_schema", description = "List available JSON schemas or retrieve a specific schema by name")]
+    async fn get_schema(
+        &self,
+        Parameters(args): Parameters<GetSchemaArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        match args.name.as_deref() {
+            None | Some("") => {
+                // List all available schema names + descriptions
+                let listing: Vec<serde_json::Value> = self
+                    .schemas
+                    .iter()
+                    .map(|s| serde_json::json!({ "name": s.name, "description": s.description }))
+                    .collect();
+                Ok(CallToolResult::success(vec![Content::text(
+                    serde_json::to_string_pretty(&listing).unwrap_or_default(),
+                )]))
+            }
+            Some(name) => {
+                let res = self
+                    .schemas
+                    .iter()
+                    .find(|s| s.name.eq_ignore_ascii_case(name))
+                    .ok_or_else(|| {
+                        McpError::invalid_params(
+                            format!("unknown schema: {name}. Call get_schema with no name to list available schemas."),
+                            None,
+                        )
+                    })?;
+                Ok(CallToolResult::success(vec![Content::text(&res.text)]))
+            }
+        }
+    }
 }
 
 #[tool_handler]
@@ -163,10 +200,9 @@ impl ServerHandler for OnboardYouMcp {
         .with_server_info(Implementation::new("onboardyou-mcp", env!("CARGO_PKG_VERSION")))
         .with_instructions(
             "OnboardYou MCP server.\n\
-             Tools: list_configs, fetch_config, create_config, validate_config, save_config.\n\
-             Resources: pipeline config model schemas (onboardyou://schema/*).\n\
+             Tools: list_configs, fetch_config, create_config, validate_config, save_config, get_schema.\n\
              Workflow: call list_configs first to see available companies, then fetch_config to get the full manifest before editing.\n\
-             Read the resources to understand the expected JSON shapes before calling tools."
+             Call get_schema to understand the expected JSON shapes before creating or editing configs."
                 .to_string(),
         )
     }

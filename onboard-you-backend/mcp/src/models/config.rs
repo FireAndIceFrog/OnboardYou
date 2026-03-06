@@ -2,6 +2,16 @@ use onboard_you_models::Manifest;
 use rmcp::schemars::{self, JsonSchema};
 use serde::Deserialize;
 
+/* ── Schema introspection ────────────────────────────────── */
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct GetSchemaArgs {
+    /// Optional schema name to retrieve (e.g. "Manifest", "ActionConfig").
+    /// Omit to list all available schema names.
+    #[schemars(description = "Schema name to retrieve, e.g. 'Manifest'. Omit or leave empty to list all available names.")]
+    pub name: Option<String>,
+}
+
 /* ── Shared-model request type (mirrors the API's ConfigRequest) ── */
 
 #[derive(Debug, Deserialize)]
