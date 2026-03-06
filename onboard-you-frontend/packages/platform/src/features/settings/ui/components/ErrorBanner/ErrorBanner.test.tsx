@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, screen } from '@testing-library/react';
 import { renderWithProviders } from '@/shared/test/testWrapper';
 import { ErrorBanner } from './ErrorBanner';

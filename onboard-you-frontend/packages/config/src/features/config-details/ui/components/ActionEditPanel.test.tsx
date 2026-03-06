@@ -36,7 +36,7 @@ function makeState(overrides: Partial<ConfigDetailsState> = {}): {
       validationResult: null,
       validationErrors: {},
       ...overrides,
-    },
+    } as unknown as ConfigDetailsState,
   };
 }
 
