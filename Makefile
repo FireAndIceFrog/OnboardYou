@@ -156,7 +156,6 @@ openapi: build-config-api
 openapi-ts:
 	@echo "▸ Generating TypeScript clients…"
 	cd onboard-you-frontend && pnpm openapi-ts
-	cd onboard-you-backend/test/smoke-test && npx openapi-ts
 	@echo "✓ TypeScript clients generated"
 
 ##──────────────────────────────────────────────────────────────
