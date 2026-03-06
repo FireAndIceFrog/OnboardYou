@@ -14,3 +14,4 @@ aws/
 awscliv2.zip
 plan.out
 _site/
+onboard-you-backend/mcp/.env

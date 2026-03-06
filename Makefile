@@ -17,6 +17,7 @@ VENV := .venv/bin/activate
 
 .PHONY: setup build-lambdas build-config-api build-etl-trigger build-authorizer \
         plan apply deploy clean smoke-test assemble-pages openapi-ts setup-hooks \
+        build-mcp sync-env-mcp \
 
 ##──────────────────────────────────────────────────────────────
 ## Setup — create venv and install cargo-lambda
@@ -58,6 +59,19 @@ build-etl-trigger:
 build-authorizer:
 	@echo "▸ Building authorizer Lambda..."
 	. $(VENV) && cargo lambda build --release -p authorizer
+
+##──────────────────────────────────────────────────────────────
+## MCP server — native binary (not a Lambda)
+##──────────────────────────────────────────────────────────────
+
+build-mcp:
+	@echo "▸ Building onboardyou-mcp..."
+	cargo build --release -p onboardyou-mcp
+	@echo "✓ Binary at target/release/onboardyou-mcp"
+
+sync-env-mcp:
+	@echo "▸ Syncing MCP .env from tofu output…"
+	cd onboard-you-backend/mcp && bash ./sync-env.sh
 
 ##──────────────────────────────────────────────────────────────
 ## Infrastructure — OpenTofu
@@ -126,7 +140,7 @@ frontend-url:
 ## All-in-one
 ##──────────────────────────────────────────────────────────────
 
-deploy: plan apply smoke-test openapi upload-frontend
+deploy: plan apply build-mcp smoke-test openapi sync-env-mcp upload-frontend
 
 ##──────────────────────────────────────────────────────────────
 ## OpenAPI spec — build the API binary and dump the spec to JSON

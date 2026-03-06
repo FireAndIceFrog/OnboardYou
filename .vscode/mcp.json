@@ -7,7 +7,15 @@
 				"-y",
 				"@chakra-ui/react-mcp"
 			]
+		},
+		"onboardyou": {
+			"args": [],
+			"command": "/home/mathew/Documents/github/2026/OnboardYou/target/debug/onboardyou-mcp",
+			"env": {
+				"ONBOARDYOU_API_URL": "https://lsrke928f3.execute-api.ap-southeast-2.amazonaws.com/v1",
+				"ONBOARDYOU_MCP_EMAIL": "demo@onboardyou.com",
+				"ONBOARDYOU_MCP_PASSWORD": "1BQ3jJ9Ri6gLm3GePUJ$"
+			}
 		}
-	},
-	"inputs": []
+	}
 }

@@ -43,6 +43,9 @@ jobs:
       - name: Build config-api binary
         run: cargo build -p api
 
+      - name: Build MCP binary
+        run: cargo build --release -p onboardyou-mcp
+
       - name: Generate OpenAPI spec
         run: ./target/debug/config-api --openapi > openapi.json
 
