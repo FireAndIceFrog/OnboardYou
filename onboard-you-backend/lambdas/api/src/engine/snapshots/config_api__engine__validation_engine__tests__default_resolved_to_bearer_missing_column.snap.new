@@ -1,0 +1,6 @@
+---
+source: onboard-you-backend/lambdas/api/src/engine/validation_engine.rs
+assertion_line: 385
+expression: output
+---
+ERR Validation: API Dispatcher requires columns not produced by the pipeline: not_here
