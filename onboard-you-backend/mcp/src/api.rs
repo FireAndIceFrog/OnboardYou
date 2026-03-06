@@ -4,12 +4,12 @@ use serde::Deserialize;
 pub struct ApiClient {
     client: reqwest::Client,
     base_url: String,
-    access_token: String,
+    id_token: String,
 }
 
 #[derive(Debug, Deserialize)]
 struct LoginResponse {
-    access_token: String,
+    id_token: String,
 }
 
 impl ApiClient {
@@ -28,7 +28,7 @@ impl ApiClient {
         Ok(Self {
             client,
             base_url: base_url.to_string(),
-            access_token: resp.access_token,
+            id_token: resp.id_token,
         })
     }
 
@@ -40,7 +40,7 @@ impl ApiClient {
         let resp = self
             .client
             .post(format!("{}{path}", self.base_url))
-            .bearer_auth(&self.access_token)
+            .bearer_auth(&self.id_token)
             .json(body)
             .send()
             .await?;
@@ -56,7 +56,7 @@ impl ApiClient {
         let resp = self
             .client
             .get(format!("{}{path}", self.base_url))
-            .bearer_auth(&self.access_token)
+            .bearer_auth(&self.id_token)
             .send()
             .await?;
         let status = resp.status();
@@ -75,7 +75,7 @@ impl ApiClient {
         let resp = self
             .client
             .put(format!("{}{path}", self.base_url))
-            .bearer_auth(&self.access_token)
+            .bearer_auth(&self.id_token)
             .json(body)
             .send()
             .await?;
