@@ -1,23 +1,46 @@
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box, Flex, Heading, Text, Input, Button, chakra } from '@chakra-ui/react';
+import { Box, Flex, Heading, Text, Button, chakra } from '@chakra-ui/react';
 import { HR_SYSTEMS, RESPONSE_GROUP_OPTIONS, SAGE_HR_HISTORY_OPTIONS } from '../../domain/types';
+import type { WorkdayFields, SageHrFields } from '../../domain/types';
 import { useConnectionForm } from '../../state/useConnectionForm';
 import { FieldError } from '../components';
-import { inputStyles } from '../components/styles';
+import { FormField } from '@/shared/ui';
 
 const Label = chakra('label');
 const StyledButton = chakra('button');
 
-const invalidInputProps = {
-  ...inputStyles,
-  borderColor: 'red.400' as const,
-  _focus: { borderColor: 'red.500', boxShadow: '0 0 0 1px var(--chakra-colors-red-500)' },
-};
+/* ── Field descriptors ──────────────────────────────────── */
 
-function getInputProps(errorKey?: string) {
-  return errorKey ? invalidInputProps : inputStyles;
+interface FieldDef {
+  id: string;
+  fieldKey: string;
+  validationKey?: string;
+  type?: string;
+  min?: number;
+  max?: number;
 }
+
+const WORKDAY_CREDENTIAL_FIELDS: FieldDef[] = [
+  { id: 'conn-tenant-url', fieldKey: 'tenantUrl', validationKey: 'workday.tenantUrl', type: 'url' },
+  { id: 'conn-tenant-id', fieldKey: 'tenantId', validationKey: 'workday.tenantId' },
+];
+
+const WORKDAY_INLINE_CREDENTIALS: FieldDef[] = [
+  { id: 'conn-username', fieldKey: 'username', validationKey: 'workday.username' },
+  { id: 'conn-password', fieldKey: 'password', validationKey: 'workday.password', type: 'password' },
+];
+
+const WORKDAY_QUERY_FIELDS: FieldDef[] = [
+  { id: 'conn-worker-count', fieldKey: 'workerCountLimit', type: 'number', min: 1, max: 999 },
+];
+
+const SAGE_HR_CREDENTIAL_FIELDS: FieldDef[] = [
+  { id: 'conn-sage-subdomain', fieldKey: 'subdomain', validationKey: 'sageHr.subdomain' },
+  { id: 'conn-sage-api-token', fieldKey: 'apiToken', validationKey: 'sageHr.apiToken', type: 'password' },
+];
+
+/* ── Component ──────────────────────────────────────────── */
 
 export function ConnectionDetailsScreen() {
   const {
@@ -38,6 +61,34 @@ export function ConnectionDetailsScreen() {
   } = useConnectionForm();
   const { t } = useTranslation();
   const csvInputRef = useRef<HTMLInputElement>(null);
+
+  const renderFields = (
+    fields: FieldDef[],
+    i18nPrefix: string,
+    getValue: (key: string) => string | number,
+    getHandler: (key: string) => (e: React.ChangeEvent<HTMLInputElement>) => void,
+  ) =>
+    fields.map((def) => (
+      <FormField
+        key={def.id}
+        id={def.id}
+        label={t(`${i18nPrefix}.${def.fieldKey}`)}
+        placeholder={t(`${i18nPrefix}.${def.fieldKey}Placeholder`, { defaultValue: '' }) || undefined}
+        helperText={t(`${i18nPrefix}.${def.fieldKey}Hint`, { defaultValue: '' }) || undefined}
+        type={def.type}
+        min={def.min}
+        max={def.max}
+        value={getValue(def.fieldKey)}
+        onChange={getHandler(def.fieldKey)}
+        onBlur={def.validationKey ? () => validateField(def.validationKey!) : undefined}
+        error={def.validationKey ? errors[def.validationKey] : undefined}
+      />
+    ));
+
+  const workdayValue = (key: string) => form.workday[key as keyof WorkdayFields] as string | number;
+  const workdayHandler = (key: string) => handleWorkdayChange(key as keyof WorkdayFields);
+  const sageHrValue = (key: string) => form.sageHr[key as keyof SageHrFields] as string;
+  const sageHrHandler = (key: string) => handleSageHrChange(key as keyof SageHrFields);
 
   return (
     <Box maxW="680px" mx="auto" py="8" px="6">
@@ -78,9 +129,14 @@ export function ConnectionDetailsScreen() {
         {/* Display name */}
         {form.system && (
           <Box mb="5">
-            <Label htmlFor="conn-display-name" fontSize="sm" fontWeight="600" display="block" mb="1">{t('configDetails.connection.displayName')}</Label>
-            <Input id="conn-display-name" type="text" placeholder={t('configDetails.connection.displayNamePlaceholder')} value={form.displayName} onChange={handleChange('displayName')} {...inputStyles} />
-            <Text fontSize="xs" color="gray.400" mt="1">{t('configDetails.connection.displayNameHint')}</Text>
+            <FormField
+              id="conn-display-name"
+              label={t('configDetails.connection.displayName')}
+              placeholder={t('configDetails.connection.displayNamePlaceholder')}
+              helperText={t('configDetails.connection.displayNameHint')}
+              value={form.displayName}
+              onChange={handleChange('displayName')}
+            />
           </Box>
         )}
 
@@ -93,30 +149,25 @@ export function ConnectionDetailsScreen() {
                 <Text>{t('configDetails.connection.workday.credentialsTitle')}</Text>
               </Flex>
 
-              <Box mb="4">
-                <Label htmlFor="conn-tenant-url" fontSize="sm" fontWeight="600" display="block" mb="1">{t('configDetails.connection.workday.tenantUrl')}</Label>
-                <Input id="conn-tenant-url" type="url" placeholder={t('configDetails.connection.workday.tenantUrlPlaceholder')} value={form.workday.tenantUrl} onChange={handleWorkdayChange('tenantUrl')} onBlur={() => validateField('workday.tenantUrl')} aria-invalid={!!errors['workday.tenantUrl']} aria-describedby={errors['workday.tenantUrl'] ? 'conn-tenant-url-error' : undefined} {...getInputProps(errors['workday.tenantUrl'])} />
-                <FieldError id="conn-tenant-url-error" error={errors['workday.tenantUrl']} />
-                <Text fontSize="xs" color="gray.400" mt="1">{t('configDetails.connection.workday.tenantUrlHint')}</Text>
-              </Box>
+              <Flex direction="column" gap="4">
+                {renderFields(WORKDAY_CREDENTIAL_FIELDS, 'configDetails.connection.workday', workdayValue, workdayHandler)}
+              </Flex>
 
-              <Box mb="4">
-                <Label htmlFor="conn-tenant-id" fontSize="sm" fontWeight="600" display="block" mb="1">{t('configDetails.connection.workday.tenantId')}</Label>
-                <Input id="conn-tenant-id" type="text" placeholder={t('configDetails.connection.workday.tenantIdPlaceholder')} value={form.workday.tenantId} onChange={handleWorkdayChange('tenantId')} onBlur={() => validateField('workday.tenantId')} aria-invalid={!!errors['workday.tenantId']} aria-describedby={errors['workday.tenantId'] ? 'conn-tenant-id-error' : undefined} {...getInputProps(errors['workday.tenantId'])} />
-                <FieldError id="conn-tenant-id-error" error={errors['workday.tenantId']} />
-              </Box>
-
-              <Flex gap="4" mb="4">
-                <Box flex="1">
-                  <Label htmlFor="conn-username" fontSize="sm" fontWeight="600" display="block" mb="1">{t('configDetails.connection.workday.username')}</Label>
-                  <Input id="conn-username" type="text" placeholder={t('configDetails.connection.workday.usernamePlaceholder')} value={form.workday.username} onChange={handleWorkdayChange('username')} onBlur={() => validateField('workday.username')} aria-invalid={!!errors['workday.username']} aria-describedby={errors['workday.username'] ? 'conn-username-error' : undefined} {...getInputProps(errors['workday.username'])} />
-                  <FieldError id="conn-username-error" error={errors['workday.username']} />
-                </Box>
-                <Box flex="1">
-                  <Label htmlFor="conn-password" fontSize="sm" fontWeight="600" display="block" mb="1">{t('configDetails.connection.workday.password')}</Label>
-                  <Input id="conn-password" type="password" placeholder={t('configDetails.connection.workday.passwordPlaceholder')} value={form.workday.password} onChange={handleWorkdayChange('password')} onBlur={() => validateField('workday.password')} aria-invalid={!!errors['workday.password']} aria-describedby={errors['workday.password'] ? 'conn-password-error' : undefined} {...getInputProps(errors['workday.password'])} />
-                  <FieldError id="conn-password-error" error={errors['workday.password']} />
-                </Box>
+              <Flex gap="4" mt="4">
+                {WORKDAY_INLINE_CREDENTIALS.map((def) => (
+                  <Box flex="1" key={def.id}>
+                    <FormField
+                      id={def.id}
+                      label={t(`configDetails.connection.workday.${def.fieldKey}`)}
+                      placeholder={t(`configDetails.connection.workday.${def.fieldKey}Placeholder`, { defaultValue: '' }) || undefined}
+                      type={def.type}
+                      value={workdayValue(def.fieldKey)}
+                      onChange={workdayHandler(def.fieldKey)}
+                      onBlur={def.validationKey ? () => validateField(def.validationKey!) : undefined}
+                      error={def.validationKey ? errors[def.validationKey] : undefined}
+                    />
+                  </Box>
+                ))}
               </Flex>
             </Box>
 
@@ -126,13 +177,11 @@ export function ConnectionDetailsScreen() {
                 <Text>{t('configDetails.connection.workday.queryOptionsTitle')}</Text>
               </Flex>
 
-              <Box mb="4">
-                <Label htmlFor="conn-worker-count" fontSize="sm" fontWeight="600" display="block" mb="1">{t('configDetails.connection.workday.workerCountLimit')}</Label>
-                <Input id="conn-worker-count" type="number" min={1} max={999} value={form.workday.workerCountLimit} onChange={handleWorkdayChange('workerCountLimit')} {...inputStyles} />
-                <Text fontSize="xs" color="gray.400" mt="1">{t('configDetails.connection.workday.workerCountLimitHint')}</Text>
-              </Box>
+              <Flex direction="column" gap="4">
+                {renderFields(WORKDAY_QUERY_FIELDS, 'configDetails.connection.workday', workdayValue, workdayHandler)}
+              </Flex>
 
-              <Box mb="4">
+              <Box mt="4">
                 <Text fontSize="sm" fontWeight="600" mb="2">{t('configDetails.connection.workday.responseGroups')}</Text>
                 <Flex wrap="wrap" gap="2" border={errors['workday.responseGroup'] ? '2px solid' : 'none'} borderColor="red.300" borderRadius="lg" p={errors['workday.responseGroup'] ? '2' : '0'}>
                   {RESPONSE_GROUP_OPTIONS.map((opt) => (
@@ -173,19 +222,9 @@ export function ConnectionDetailsScreen() {
                 <Text>{t('configDetails.connection.sageHr.credentialsTitle')}</Text>
               </Flex>
 
-              <Box mb="4">
-                <Label htmlFor="conn-sage-subdomain" fontSize="sm" fontWeight="600" display="block" mb="1">{t('configDetails.connection.sageHr.subdomain')}</Label>
-                <Input id="conn-sage-subdomain" type="text" placeholder={t('configDetails.connection.sageHr.subdomainPlaceholder')} value={form.sageHr.subdomain} onChange={handleSageHrChange('subdomain')} onBlur={() => validateField('sageHr.subdomain')} aria-invalid={!!errors['sageHr.subdomain']} aria-describedby={errors['sageHr.subdomain'] ? 'conn-sage-subdomain-error' : undefined} {...getInputProps(errors['sageHr.subdomain'])} />
-                <FieldError id="conn-sage-subdomain-error" error={errors['sageHr.subdomain']} />
-                <Text fontSize="xs" color="gray.400" mt="1">{t('configDetails.connection.sageHr.subdomainHint')}</Text>
-              </Box>
-
-              <Box mb="4">
-                <Label htmlFor="conn-sage-api-token" fontSize="sm" fontWeight="600" display="block" mb="1">{t('configDetails.connection.sageHr.apiToken')}</Label>
-                <Input id="conn-sage-api-token" type="password" placeholder={t('configDetails.connection.sageHr.apiTokenPlaceholder')} value={form.sageHr.apiToken} onChange={handleSageHrChange('apiToken')} onBlur={() => validateField('sageHr.apiToken')} aria-invalid={!!errors['sageHr.apiToken']} aria-describedby={errors['sageHr.apiToken'] ? 'conn-sage-api-token-error' : undefined} {...getInputProps(errors['sageHr.apiToken'])} />
-                <FieldError id="conn-sage-api-token-error" error={errors['sageHr.apiToken']} />
-                <Text fontSize="xs" color="gray.400" mt="1">{t('configDetails.connection.sageHr.apiTokenHint')}</Text>
-              </Box>
+              <Flex direction="column" gap="4">
+                {renderFields(SAGE_HR_CREDENTIAL_FIELDS, 'configDetails.connection.sageHr', sageHrValue, sageHrHandler)}
+              </Flex>
             </Box>
 
             <Box as="fieldset" border="none" p="0" m="0" mb="5">
