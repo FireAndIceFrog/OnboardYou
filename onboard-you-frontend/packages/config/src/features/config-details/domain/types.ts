@@ -24,9 +24,9 @@ export interface ConfigDetailsState {
 
 /** Only connectors backed by Rust ingestion code. */
 export const HR_SYSTEMS = [
-  { id: 'workday', name: 'Workday', icon: '🏢' },
-  { id: 'sage_hr', name: 'Sage HR', icon: '🌿' },
-  { id: 'csv', name: 'CSV File Upload', icon: '📄' },
+  { id: 'workday', nameKey: 'configDetails.connection.systems.workday', icon: '🏢' },
+  { id: 'sage_hr', nameKey: 'configDetails.connection.systems.sage_hr', icon: '🌿' },
+  { id: 'csv', nameKey: 'configDetails.connection.systems.csv', icon: '📄' },
 ] as const;
 
 export type SystemId = (typeof HR_SYSTEMS)[number]['id'];
@@ -99,11 +99,11 @@ export const INITIAL_CONNECTION_FORM: ConnectionForm = {
  * from the active toggles.
  */
 export const RESPONSE_GROUP_OPTIONS = [
-  { value: 'include_personal_information', label: 'Personal Information' },
-  { value: 'include_employment_information', label: 'Employment Information' },
-  { value: 'include_compensation', label: 'Compensation' },
-  { value: 'include_organizations', label: 'Organizations' },
-  { value: 'include_roles', label: 'Roles' },
+  { value: 'include_personal_information', labelKey: 'configDetails.connection.responseGroupLabels.include_personal_information' },
+  { value: 'include_employment_information', labelKey: 'configDetails.connection.responseGroupLabels.include_employment_information' },
+  { value: 'include_compensation', labelKey: 'configDetails.connection.responseGroupLabels.include_compensation' },
+  { value: 'include_organizations', labelKey: 'configDetails.connection.responseGroupLabels.include_organizations' },
+  { value: 'include_roles', labelKey: 'configDetails.connection.responseGroupLabels.include_roles' },
 ] as const;
 
 /**
@@ -128,9 +128,9 @@ export function buildResponseGroup(csv: string): WorkdayResponseGroup {
  * `value` maps to the `SageHrFields` boolean key.
  */
 export const SAGE_HR_HISTORY_OPTIONS = [
-  { value: 'includeTeamHistory', label: 'Team History' },
-  { value: 'includeEmploymentStatusHistory', label: 'Employment Status History' },
-  { value: 'includePositionHistory', label: 'Position History' },
+  { value: 'includeTeamHistory', labelKey: 'configDetails.connection.historyLabels.includeTeamHistory' },
+  { value: 'includeEmploymentStatusHistory', labelKey: 'configDetails.connection.historyLabels.includeEmploymentStatusHistory' },
+  { value: 'includePositionHistory', labelKey: 'configDetails.connection.historyLabels.includePositionHistory' },
 ] as const;
 
 /**

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Flex, Text } from '@chakra-ui/react';
 import { ACTION_FIELD_SCHEMAS } from '../../../domain/actionCatalog';
 import { SAGE_HR_HISTORY_OPTIONS } from '../../../domain/types';
@@ -6,6 +7,7 @@ import { FieldEditor } from '../FieldEditor';
 import type { ActionEditorProps } from './registry';
 
 export function SageHrHistoryPanel({ config, onChange, availableColumns }: ActionEditorProps) {
+  const { t } = useTranslation();
   const fieldSchemas = useMemo(
     () => ACTION_FIELD_SCHEMAS.sage_hr_connector ?? [],
     [],
@@ -40,10 +42,10 @@ export function SageHrHistoryPanel({ config, onChange, availableColumns }: Actio
       {/* Custom history toggle chips */}
       <Box>
         <Text fontSize="sm" fontWeight="600" mb="1">
-          History Options
+          {t('configDetails.panels.historyOptions.title')}
         </Text>
         <Text fontSize="xs" color="gray.500" mb="2">
-          Include historical data from Sage HR
+          {t('configDetails.panels.historyOptions.hint')}
         </Text>
         <Flex wrap="wrap" gap="2">
           {SAGE_HR_HISTORY_OPTIONS.map((opt) => (
@@ -71,7 +73,7 @@ export function SageHrHistoryPanel({ config, onChange, availableColumns }: Actio
                 style={{ display: 'none' }}
                 data-testid={`history-${opt.value}`}
               />
-              <Text>{opt.label}</Text>
+              <Text>{t(opt.labelKey)}</Text>
             </Box>
           ))}
         </Flex>

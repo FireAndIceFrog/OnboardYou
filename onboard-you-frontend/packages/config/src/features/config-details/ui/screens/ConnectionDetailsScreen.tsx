@@ -68,7 +68,7 @@ export function ConnectionDetailsScreen() {
                 onClick={() => handleSystemSelect(sys.id)}
               >
                 <Text fontSize="2xl">{sys.icon}</Text>
-                <Text fontSize="sm" fontWeight="500">{sys.name}</Text>
+                <Text fontSize="sm" fontWeight="500">{t(sys.nameKey)}</Text>
               </StyledButton>
             ))}
           </Box>
@@ -153,7 +153,7 @@ export function ConnectionDetailsScreen() {
                       aria-pressed={activeGroups.has(opt.value)}
                       onClick={() => handleResponseGroupToggle(opt.value)}
                     >
-                      {opt.label}
+                      {t(opt.labelKey)}
                     </StyledButton>
                   ))}
                 </Flex>
@@ -215,7 +215,7 @@ export function ConnectionDetailsScreen() {
                       aria-pressed={!!form.sageHr[opt.value]}
                       onClick={() => handleSageHrHistoryToggle(opt.value)}
                     >
-                      {opt.label}
+                      {t(opt.labelKey)}
                     </StyledButton>
                   ))}
                 </Flex>
