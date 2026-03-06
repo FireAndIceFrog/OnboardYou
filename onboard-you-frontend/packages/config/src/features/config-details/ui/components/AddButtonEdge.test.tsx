@@ -42,7 +42,6 @@ const BASE_EDGE_PROPS: EdgeProps = {
   labelBgBorderRadius: undefined,
   deletable: undefined,
   selectable: undefined,
-  focusable: undefined,
 };
 
 /** Nodes needed in Redux state so the edge can find its target index. */
@@ -71,7 +70,8 @@ const PRELOADED_STATE = {
 
 function renderEdge(
   overrides: Partial<EdgeProps> = {},
-  preloadedState = PRELOADED_STATE,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  preloadedState: any = PRELOADED_STATE,
 ) {
   return renderWithProviders(
     <ReactFlowProvider>
