@@ -5,6 +5,7 @@ members = [
     "onboard-you-backend/lambdas/etl-trigger",
     "onboard-you-backend/lambdas/authorizer", 
     "onboard-you-backend/shared/models",
+    "onboard-you-backend/mcp",
 ]
 resolver = "2"
 
