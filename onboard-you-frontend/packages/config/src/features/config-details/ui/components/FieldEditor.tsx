@@ -43,6 +43,18 @@ export function FieldEditor({ schema, value, onChange, availableColumns }: Field
       );
     }
 
+    case 'password':
+      return (
+        <Input
+          type="password"
+          value={String(value ?? '')}
+          onChange={handleText}
+          placeholder={schema.placeholder}
+          data-testid={`field-password-${schema.key}`}
+          {...inputStyles}
+        />
+      );
+
     case 'text':
       return (
         <Input
