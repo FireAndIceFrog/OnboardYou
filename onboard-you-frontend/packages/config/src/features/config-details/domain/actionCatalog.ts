@@ -110,7 +110,7 @@ export const ACTION_CATALOG: ActionCatalogEntry[] = [
 
 /* ── Field schemas for the edit panel ──────────────────────── */
 
-export type FieldType = 'text' | 'number' | 'select' | 'columns' | 'column-select' | 'column-multi' | 'mapping' | 'readonly';
+export type FieldType = 'text' | 'number' | 'select' | 'columns' | 'column-select' | 'column-multi' | 'mapping' | 'readonly' | 'password';
 
 export interface FieldSchema {
   key: string;
@@ -134,9 +134,13 @@ export const ACTION_FIELD_SCHEMAS: Partial<Record<ActionType, FieldSchema[]>> = 
     { key: 'tenant_url', label: 'Tenant URL', type: 'text', hint: 'Workday tenant base URL', placeholder: 'https://wd3-impl-services1.workday.com' },
     { key: 'tenant_id', label: 'Tenant ID', type: 'text', hint: 'Workday tenant identifier', placeholder: 'acme_corp' },
     { key: 'username', label: 'Username', type: 'text', hint: 'Integration System User (ISU)', placeholder: 'ISU_Onboarding' },
-    { key: 'password', label: 'Password', type: 'text', hint: 'ISU password (prefix env: to read from env var)', placeholder: 'env:WORKDAY_PASSWORD' },
+    { key: 'password', label: 'Password', type: 'password', hint: 'ISU password (prefix env: to read from env var)', placeholder: 'env:WORKDAY_PASSWORD' },
     { key: 'worker_count_limit', label: 'Worker Count Limit', type: 'number', hint: 'Max workers per page' },
     { key: 'response_group', label: 'Response Groups', type: 'readonly', hint: 'Data sections to include in the Workday response' },
+  ],
+  sage_hr_connector: [
+    { key: 'subdomain', label: 'Subdomain', type: 'text', hint: 'Your Sage HR subdomain (e.g. acme for acme.sage.hr)', placeholder: 'acme' },
+    { key: 'api_token', label: 'API Token', type: 'password', hint: 'Sage HR REST API token from Settings → API', placeholder: 'your-api-token' },
   ],
   identity_deduplicator: [
     { key: 'columns', label: 'Match Columns', type: 'column-multi', hint: 'Columns used to identify duplicates (e.g. email, national_id)' },

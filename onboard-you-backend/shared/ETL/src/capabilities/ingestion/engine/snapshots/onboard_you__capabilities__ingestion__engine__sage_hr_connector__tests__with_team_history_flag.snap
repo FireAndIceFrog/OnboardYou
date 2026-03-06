@@ -1,0 +1,6 @@
+---
+source: onboard-you-backend/shared/ETL/src/capabilities/ingestion/engine/sage_hr_connector.rs
+expression: output
+---
+id=19 email=john@example.com name=John Doe team=Engineering position=Developer status=Full-time
+id=20 email=jane@example.com name=Jane Smith team=Marketing position=Manager status=Part-time

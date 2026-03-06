@@ -2962,6 +2962,7 @@ dependencies = [
  "aws-config",
  "aws-sdk-s3",
  "criterion",
+ "insta",
  "lambda_runtime",
  "macro_rules_attribute",
  "onboard_you_models",

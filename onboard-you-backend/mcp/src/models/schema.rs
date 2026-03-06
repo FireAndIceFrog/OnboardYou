@@ -60,6 +60,30 @@ pub fn build_schema_resources() -> Vec<SchemaResource> {
             description: "Ingress: pulls worker data from a Workday HCM tenant",
             text: schema_json::<WorkdayConfig>(),
         },
+        SchemaResource {
+            uri: "onboardyou://schema/sage-hr-config".into(),
+            name: "SageHrConfig",
+            description: "Ingress: pulls employee data from Sage HR REST API",
+            text: schema_json::<SageHrConfig>(),
+        },
+        SchemaResource {
+            uri: "onboardyou://schema/sage-hr-api-response".into(),
+            name: "SageHrApiResponse",
+            description: "Sage HR API response envelope: data array + pagination meta",
+            text: schema_json::<SageHrApiResponse>(),
+        },
+        SchemaResource {
+            uri: "onboardyou://schema/sage-hr-employee".into(),
+            name: "SageHrEmployee",
+            description: "Raw employee object from Sage HR API",
+            text: schema_json::<SageHrEmployee>(),
+        },
+        SchemaResource {
+            uri: "onboardyou://schema/sage-hr-meta".into(),
+            name: "SageHrMeta",
+            description: "Pagination metadata from Sage HR API",
+            text: schema_json::<SageHrMeta>(),
+        },
         // ── Logic ────────────────────────────────────────────
         SchemaResource {
             uri: "onboardyou://schema/scd-type-2-config".into(),

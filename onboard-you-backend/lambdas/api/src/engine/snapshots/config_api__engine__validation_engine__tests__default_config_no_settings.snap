@@ -2,4 +2,4 @@
 source: onboard-you-backend/lambdas/api/src/engine/validation_engine.rs
 expression: output
 ---
-ERR Validation: Egress validation failed: There are no settings saved for default config
+ERR Validation: No API dispatcher settings configured — go to Settings to set up a default auth method

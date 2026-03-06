@@ -20,11 +20,6 @@ export type ActionConfig = {
      */
     config: ActionConfigPayload;
     /**
-     * When `true`, the ETL engine skips this action at runtime.
-     * Used by the plan summary UI to toggle features on/off.
-     */
-    disabled?: boolean;
-    /**
      * Unique identifier for this pipeline step
      */
     id: string;
@@ -38,7 +33,7 @@ export type ActionConfig = {
  * JSON serialisation (no wrapper key), while `ToSchema` generates a
  * `oneOf` schema listing every config variant for OpenAPI.
  */
-export type ActionConfigPayload = CsvHrisConnectorConfig | WorkdayConfig | ScdType2Config | PiiMaskingConfig | DedupConfig | RegexReplaceConfig | IsoCountrySanitizerConfig | CellphoneSanitizerConfig | HandleDiacriticsConfig | RenameConfig | DropConfig | FilterByValueConfig | ApiDispatcherConfig;
+export type ActionConfigPayload = CsvHrisConnectorConfig | WorkdayConfig | SageHrConfig | ScdType2Config | PiiMaskingConfig | DedupConfig | RegexReplaceConfig | IsoCountrySanitizerConfig | CellphoneSanitizerConfig | HandleDiacriticsConfig | RenameConfig | DropConfig | FilterByValueConfig | ApiDispatcherConfig;
 
 /**
  * All known action types in the pipeline.
@@ -51,6 +46,7 @@ export type ActionConfigPayload = CsvHrisConnectorConfig | WorkdayConfig | ScdTy
  * |---------------------------|------------------------|
  * | `"csv_hris_connector"`    | `CsvHrisConnector`     |
  * | `"workday_hris_connector"`| `WorkdayHrisConnector` |
+ * | `"sage_hr_connector"`     | `SageHrConnector`      |
  * | `"scd_type_2"`            | `ScdType2`             |
  * | `"pii_masking"`           | `PiiMasking`           |
  * | `"identity_deduplicator"` | `IdentityDeduplicator` |
@@ -63,7 +59,7 @@ export type ActionConfigPayload = CsvHrisConnectorConfig | WorkdayConfig | ScdTy
  * | `"filter_by_value"`       | `FilterByValue`        |
  * | `"api_dispatcher"`        | `ApiDispatcher`        |
  */
-export type ActionType = 'csv_hris_connector' | 'workday_hris_connector' | 'scd_type_2' | 'pii_masking' | 'identity_deduplicator' | 'regex_replace' | 'iso_country_sanitizer' | 'cellphone_sanitizer' | 'handle_diacritics' | 'rename_column' | 'drop_column' | 'filter_by_value' | 'api_dispatcher';
+export type ActionType = 'csv_hris_connector' | 'workday_hris_connector' | 'sage_hr_connector' | 'scd_type_2' | 'pii_masking' | 'identity_deduplicator' | 'regex_replace' | 'iso_country_sanitizer' | 'cellphone_sanitizer' | 'handle_diacritics' | 'rename_column' | 'drop_column' | 'filter_by_value' | 'api_dispatcher';
 
 /**
  * Fully-typed API dispatcher configuration.
@@ -156,20 +152,6 @@ export type CellphoneSanitizerConfig = {
      * Column holding the raw phone number.
      */
     phone_column: string;
-};
-
-/**
- * A single column mapping from the pipeline to the egress destination.
- */
-export type ColumnMapping = {
-    /**
-     * Column name in the pipeline (from `final_columns`)
-     */
-    source_column: string;
-    /**
-     * Destination field name in the egress schema
-     */
-    target_field: string;
 };
 
 /**
@@ -353,27 +335,6 @@ export type FilterByValueConfig = {
      * The raw regex pattern.
      */
     pattern: string;
-};
-
-/**
- * Request body for `POST /config/{id}/generate-plan`.
- *
- * Currently empty — source system is derived from the pipeline's ingress
- * connector. Kept as a struct so future fields can be added without a
- * breaking API change.
- */
-export type GeneratePlanRequest = {
-    [key: string]: unknown;
-};
-
-/**
- * Response body for `POST /config/{id}/generate-plan` (202 Accepted).
- */
-export type GeneratePlanResponse = {
-    /**
-     * Current generation status
-     */
-    status: string;
 };
 
 /**
@@ -688,97 +649,6 @@ export type PipelineConfig = {
      * The full ETL pipeline manifest (passed through to the ETL Lambda)
      */
     pipeline: Manifest;
-    planSummary?: null | PlanSummary;
-};
-
-/**
- * A single feature card in the plan summary UI.
- *
- * Each feature references one or more manifest actions via `action_ids`.
- * Toggling a feature flips the `disabled` flag on those actions.
- */
-export type PlanFeature = {
-    /**
-     * References to the manifest action IDs this feature maps to
-     */
-    actionIds: Array<string>;
-    /**
-     * Description of what this feature does
-     */
-    description: string;
-    /**
-     * Icon name for the UI (e.g. "calendar", "users", "shield")
-     */
-    icon: string;
-    /**
-     * Unique identifier for this feature (e.g. "sync_start_dates")
-     */
-    id: string;
-    /**
-     * Human-readable label (e.g. "Sync Start Dates")
-     */
-    label: string;
-};
-
-/**
- * Synthetic before/after preview showing how data transforms.
- */
-export type PlanPreview = {
-    /**
-     * Sample record after pipeline transforms
-     */
-    after: {
-        [key: string]: string;
-    };
-    /**
-     * Sample record as it appears in the source system
-     */
-    before: {
-        [key: string]: string;
-    };
-    /**
-     * Label for the source side (e.g. "In Workday")
-     */
-    sourceLabel: string;
-    /**
-     * Label for the target side (e.g. "In Your App")
-     */
-    targetLabel: string;
-    /**
-     * Warnings for destination fields that could not be mapped from the source.
-     * Each warning uses the sentinel value `__NEEDS_MAPPING__` in `after`
-     * and surfaces a human-readable message for user intervention.
-     */
-    warnings?: Array<PreviewWarning>;
-};
-
-/**
- * AI-generated plan summary cached on `PipelineConfig`.
- *
- * Provides a human-readable description of the pipeline plus
- * toggleable features that map back to manifest actions.
- */
-export type PlanSummary = {
-    /**
-     * Multi-sentence description of the pipeline
-     */
-    description: string;
-    /**
-     * Toggleable features — each references manifest action IDs
-     */
-    features: Array<PlanFeature>;
-    /**
-     * Current generation status (InProgress, Completed, Failed)
-     */
-    generationStatus: SchemaGenerationStatus;
-    /**
-     * One-line headline (e.g. "Here's the plan to connect Workday to your App.")
-     */
-    headline: string;
-    /**
-     * Synthetic before/after preview data
-     */
-    preview: PlanPreview;
 };
 
 /**
@@ -797,23 +667,6 @@ export type PresignedUploadResponse = {
      * Presigned PUT URL — the frontend uses this to upload the CSV directly.
      */
     upload_url: string;
-};
-
-/**
- * A warning for a destination field that has no matching source column.
- *
- * The corresponding entry in `PlanPreview::after` will have the sentinel
- * value `__NEEDS_MAPPING__` to signal the UI that user action is required.
- */
-export type PreviewWarning = {
-    /**
-     * The destination field name that could not be mapped
-     */
-    field: string;
-    /**
-     * Human-readable explanation of why the mapping is missing
-     */
-    message: string;
 };
 
 /**
@@ -868,6 +721,120 @@ export type RenameConfig = {
 };
 
 /**
+ * Top-level response from the Sage HR `/api/employees` endpoint.
+ */
+export type SageHrApiResponse = {
+    data: Array<SageHrEmployee>;
+    meta: SageHrMeta;
+};
+
+/**
+ * Configuration for the Sage HR REST API connector.
+ *
+ * # JSON config example
+ *
+ * ```json
+ * {
+ * "subdomain": "acme",
+ * "api_token": "<your-sage-hr-api-token>",
+ * "include_team_history": true,
+ * "include_employment_status_history": true,
+ * "include_position_history": true
+ * }
+ * ```
+ *
+ * | Field                              | Type   | Required | Description                                         |
+ * |------------------------------------|--------|----------|-----------------------------------------------------|
+ * | `subdomain`                        | string | **yes**  | Sage HR subdomain (e.g. `acme` → `acme.sage.hr`)    |
+ * | `api_token`                        | string | **yes**  | API token provided by the user                       |
+ * | `include_team_history`             | bool   | no       | Include team history (default false)                 |
+ * | `include_employment_status_history`| bool   | no       | Include employment status history (default false)    |
+ * | `include_position_history`         | bool   | no       | Include position history (default false)             |
+ */
+export type SageHrConfig = {
+    api_token: string;
+    include_employment_status_history?: boolean;
+    include_position_history?: boolean;
+    include_team_history?: boolean;
+    subdomain: string;
+};
+
+/**
+ * A single employee record as returned by the Sage HR API.
+ */
+export type SageHrEmployee = {
+    city?: string | null;
+    country?: string | null;
+    date_of_birth?: string | null;
+    email?: string | null;
+    employee_number?: string | null;
+    employment_start_date?: string | null;
+    employment_status?: string | null;
+    employment_status_history?: Array<SageHrEmploymentStatusHistory> | null;
+    first_name?: string | null;
+    gender?: string | null;
+    home_phone?: string | null;
+    id: number;
+    last_name?: string | null;
+    mobile_phone?: string | null;
+    picture_url?: string | null;
+    position?: string | null;
+    position_history?: Array<SageHrPositionHistory> | null;
+    position_id?: number | null;
+    post_code?: unknown;
+    reports_to_employee_id?: number | null;
+    street_first?: string | null;
+    street_second?: string | null;
+    team?: string | null;
+    team_history?: Array<SageHrTeamHistory> | null;
+    team_id?: number | null;
+    work_phone?: string | null;
+};
+
+/**
+ * An employment status history entry.
+ */
+export type SageHrEmploymentStatusHistory = {
+    employment_statu_name?: string | null;
+    employment_status_id: number;
+    end_date?: string | null;
+    start_date?: string | null;
+};
+
+/**
+ * Pagination metadata from the Sage HR API.
+ */
+export type SageHrMeta = {
+    current_page: number;
+    next_page?: number | null;
+    per_page: number;
+    previous_page?: number | null;
+    total_entries: number;
+    total_pages: number;
+};
+
+/**
+ * A position history entry.
+ */
+export type SageHrPositionHistory = {
+    end_date?: string | null;
+    position_code?: string | null;
+    position_id: number;
+    position_name?: string | null;
+    start_date?: string | null;
+};
+
+/**
+ * A team assignment history entry.
+ */
+export type SageHrTeamHistory = {
+    end_date?: string | null;
+    start_date?: string | null;
+    team_id: number;
+    team_name?: string | null;
+};
+
+/**
  * Configuration for SCD Type 2 effective dating.
  *
  * # JSON config
@@ -893,31 +860,6 @@ export type ScdType2Config = {
      * The column that identifies the entity (partitioning column).
      */
     entity_column?: string;
-};
-
-/**
- * Result of diffing `final_columns` against the egress schema.
- *
- * Shows which pipeline columns map to destination fields, and which are
- * unmatched on either side.
- */
-export type SchemaDiff = {
-    /**
-     * Columns present in the pipeline that have a mapping in the egress schema
-     */
-    mapped: Array<ColumnMapping>;
-    /**
-     * Pipeline columns with no egress mapping
-     */
-    unmapped_source: Array<string>;
-    /**
-     * Egress schema fields with no matching pipeline column
-     */
-    unmapped_target: Array<string>;
-};
-
-export type SchemaGenerationStatus = 'notStarted' | 'inProgress' | 'completed' | {
-    failed: string;
 };
 
 /**
@@ -958,7 +900,6 @@ export type ValidationResult = {
      * Final column set after the last step.
      */
     final_columns: Array<string>;
-    schema_diff?: null | SchemaDiff;
     /**
      * Per-step column snapshots (in execution order).
      */
@@ -1320,47 +1261,6 @@ export type CsvPresignedUploadResponses = {
 };
 
 export type CsvPresignedUploadResponse = CsvPresignedUploadResponses[keyof CsvPresignedUploadResponses];
-
-export type GeneratePlanData = {
-    /**
-     * Optional request body (currently empty — source system is derived from the pipeline)
-     */
-    body: GeneratePlanRequest;
-    path: {
-        /**
-         * Unique identifier for the customer company
-         */
-        customer_company_id: string;
-    };
-    query?: never;
-    url: '/config/{customer_company_id}/generate-plan';
-};
-
-export type GeneratePlanErrors = {
-    /**
-     * Unauthorized — missing or invalid token
-     */
-    401: ErrorResponse;
-    /**
-     * Configuration not found
-     */
-    404: ErrorResponse;
-    /**
-     * Internal server error
-     */
-    500: ErrorResponse;
-};
-
-export type GeneratePlanError = GeneratePlanErrors[keyof GeneratePlanErrors];
-
-export type GeneratePlanResponses = {
-    /**
-     * Plan generation started
-     */
-    202: GeneratePlanResponse;
-};
-
-export type GeneratePlanResponse2 = GeneratePlanResponses[keyof GeneratePlanResponses];
 
 export type ValidateConfigData = {
     /**

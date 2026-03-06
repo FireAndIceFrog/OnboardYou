@@ -28,7 +28,8 @@ use models::{
 use onboard_you_models::{
     ActionConfig, ActionConfigPayload, ActionType, ApiDispatcherConfig, BearerPlacement,
     BearerRepoConfig, Manifest, OAuth2GrantType, OAuth2RepoConfig, OAuthRepoConfig, OrgSettings,
-    PipelineConfig,
+    PipelineConfig, SageHrApiResponse, SageHrConfig, SageHrEmployee,
+    SageHrEmploymentStatusHistory, SageHrMeta, SageHrPositionHistory, SageHrTeamHistory,
 };
 use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::{fmt, EnvFilter};
@@ -79,6 +80,13 @@ use utoipa_swagger_ui::SwaggerUi;
         SettingsRequest,
         PresignedUploadResponse,
         CsvColumnsResponse,
+        SageHrConfig,
+        SageHrApiResponse,
+        SageHrEmployee,
+        SageHrMeta,
+        SageHrTeamHistory,
+        SageHrEmploymentStatusHistory,
+        SageHrPositionHistory,
     )),
     tags(
         (name = "Authentication", description = "Login and token management"),

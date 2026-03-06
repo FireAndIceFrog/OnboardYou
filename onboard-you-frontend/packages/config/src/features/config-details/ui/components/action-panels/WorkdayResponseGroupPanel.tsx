@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Box, Flex, Text } from '@chakra-ui/react';
 import { ACTION_FIELD_SCHEMAS } from '../../../domain/actionCatalog';
 import { RESPONSE_GROUP_OPTIONS } from '../../../domain/types';
@@ -6,6 +7,7 @@ import { FieldEditor } from '../FieldEditor';
 import type { ActionEditorProps } from './registry';
 
 export function WorkdayResponseGroupPanel({ config, onChange, availableColumns }: ActionEditorProps) {
+  const { t } = useTranslation();
   const fieldSchemas = useMemo(
     () => ACTION_FIELD_SCHEMAS.workday_hris_connector ?? [],
     [],
@@ -46,10 +48,10 @@ export function WorkdayResponseGroupPanel({ config, onChange, availableColumns }
       {/* Custom response_group toggle chips */}
       <Box>
         <Text fontSize="sm" fontWeight="600" mb="1">
-          Response Groups
+          {t('configDetails.panels.responseGroup.title')}
         </Text>
         <Text fontSize="xs" color="gray.500" mb="2">
-          Data sections to include in the Workday response
+          {t('configDetails.panels.responseGroup.hint')}
         </Text>
         <Flex wrap="wrap" gap="2">
           {RESPONSE_GROUP_OPTIONS.map((opt) => (
@@ -77,7 +79,7 @@ export function WorkdayResponseGroupPanel({ config, onChange, availableColumns }
                 style={{ display: 'none' }}
                 data-testid={`response-group-${opt.value}`}
               />
-              <Text>{opt.label}</Text>
+              <Text>{t(opt.labelKey)}</Text>
             </Box>
           ))}
         </Flex>

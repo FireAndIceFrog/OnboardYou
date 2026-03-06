@@ -85,6 +85,18 @@
         "responseGroups": "Response Groups",
         "responseGroupsHint": "Select which data groups to pull from Workday."
       },
+      "sageHr": {
+        "credentialsTitle": "API Credentials",
+        "subdomain": "Subdomain",
+        "subdomainPlaceholder": "acme",
+        "subdomainHint": "Your Sage HR subdomain (e.g. acme for acme.sage.hr).",
+        "apiToken": "API Token",
+        "apiTokenPlaceholder": "your-api-token",
+        "apiTokenHint": "Find this in Sage HR → Settings → API.",
+        "historyOptionsTitle": "Data Options",
+        "historyOptions": "History Options",
+        "historyOptionsHint": "Optionally include historical records from Sage HR."
+      },
       "csv": {
         "uploadTitle": "Upload CSV File",
         "uploadLabel": "CSV File",
@@ -95,7 +107,34 @@
         "columnsHint": "{{count}} column(s) detected from the CSV header row."
       },
       "backButton": "← Back",
-      "nextButton": "Next: Customize Flow →"
+      "nextButton": "Next: Customize Flow →",
+      "systems": {
+        "workday": "Workday",
+        "sage_hr": "Sage HR",
+        "csv": "CSV File Upload"
+      },
+      "responseGroupLabels": {
+        "include_personal_information": "Personal Information",
+        "include_employment_information": "Employment Information",
+        "include_compensation": "Compensation",
+        "include_organizations": "Organizations",
+        "include_roles": "Roles"
+      },
+      "historyLabels": {
+        "includeTeamHistory": "Team History",
+        "includeEmploymentStatusHistory": "Employment Status History",
+        "includePositionHistory": "Position History"
+      }
+    },
+    "panels": {
+      "responseGroup": {
+        "title": "Response Groups",
+        "hint": "Data sections to include in the Workday response"
+      },
+      "historyOptions": {
+        "title": "History Options",
+        "hint": "Include historical data from Sage HR"
+      }
     },
     "nodes": {
       "dataSource": "Data Source",

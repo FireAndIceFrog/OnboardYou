@@ -315,8 +315,13 @@ resource "aws_api_gateway_deployment" "this" {
       { for k, v in aws_api_gateway_integration.exact : k => v.id },
       { for k, v in aws_api_gateway_method.proxy : k => v.id },
       { for k, v in aws_api_gateway_integration.proxy : k => v.id },
+      { for k, v in aws_api_gateway_method.cors_exact : k => v.id },
+      { for k, v in aws_api_gateway_integration.cors_exact : k => v.id },
+      { for k, v in aws_api_gateway_method.cors_proxy : k => v.id },
+      { for k, v in aws_api_gateway_integration.cors_proxy : k => v.id },
       aws_api_gateway_gateway_response.default_4xx.id,
       aws_api_gateway_gateway_response.default_5xx.id,
+      var.cors_allowed_origin,
     ]))
   }
 
