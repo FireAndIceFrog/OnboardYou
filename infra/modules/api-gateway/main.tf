@@ -252,6 +252,34 @@ resource "aws_api_gateway_integration_response" "cors_proxy_200" {
 }
 
 # ══════════════════════════════════════════════════════════════
+# Gateway Responses — add CORS headers to API Gateway-generated
+# errors (e.g. Lambda crash, timeout, throttling, authorizer
+# failures).  Without these, the browser blocks the error body.
+# ══════════════════════════════════════════════════════════════
+
+resource "aws_api_gateway_gateway_response" "default_4xx" {
+  rest_api_id   = aws_api_gateway_rest_api.this.id
+  response_type = "DEFAULT_4XX"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'${var.cors_allowed_origin}'"
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'${var.cors_allowed_headers}'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'GET,POST,PUT,DELETE,OPTIONS'"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "default_5xx" {
+  rest_api_id   = aws_api_gateway_rest_api.this.id
+  response_type = "DEFAULT_5XX"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'${var.cors_allowed_origin}'"
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'${var.cors_allowed_headers}'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'GET,POST,PUT,DELETE,OPTIONS'"
+  }
+}
+
+# ══════════════════════════════════════════════════════════════
 # Lambda invoke permission
 # ══════════════════════════════════════════════════════════════
 
@@ -275,6 +303,8 @@ resource "aws_api_gateway_deployment" "this" {
     aws_api_gateway_integration.proxy,
     aws_api_gateway_integration.cors_exact,
     aws_api_gateway_integration.cors_proxy,
+    aws_api_gateway_gateway_response.default_4xx,
+    aws_api_gateway_gateway_response.default_5xx,
   ]
 
   triggers = {
@@ -285,6 +315,8 @@ resource "aws_api_gateway_deployment" "this" {
       { for k, v in aws_api_gateway_integration.exact : k => v.id },
       { for k, v in aws_api_gateway_method.proxy : k => v.id },
       { for k, v in aws_api_gateway_integration.proxy : k => v.id },
+      aws_api_gateway_gateway_response.default_4xx.id,
+      aws_api_gateway_gateway_response.default_5xx.id,
     ]))
   }
 

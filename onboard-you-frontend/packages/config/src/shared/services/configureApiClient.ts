@@ -9,7 +9,7 @@ export function configureApiClient(baseUrl: string): void {
   client.setConfig({ baseUrl });
 
   client.interceptors.request.use((request) => {
-    const token = sessionStorage.getItem('oy_access_token');
+    const token = sessionStorage.getItem('oy_id_token');
     if (token) {
       request.headers.set('Authorization', `Bearer ${token}`);
     }
