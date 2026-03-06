@@ -138,6 +138,10 @@ export const ACTION_FIELD_SCHEMAS: Partial<Record<ActionType, FieldSchema[]>> = 
     { key: 'worker_count_limit', label: 'Worker Count Limit', type: 'number', hint: 'Max workers per page' },
     { key: 'response_group', label: 'Response Groups', type: 'readonly', hint: 'Data sections to include in the Workday response' },
   ],
+  sage_hr_connector: [
+    { key: 'subdomain', label: 'Subdomain', type: 'text', hint: 'Your Sage HR subdomain (e.g. acme for acme.sage.hr)', placeholder: 'acme' },
+    { key: 'api_token', label: 'API Token', type: 'text', hint: 'Sage HR REST API token from Settings → API', placeholder: 'your-api-token' },
+  ],
   identity_deduplicator: [
     { key: 'columns', label: 'Match Columns', type: 'column-multi', hint: 'Columns used to identify duplicates (e.g. email, national_id)' },
     { key: 'employee_id_column', label: 'Employee ID Column', type: 'column-select', hint: 'The column with the unique employee identifier' },

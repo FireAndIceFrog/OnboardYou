@@ -13,7 +13,7 @@ import {
   type EdgeChange,
 } from '@xyflow/react';
 import type { RootState, ThunkExtra } from '@/store';
-import type { PipelineConfig, ActionConfig, ActionConfigPayload, ValidationResult, ActionType, WorkdayConfig, CsvHrisConnectorConfig } from '@/generated/api';
+import type { PipelineConfig, ActionConfig, ActionConfigPayload, ValidationResult, ActionType, WorkdayConfig, CsvHrisConnectorConfig, SageHrConfig } from '@/generated/api';
 
 /* ── API error extraction ──────────────────────────────────── */
 
@@ -53,7 +53,7 @@ function parseValidationErrors(
 }
 import { actionCategory, businessLabel } from '@/shared/domain/types';
 import type { ConfigDetailsState, ConnectionForm } from '../domain/types';
-import { buildResponseGroup } from '../domain/types';
+import { buildResponseGroup, buildSageHrConfig } from '../domain/types';
 import { fetchConfig, createConfig as createConfigService, saveConfig as saveConfigService, deleteConfig as deleteConfigService, validateConfig as validateConfigService } from '../services/configDetailsService';
 import { convertToFlow } from '../services/pipelineLayoutService';
 
@@ -376,10 +376,14 @@ const configDetailsSlice = createSlice({
 
       // Map the wizard system id to the generated ActionType
       const actionType: ActionType =
-        form.system === 'workday' ? 'workday_hris_connector' : 'csv_hris_connector';
+        form.system === 'workday'
+          ? 'workday_hris_connector'
+          : form.system === 'sage_hr'
+            ? 'sage_hr_connector'
+            : 'csv_hris_connector';
 
       // Build connector-specific config payload
-      const connectorConfig: WorkdayConfig | CsvHrisConnectorConfig =
+      const connectorConfig: WorkdayConfig | SageHrConfig | CsvHrisConnectorConfig =
         form.system === 'workday'
           ? {
               tenant_url: form.workday.tenantUrl,
@@ -389,10 +393,12 @@ const configDetailsSlice = createSlice({
               worker_count_limit: Number(form.workday.workerCountLimit) || 200,
               response_group: buildResponseGroup(form.workday.responseGroup),
             }
-          : {
-              filename: form.csv.filename,
-              columns: form.csv.columns,
-            };
+          : form.system === 'sage_hr'
+            ? buildSageHrConfig(form.sageHr)
+            : {
+                filename: form.csv.filename,
+                columns: form.csv.columns,
+              };
 
       const ingestionAction: ActionConfig = {
         id: 'ingest',

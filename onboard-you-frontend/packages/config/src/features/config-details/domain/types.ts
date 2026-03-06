@@ -1,5 +1,5 @@
 import type { Node, Edge } from '@xyflow/react';
-import type { PipelineConfig, ValidationResult, WorkdayResponseGroup } from '@/generated/api';
+import type { PipelineConfig, ValidationResult, WorkdayResponseGroup, SageHrConfig as SageHrConfigApi } from '@/generated/api';
 
 export interface ConfigDetailsState {
   config: PipelineConfig | null;
@@ -25,6 +25,7 @@ export interface ConfigDetailsState {
 /** Only connectors backed by Rust ingestion code. */
 export const HR_SYSTEMS = [
   { id: 'workday', name: 'Workday', icon: '🏢' },
+  { id: 'sage_hr', name: 'Sage HR', icon: '🌿' },
   { id: 'csv', name: 'CSV File Upload', icon: '📄' },
 ] as const;
 
@@ -37,6 +38,14 @@ export interface WorkdayFields {
   password: string;
   workerCountLimit: string;
   responseGroup: string;
+}
+
+export interface SageHrFields {
+  subdomain: string;
+  apiToken: string;
+  includeTeamHistory: boolean;
+  includeEmploymentStatusHistory: boolean;
+  includePositionHistory: boolean;
 }
 
 export type CsvUploadStatus = 'idle' | 'uploading' | 'discovering' | 'done' | 'error';
@@ -52,6 +61,7 @@ export interface ConnectionForm {
   system: SystemId | '';
   displayName: string;
   workday: WorkdayFields;
+  sageHr: SageHrFields;
   csv: CsvFields;
 }
 
@@ -65,6 +75,13 @@ export const INITIAL_CONNECTION_FORM: ConnectionForm = {
     password: '',
     workerCountLimit: '200',
     responseGroup: 'include_personal_information,include_employment_information',
+  },
+  sageHr: {
+    subdomain: '',
+    apiToken: '',
+    includeTeamHistory: false,
+    includeEmploymentStatusHistory: false,
+    includePositionHistory: false,
   },
   csv: {
     filename: '',
@@ -101,5 +118,30 @@ export function buildResponseGroup(csv: string): WorkdayResponseGroup {
     include_compensation: active.has('include_compensation'),
     include_organizations: active.has('include_organizations'),
     include_roles: active.has('include_roles'),
+  };
+}
+
+/* ── Sage HR ──────────────────────────────────────────────── */
+
+/**
+ * History toggle options for the Sage HR connection wizard.
+ * `value` maps to the `SageHrFields` boolean key.
+ */
+export const SAGE_HR_HISTORY_OPTIONS = [
+  { value: 'includeTeamHistory', label: 'Team History' },
+  { value: 'includeEmploymentStatusHistory', label: 'Employment Status History' },
+  { value: 'includePositionHistory', label: 'Position History' },
+] as const;
+
+/**
+ * Convert the wizard form fields into a typed `SageHrConfig` for the manifest.
+ */
+export function buildSageHrConfig(fields: SageHrFields): SageHrConfigApi {
+  return {
+    subdomain: fields.subdomain.trim(),
+    api_token: fields.apiToken,
+    include_team_history: fields.includeTeamHistory || undefined,
+    include_employment_status_history: fields.includeEmploymentStatusHistory || undefined,
+    include_position_history: fields.includePositionHistory || undefined,
   };
 }

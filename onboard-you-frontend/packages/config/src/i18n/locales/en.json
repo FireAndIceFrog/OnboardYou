@@ -85,6 +85,18 @@
         "responseGroups": "Response Groups",
         "responseGroupsHint": "Select which data groups to pull from Workday."
       },
+      "sageHr": {
+        "credentialsTitle": "API Credentials",
+        "subdomain": "Subdomain",
+        "subdomainPlaceholder": "acme",
+        "subdomainHint": "Your Sage HR subdomain (e.g. acme for acme.sage.hr).",
+        "apiToken": "API Token",
+        "apiTokenPlaceholder": "your-api-token",
+        "apiTokenHint": "Find this in Sage HR → Settings → API.",
+        "historyOptionsTitle": "Data Options",
+        "historyOptions": "History Options",
+        "historyOptionsHint": "Optionally include historical records from Sage HR."
+      },
       "csv": {
         "uploadTitle": "Upload CSV File",
         "uploadLabel": "CSV File",

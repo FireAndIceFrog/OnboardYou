@@ -16,6 +16,13 @@ vi.mock('../../state/useConnectionForm', () => ({
         workerCountLimit: '200',
         responseGroup: '',
       },
+      sageHr: {
+        subdomain: '',
+        apiToken: '',
+        includeTeamHistory: false,
+        includeEmploymentStatusHistory: false,
+        includePositionHistory: false,
+      },
       csv: { filename: '', columns: [], uploadStatus: 'idle', uploadError: null },
     },
     errors: {},
@@ -24,6 +31,8 @@ vi.mock('../../state/useConnectionForm', () => ({
     handleSystemSelect: vi.fn(),
     handleChange: () => vi.fn(),
     handleWorkdayChange: () => vi.fn(),
+    handleSageHrChange: () => vi.fn(),
+    handleSageHrHistoryToggle: vi.fn(),
     handleCsvFileSelect: vi.fn(),
     handleResponseGroupToggle: vi.fn(),
     handleNext: vi.fn(),
@@ -32,30 +41,52 @@ vi.mock('../../state/useConnectionForm', () => ({
   }),
 }));
 
+/* ── Declarative Cases ──────────────────────────────────── */
+
+interface Case {
+  name: string;
+  assert: (screen: typeof import('@testing-library/react').screen) => void;
+}
+
+const cases: Case[] = [
+  {
+    name: 'renders all HR system options',
+    assert: (s) => {
+      expect(s.getByText('Workday')).toBeInTheDocument();
+      expect(s.getByText('Sage HR')).toBeInTheDocument();
+      expect(s.getByText('CSV File Upload')).toBeInTheDocument();
+    },
+  },
+  {
+    name: 'renders back button',
+    assert: (s) => {
+      expect(s.getByRole('button', { name: /back/i })).toBeInTheDocument();
+    },
+  },
+  {
+    name: 'renders next button',
+    assert: (s) => {
+      expect(s.getByRole('button', { name: /next/i })).toBeInTheDocument();
+    },
+  },
+  {
+    name: 'next button is disabled when form is invalid',
+    assert: (s) => {
+      expect(s.getByRole('button', { name: /next/i })).toBeDisabled();
+    },
+  },
+];
+
+/* ── Tests ──────────────────────────────────────────────── */
+
 describe('ConnectionDetailsScreen', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('renders the form with system selector', async () => {
+  it.each(cases)('$name', async ({ assert: assertFn }) => {
     const { ConnectionDetailsScreen } = await import('./ConnectionDetailsScreen');
     renderWithProviders(<ConnectionDetailsScreen />);
-    // Should show the two HR system options
-    expect(screen.getByText('Workday')).toBeInTheDocument();
-    expect(screen.getByText('CSV File Upload')).toBeInTheDocument();
-  });
-
-  it('renders back and next buttons', async () => {
-    const { ConnectionDetailsScreen } = await import('./ConnectionDetailsScreen');
-    renderWithProviders(<ConnectionDetailsScreen />);
-    expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /next/i })).toBeInTheDocument();
-  });
-
-  it('disables next button when form is invalid', async () => {
-    const { ConnectionDetailsScreen } = await import('./ConnectionDetailsScreen');
-    renderWithProviders(<ConnectionDetailsScreen />);
-    const nextBtn = screen.getByRole('button', { name: /next/i });
-    expect(nextBtn).toBeDisabled();
+    assertFn(screen);
   });
 });

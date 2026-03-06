@@ -1,0 +1,5 @@
+---
+source: onboard-you-backend/shared/ETL/src/orchestration/clients/rest_client.rs
+expression: format_outcome(&result)
+---
+ERR: Ingestion error: connection refused

@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box, Flex, Heading, Text, Input, Button, chakra } from '@chakra-ui/react';
-import { HR_SYSTEMS, RESPONSE_GROUP_OPTIONS } from '../../domain/types';
+import { HR_SYSTEMS, RESPONSE_GROUP_OPTIONS, SAGE_HR_HISTORY_OPTIONS } from '../../domain/types';
 import { useConnectionForm } from '../../state/useConnectionForm';
 import { FieldError } from '../components';
 import { inputStyles } from '../components/styles';
@@ -28,6 +28,8 @@ export function ConnectionDetailsScreen() {
     handleSystemSelect,
     handleChange,
     handleWorkdayChange,
+    handleSageHrChange,
+    handleSageHrHistoryToggle,
     handleCsvFileSelect,
     handleResponseGroupToggle,
     handleNext,
@@ -157,6 +159,67 @@ export function ConnectionDetailsScreen() {
                 </Flex>
                 <FieldError id="response-group-error" error={errors['workday.responseGroup']} />
                 <Text fontSize="xs" color="gray.400" mt="1">{t('configDetails.connection.workday.responseGroupsHint')}</Text>
+              </Box>
+            </Box>
+          </>
+        )}
+
+        {/* Sage HR-specific fields */}
+        {form.system === 'sage_hr' && (
+          <>
+            <Box as="fieldset" border="none" p="0" m="0" mb="5">
+              <Flex as="legend" align="center" gap="2" fontSize="sm" fontWeight="700" color="gray.700" mb="4" pb="2" borderBottom="1px solid" borderColor="gray.100">
+                <Text>🔐</Text>
+                <Text>{t('configDetails.connection.sageHr.credentialsTitle')}</Text>
+              </Flex>
+
+              <Box mb="4">
+                <Label htmlFor="conn-sage-subdomain" fontSize="sm" fontWeight="600" display="block" mb="1">{t('configDetails.connection.sageHr.subdomain')}</Label>
+                <Input id="conn-sage-subdomain" type="text" placeholder={t('configDetails.connection.sageHr.subdomainPlaceholder')} value={form.sageHr.subdomain} onChange={handleSageHrChange('subdomain')} onBlur={() => validateField('sageHr.subdomain')} aria-invalid={!!errors['sageHr.subdomain']} aria-describedby={errors['sageHr.subdomain'] ? 'conn-sage-subdomain-error' : undefined} {...getInputProps(errors['sageHr.subdomain'])} />
+                <FieldError id="conn-sage-subdomain-error" error={errors['sageHr.subdomain']} />
+                <Text fontSize="xs" color="gray.400" mt="1">{t('configDetails.connection.sageHr.subdomainHint')}</Text>
+              </Box>
+
+              <Box mb="4">
+                <Label htmlFor="conn-sage-api-token" fontSize="sm" fontWeight="600" display="block" mb="1">{t('configDetails.connection.sageHr.apiToken')}</Label>
+                <Input id="conn-sage-api-token" type="password" placeholder={t('configDetails.connection.sageHr.apiTokenPlaceholder')} value={form.sageHr.apiToken} onChange={handleSageHrChange('apiToken')} onBlur={() => validateField('sageHr.apiToken')} aria-invalid={!!errors['sageHr.apiToken']} aria-describedby={errors['sageHr.apiToken'] ? 'conn-sage-api-token-error' : undefined} {...getInputProps(errors['sageHr.apiToken'])} />
+                <FieldError id="conn-sage-api-token-error" error={errors['sageHr.apiToken']} />
+                <Text fontSize="xs" color="gray.400" mt="1">{t('configDetails.connection.sageHr.apiTokenHint')}</Text>
+              </Box>
+            </Box>
+
+            <Box as="fieldset" border="none" p="0" m="0" mb="5">
+              <Flex as="legend" align="center" gap="2" fontSize="sm" fontWeight="700" color="gray.700" mb="4" pb="2" borderBottom="1px solid" borderColor="gray.100">
+                <Text>⚙️</Text>
+                <Text>{t('configDetails.connection.sageHr.historyOptionsTitle')}</Text>
+              </Flex>
+
+              <Box mb="4">
+                <Text fontSize="sm" fontWeight="600" mb="2">{t('configDetails.connection.sageHr.historyOptions')}</Text>
+                <Flex wrap="wrap" gap="2">
+                  {SAGE_HR_HISTORY_OPTIONS.map((opt) => (
+                    <StyledButton
+                      key={opt.value}
+                      type="button"
+                      px="3"
+                      py="1.5"
+                      borderRadius="full"
+                      border="1px solid"
+                      borderColor={form.sageHr[opt.value] ? 'blue.400' : 'gray.200'}
+                      bg={form.sageHr[opt.value] ? 'blue.50' : 'white'}
+                      color={form.sageHr[opt.value] ? 'blue.700' : 'gray.600'}
+                      fontSize="sm"
+                      cursor="pointer"
+                      transition="all 0.15s"
+                      _hover={{ borderColor: 'blue.300' }}
+                      aria-pressed={!!form.sageHr[opt.value]}
+                      onClick={() => handleSageHrHistoryToggle(opt.value)}
+                    >
+                      {opt.label}
+                    </StyledButton>
+                  ))}
+                </Flex>
+                <Text fontSize="xs" color="gray.400" mt="1">{t('configDetails.connection.sageHr.historyOptionsHint')}</Text>
               </Box>
             </Box>
           </>

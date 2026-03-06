@@ -512,80 +512,6 @@
         }
       }
     },
-    "/config/{customer_company_id}/generate-plan": {
-      "post": {
-        "tags": [
-          "Configuration"
-        ],
-        "summary": "POST /config/{customerCompanyId}/generate-plan",
-        "description": "Trigger async AI plan generation for a pipeline configuration.\nSets the generation status to InProgress, sends an SQS message to the\netl-trigger lambda, and returns 202 immediately. The frontend polls\n`GET /config/{id}` until `planSummary.generationStatus` is `Completed`.",
-        "operationId": "generate_plan",
-        "parameters": [
-          {
-            "name": "customer_company_id",
-            "in": "path",
-            "description": "Unique identifier for the customer company",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "description": "Optional request body (currently empty — source system is derived from the pipeline)",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GeneratePlanRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "202": {
-            "description": "Plan generation started",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GeneratePlanResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized — missing or invalid token",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Configuration not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/config/{customer_company_id}/validate": {
       "post": {
         "tags": [
@@ -783,10 +709,6 @@
             "$ref": "#/components/schemas/ActionConfigPayload",
             "description": "Action-specific configuration (shape depends on action_type)\n\nDeserialized into the concrete typed variant matching `action_type`\nvia the custom `Deserialize` impl below."
           },
-          "disabled": {
-            "type": "boolean",
-            "description": "When `true`, the ETL engine skips this action at runtime.\nUsed by the plan summary UI to toggle features on/off."
-          },
           "id": {
             "type": "string",
             "description": "Unique identifier for this pipeline step"
@@ -800,6 +722,9 @@
           },
           {
             "$ref": "#/components/schemas/WorkdayConfig"
+          },
+          {
+            "$ref": "#/components/schemas/SageHrConfig"
           },
           {
             "$ref": "#/components/schemas/ScdType2Config"
@@ -839,10 +764,11 @@
       },
       "ActionType": {
         "type": "string",
-        "description": "All known action types in the pipeline.\n\nThis is the **single source of truth** — adding a new capability requires\nadding a variant here, which then forces the factory to handle it\n(exhaustive match). Serde maps these to/from `snake_case` JSON strings.\n\n| JSON value                | Variant                |\n|---------------------------|------------------------|\n| `\"csv_hris_connector\"`    | `CsvHrisConnector`     |\n| `\"workday_hris_connector\"`| `WorkdayHrisConnector` |\n| `\"scd_type_2\"`            | `ScdType2`             |\n| `\"pii_masking\"`           | `PiiMasking`           |\n| `\"identity_deduplicator\"` | `IdentityDeduplicator` |\n| `\"regex_replace\"`         | `RegexReplace`         |\n| `\"iso_country_sanitizer\"` | `IsoCountrySanitizer`  |\n| `\"cellphone_sanitizer\"`   | `CellphoneSanitizer`   |\n| `\"handle_diacritics\"`     | `HandleDiacritics`     |\n| `\"rename_column\"`         | `RenameColumn`         |\n| `\"drop_column\"`           | `DropColumn`           |\n| `\"filter_by_value\"`       | `FilterByValue`        |\n| `\"api_dispatcher\"`        | `ApiDispatcher`        |",
+        "description": "All known action types in the pipeline.\n\nThis is the **single source of truth** — adding a new capability requires\nadding a variant here, which then forces the factory to handle it\n(exhaustive match). Serde maps these to/from `snake_case` JSON strings.\n\n| JSON value                | Variant                |\n|---------------------------|------------------------|\n| `\"csv_hris_connector\"`    | `CsvHrisConnector`     |\n| `\"workday_hris_connector\"`| `WorkdayHrisConnector` |\n| `\"sage_hr_connector\"`     | `SageHrConnector`      |\n| `\"scd_type_2\"`            | `ScdType2`             |\n| `\"pii_masking\"`           | `PiiMasking`           |\n| `\"identity_deduplicator\"` | `IdentityDeduplicator` |\n| `\"regex_replace\"`         | `RegexReplace`         |\n| `\"iso_country_sanitizer\"` | `IsoCountrySanitizer`  |\n| `\"cellphone_sanitizer\"`   | `CellphoneSanitizer`   |\n| `\"handle_diacritics\"`     | `HandleDiacritics`     |\n| `\"rename_column\"`         | `RenameColumn`         |\n| `\"drop_column\"`           | `DropColumn`           |\n| `\"filter_by_value\"`       | `FilterByValue`        |\n| `\"api_dispatcher\"`        | `ApiDispatcher`        |",
         "enum": [
           "csv_hris_connector",
           "workday_hris_connector",
+          "sage_hr_connector",
           "scd_type_2",
           "pii_masking",
           "identity_deduplicator",
@@ -1036,24 +962,6 @@
           }
         }
       },
-      "ColumnMapping": {
-        "type": "object",
-        "description": "A single column mapping from the pipeline to the egress destination.",
-        "required": [
-          "source_column",
-          "target_field"
-        ],
-        "properties": {
-          "source_column": {
-            "type": "string",
-            "description": "Column name in the pipeline (from `final_columns`)"
-          },
-          "target_field": {
-            "type": "string",
-            "description": "Destination field name in the egress schema"
-          }
-        }
-      },
       "ColumnMask": {
         "type": "object",
         "description": "Configuration for a single column to mask.\n\n# JSON shape\n\n```json\n{ \"name\": \"ssn\", \"strategy\": \"redact\", \"keep_last\": 4, \"mask_prefix\": \"***-**-\" }\n```\n\n| Field         | Type   | Default     | Description                             |\n|---------------|--------|-------------|-----------------------------------------|\n| `name`        | string | —           | Column name to mask                     |\n| `strategy`    | string | `\"redact\"`  | `\"redact\"` or `\"zero\"`                 |\n| `keep_last`   | int    | `4`         | Characters to preserve (redact only)    |\n| `mask_prefix` | string | `\"***-**-\"` | Prefix replacing the redacted portion   |",
@@ -1216,23 +1124,6 @@
           "pattern": {
             "type": "string",
             "description": "The raw regex pattern."
-          }
-        }
-      },
-      "GeneratePlanRequest": {
-        "type": "object",
-        "description": "Request body for `POST /config/{id}/generate-plan`.\n\nCurrently empty — source system is derived from the pipeline's ingress\nconnector. Kept as a struct so future fields can be added without a\nbreaking API change."
-      },
-      "GeneratePlanResponse": {
-        "type": "object",
-        "description": "Response body for `POST /config/{id}/generate-plan` (202 Accepted).",
-        "required": [
-          "status"
-        ],
-        "properties": {
-          "status": {
-            "type": "string",
-            "description": "Current generation status"
           }
         }
       },
@@ -1583,136 +1474,6 @@
           "pipeline": {
             "$ref": "#/components/schemas/Manifest",
             "description": "The full ETL pipeline manifest (passed through to the ETL Lambda)"
-          },
-          "planSummary": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/PlanSummary",
-                "description": "AI-generated plan summary — cached from the plan generation engine.\n`None` until plan generation has been triggered."
-              }
-            ]
-          }
-        }
-      },
-      "PlanFeature": {
-        "type": "object",
-        "description": "A single feature card in the plan summary UI.\n\nEach feature references one or more manifest actions via `action_ids`.\nToggling a feature flips the `disabled` flag on those actions.",
-        "required": [
-          "id",
-          "icon",
-          "label",
-          "description",
-          "actionIds"
-        ],
-        "properties": {
-          "actionIds": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "References to the manifest action IDs this feature maps to"
-          },
-          "description": {
-            "type": "string",
-            "description": "Description of what this feature does"
-          },
-          "icon": {
-            "type": "string",
-            "description": "Icon name for the UI (e.g. \"calendar\", \"users\", \"shield\")"
-          },
-          "id": {
-            "type": "string",
-            "description": "Unique identifier for this feature (e.g. \"sync_start_dates\")"
-          },
-          "label": {
-            "type": "string",
-            "description": "Human-readable label (e.g. \"Sync Start Dates\")"
-          }
-        }
-      },
-      "PlanPreview": {
-        "type": "object",
-        "description": "Synthetic before/after preview showing how data transforms.",
-        "required": [
-          "sourceLabel",
-          "targetLabel",
-          "before",
-          "after"
-        ],
-        "properties": {
-          "after": {
-            "type": "object",
-            "description": "Sample record after pipeline transforms",
-            "additionalProperties": {
-              "type": "string"
-            },
-            "propertyNames": {
-              "type": "string"
-            }
-          },
-          "before": {
-            "type": "object",
-            "description": "Sample record as it appears in the source system",
-            "additionalProperties": {
-              "type": "string"
-            },
-            "propertyNames": {
-              "type": "string"
-            }
-          },
-          "sourceLabel": {
-            "type": "string",
-            "description": "Label for the source side (e.g. \"In Workday\")"
-          },
-          "targetLabel": {
-            "type": "string",
-            "description": "Label for the target side (e.g. \"In Your App\")"
-          },
-          "warnings": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PreviewWarning"
-            },
-            "description": "Warnings for destination fields that could not be mapped from the source.\nEach warning uses the sentinel value `__NEEDS_MAPPING__` in `after`\nand surfaces a human-readable message for user intervention."
-          }
-        }
-      },
-      "PlanSummary": {
-        "type": "object",
-        "description": "AI-generated plan summary cached on `PipelineConfig`.\n\nProvides a human-readable description of the pipeline plus\ntoggleable features that map back to manifest actions.",
-        "required": [
-          "headline",
-          "description",
-          "features",
-          "preview",
-          "generationStatus"
-        ],
-        "properties": {
-          "description": {
-            "type": "string",
-            "description": "Multi-sentence description of the pipeline"
-          },
-          "features": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PlanFeature"
-            },
-            "description": "Toggleable features — each references manifest action IDs"
-          },
-          "generationStatus": {
-            "$ref": "#/components/schemas/SchemaGenerationStatus",
-            "description": "Current generation status (InProgress, Completed, Failed)"
-          },
-          "headline": {
-            "type": "string",
-            "description": "One-line headline (e.g. \"Here's the plan to connect Workday to your App.\")"
-          },
-          "preview": {
-            "$ref": "#/components/schemas/PlanPreview",
-            "description": "Synthetic before/after preview data"
           }
         }
       },
@@ -1736,24 +1497,6 @@
           "upload_url": {
             "type": "string",
             "description": "Presigned PUT URL — the frontend uses this to upload the CSV directly."
-          }
-        }
-      },
-      "PreviewWarning": {
-        "type": "object",
-        "description": "A warning for a destination field that has no matching source column.\n\nThe corresponding entry in `PlanPreview::after` will have the sentinel\nvalue `__NEEDS_MAPPING__` to signal the UI that user action is required.",
-        "required": [
-          "field",
-          "message"
-        ],
-        "properties": {
-          "field": {
-            "type": "string",
-            "description": "The destination field name that could not be mapped"
-          },
-          "message": {
-            "type": "string",
-            "description": "Human-readable explanation of why the mapping is missing"
           }
         }
       },
@@ -1799,6 +1542,374 @@
           }
         }
       },
+      "SageHrApiResponse": {
+        "type": "object",
+        "description": "Top-level response from the Sage HR `/api/employees` endpoint.",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SageHrEmployee"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/SageHrMeta"
+          }
+        }
+      },
+      "SageHrConfig": {
+        "type": "object",
+        "description": "Configuration for the Sage HR REST API connector.\n\n# JSON config example\n\n```json\n{\n  \"subdomain\": \"acme\",\n  \"api_token\": \"<your-sage-hr-api-token>\",\n  \"include_team_history\": true,\n  \"include_employment_status_history\": true,\n  \"include_position_history\": true\n}\n```\n\n| Field                              | Type   | Required | Description                                         |\n|------------------------------------|--------|----------|-----------------------------------------------------|\n| `subdomain`                        | string | **yes**  | Sage HR subdomain (e.g. `acme` → `acme.sage.hr`)    |\n| `api_token`                        | string | **yes**  | API token provided by the user                       |\n| `include_team_history`             | bool   | no       | Include team history (default false)                 |\n| `include_employment_status_history`| bool   | no       | Include employment status history (default false)    |\n| `include_position_history`         | bool   | no       | Include position history (default false)             |",
+        "required": [
+          "subdomain",
+          "api_token"
+        ],
+        "properties": {
+          "api_token": {
+            "type": "string"
+          },
+          "include_employment_status_history": {
+            "type": "boolean"
+          },
+          "include_position_history": {
+            "type": "boolean"
+          },
+          "include_team_history": {
+            "type": "boolean"
+          },
+          "subdomain": {
+            "type": "string"
+          }
+        }
+      },
+      "SageHrEmployee": {
+        "type": "object",
+        "description": "A single employee record as returned by the Sage HR API.",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "city": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "country": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "date_of_birth": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "employee_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "employment_start_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "employment_status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "employment_status_history": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SageHrEmploymentStatusHistory"
+            }
+          },
+          "first_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "gender": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "home_phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "last_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "mobile_phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "picture_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "position": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "position_history": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SageHrPositionHistory"
+            }
+          },
+          "position_id": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "minimum": 0
+          },
+          "post_code": {},
+          "reports_to_employee_id": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "minimum": 0
+          },
+          "street_first": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "street_second": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "team": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "team_history": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SageHrTeamHistory"
+            }
+          },
+          "team_id": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "minimum": 0
+          },
+          "work_phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "SageHrEmploymentStatusHistory": {
+        "type": "object",
+        "description": "An employment status history entry.",
+        "required": [
+          "employment_status_id"
+        ],
+        "properties": {
+          "employment_statu_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "employment_status_id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "end_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "start_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "SageHrMeta": {
+        "type": "object",
+        "description": "Pagination metadata from the Sage HR API.",
+        "required": [
+          "current_page",
+          "total_pages",
+          "per_page",
+          "total_entries"
+        ],
+        "properties": {
+          "current_page": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "next_page": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "per_page": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "previous_page": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "total_entries": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "total_pages": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
+      "SageHrPositionHistory": {
+        "type": "object",
+        "description": "A position history entry.",
+        "required": [
+          "position_id"
+        ],
+        "properties": {
+          "end_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "position_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "position_id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "position_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "start_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "SageHrTeamHistory": {
+        "type": "object",
+        "description": "A team assignment history entry.",
+        "required": [
+          "team_id"
+        ],
+        "properties": {
+          "end_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "start_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "team_id": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "team_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "ScdType2Config": {
         "type": "object",
         "description": "Configuration for SCD Type 2 effective dating.\n\n# JSON config\n\n```json\n{\n  \"entity_column\": \"employee_id\",\n  \"date_column\": \"start_date\"\n}\n```\n\n| Field           | Type   | Default         | Description                                      |\n|-----------------|--------|-----------------|--------------------------------------------------|\n| `entity_column` | string | `\"employee_id\"` | Column that identifies the entity (partition key) |\n| `date_column`   | string | `\"start_date\"`  | Column holding the date used for versioning       |",
@@ -1814,71 +1925,6 @@
             "default": "employee_id"
           }
         }
-      },
-      "SchemaDiff": {
-        "type": "object",
-        "description": "Result of diffing `final_columns` against the egress schema.\n\nShows which pipeline columns map to destination fields, and which are\nunmatched on either side.",
-        "required": [
-          "mapped",
-          "unmapped_source",
-          "unmapped_target"
-        ],
-        "properties": {
-          "mapped": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ColumnMapping"
-            },
-            "description": "Columns present in the pipeline that have a mapping in the egress schema"
-          },
-          "unmapped_source": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Pipeline columns with no egress mapping"
-          },
-          "unmapped_target": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Egress schema fields with no matching pipeline column"
-          }
-        }
-      },
-      "SchemaGenerationStatus": {
-        "oneOf": [
-          {
-            "type": "string",
-            "enum": [
-              "notStarted"
-            ]
-          },
-          {
-            "type": "string",
-            "enum": [
-              "inProgress"
-            ]
-          },
-          {
-            "type": "string",
-            "enum": [
-              "completed"
-            ]
-          },
-          {
-            "type": "object",
-            "required": [
-              "failed"
-            ],
-            "properties": {
-              "failed": {
-                "type": "string"
-              }
-            }
-          }
-        ]
       },
       "SettingsRequest": {
         "type": "object",
@@ -1933,17 +1979,6 @@
               "type": "string"
             },
             "description": "Final column set after the last step."
-          },
-          "schema_diff": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/SchemaDiff",
-                "description": "Schema diff against the egress model (if an egress action is present)."
-              }
-            ]
           },
           "steps": {
             "type": "array",

@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { ConnectionForm, WorkdayFields, SystemId, CsvUploadStatus } from '../domain/types';
+import type { ConnectionForm, WorkdayFields, SageHrFields, SystemId, CsvUploadStatus } from '../domain/types';
 import { INITIAL_CONNECTION_FORM } from '../domain/types';
 import { validateCsvFile, uploadCsvAndDiscoverColumns } from '../services/csvUploadService';
 
@@ -50,6 +50,18 @@ export function useConnectionForm() {
         const groups = w.responseGroup.split(',').filter(Boolean);
         if (groups.length === 0) {
           errs['workday.responseGroup'] = t('validation.selectResponseGroup');
+        }
+      }
+
+      if (f.system === 'sage_hr') {
+        const s = f.sageHr;
+        if (!s.subdomain.trim()) {
+          errs['sageHr.subdomain'] = t('validation.required');
+        }
+        if (!s.apiToken) {
+          errs['sageHr.apiToken'] = t('validation.required');
+        } else if (s.apiToken.length < 8) {
+          errs['sageHr.apiToken'] = t('validation.minLength', { min: 8 });
         }
       }
 
@@ -121,6 +133,34 @@ export function useConnectionForm() {
     },
     [form, submitted, validateAllFields],
   );
+
+  const handleSageHrChange = useCallback(
+    (field: keyof SageHrFields) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      setForm((prev) => ({
+        ...prev,
+        sageHr: { ...prev.sageHr, [field]: e.target.value },
+      }));
+      if (submitted) {
+        setTimeout(() => {
+          setErrors((prev) => {
+            const all = validateAllFields({
+              ...form,
+              sageHr: { ...form.sageHr, [field]: e.target.value },
+            } as ConnectionForm);
+            return { ...prev, [`sageHr.${field}`]: all[`sageHr.${field}`] };
+          });
+        }, 0);
+      }
+    },
+    [form, submitted, validateAllFields],
+  );
+
+  const handleSageHrHistoryToggle = useCallback((field: keyof SageHrFields) => {
+    setForm((prev) => ({
+      ...prev,
+      sageHr: { ...prev.sageHr, [field]: !prev.sageHr[field] },
+    }));
+  }, []);
 
   /**
    * Handle CSV file selection — validates, uploads via presigned URL,
@@ -209,6 +249,10 @@ export function useConnectionForm() {
         groups.length > 0
       );
     }
+    if (form.system === 'sage_hr') {
+      const s = form.sageHr;
+      return !!(s.subdomain.trim() && s.apiToken && s.apiToken.length >= 8);
+    }
     if (form.system === 'csv') {
       return !!(form.csv.filename && form.csv.columns.length > 0 && form.csv.uploadStatus === 'done');
     }
@@ -239,6 +283,8 @@ export function useConnectionForm() {
     handleSystemSelect,
     handleChange,
     handleWorkdayChange,
+    handleSageHrChange,
+    handleSageHrHistoryToggle,
     handleCsvFileSelect,
     handleResponseGroupToggle,
     handleNext,

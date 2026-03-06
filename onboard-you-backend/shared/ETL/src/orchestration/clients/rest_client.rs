@@ -149,6 +149,8 @@ impl RestClient for ReqwestRestClient {
 mod tests {
     use super::*;
 
+    // ── Mock Clients ────────────────────────────────────────────────────
+
     struct StubClient(String);
 
     #[async_trait::async_trait]
@@ -177,17 +179,105 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn test_stub_client_returns_body() {
-        let c = StubClient(r#"{"data":[],"meta":{"current_page":1,"next_page":null,"previous_page":null,"total_pages":1,"per_page":50,"total_entries":0}}"#.into());
-        let result = c.get("https://example.com/api", &[], &[]).await.unwrap();
-        assert!(result.contains("data"));
+    // ── Declarative Case ────────────────────────────────────────────────
+
+    enum ClientKind {
+        Stub(&'static str),
+        Fail,
+    }
+
+    struct Case {
+        name: &'static str,
+        client: ClientKind,
+        expect_ok: bool,
+    }
+
+    fn all_cases() -> Vec<Case> {
+        vec![
+            Case {
+                name: "stub_returns_body",
+                client: ClientKind::Stub(
+                    r#"{"data":[],"meta":{"current_page":1}}"#,
+                ),
+                expect_ok: true,
+            },
+            Case {
+                name: "stub_returns_empty_string",
+                client: ClientKind::Stub(""),
+                expect_ok: true,
+            },
+            Case {
+                name: "fail_returns_error",
+                client: ClientKind::Fail,
+                expect_ok: false,
+            },
+        ]
+    }
+
+    fn format_outcome(result: &Result<String>) -> String {
+        match result {
+            Ok(body) => format!("OK: len={}", body.len()),
+            Err(e) => format!("ERR: {}", e),
+        }
     }
 
     #[tokio::test]
-    async fn test_fail_client_returns_error() {
-        let c = FailClient;
-        let result = c.get("https://example.com/api", &[], &[]).await;
-        assert!(result.is_err());
+    async fn rest_client_cases() {
+        for case in all_cases() {
+            let client: Box<dyn RestClient> = match case.client {
+                ClientKind::Stub(body) => Box::new(StubClient(body.into())),
+                ClientKind::Fail => Box::new(FailClient),
+            };
+
+            let result = client
+                .get("https://example.com/api", &[], &[])
+                .await;
+
+            assert_eq!(
+                result.is_ok(),
+                case.expect_ok,
+                "case '{}': expected ok={}, got {:?}",
+                case.name,
+                case.expect_ok,
+                result,
+            );
+
+            insta::assert_snapshot!(case.name, format_outcome(&result));
+        }
+    }
+
+    #[test]
+    fn retryable_status_codes() {
+        struct StatusCase {
+            name: &'static str,
+            code: u16,
+            expected: bool,
+        }
+
+        let cases = vec![
+            StatusCase { name: "200_not_retryable", code: 200, expected: false },
+            StatusCase { name: "400_not_retryable", code: 400, expected: false },
+            StatusCase { name: "401_not_retryable", code: 401, expected: false },
+            StatusCase { name: "429_retryable", code: 429, expected: true },
+            StatusCase { name: "500_retryable", code: 500, expected: true },
+            StatusCase { name: "502_retryable", code: 502, expected: true },
+            StatusCase { name: "503_retryable", code: 503, expected: true },
+        ];
+
+        let results: Vec<String> = cases
+            .iter()
+            .map(|c| {
+                let status = reqwest::StatusCode::from_u16(c.code).unwrap();
+                let retryable = is_retryable(status);
+                assert_eq!(
+                    retryable, c.expected,
+                    "case '{}': expected {}, got {}",
+                    c.name, c.expected, retryable
+                );
+                format!("{}={}", c.name, retryable)
+            })
+            .collect();
+
+        insta::assert_snapshot!("retryable_status_codes", results.join("\n"));
     }
 }

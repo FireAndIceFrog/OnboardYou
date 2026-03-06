@@ -1,0 +1,11 @@
+---
+source: onboard-you-backend/shared/ETL/src/orchestration/clients/rest_client.rs
+expression: "results.join(\"\\n\")"
+---
+200_not_retryable=false
+400_not_retryable=false
+401_not_retryable=false
+429_retryable=true
+500_retryable=true
+502_retryable=true
+503_retryable=true

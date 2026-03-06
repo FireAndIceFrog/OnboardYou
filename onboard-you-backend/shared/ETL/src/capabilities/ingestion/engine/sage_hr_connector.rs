@@ -20,61 +20,61 @@ use onboard_you_models::{Error, OnboardingAction, Result, RosterContext};
 use onboard_you_models::{SageHrApiResponse, SageHrConfig, SageHrRecord};
 use polars::prelude::*;
 
-/// Convert a vector of flat employee records into a Polars DataFrame.
-pub fn employees_to_dataframe(records: &[SageHrRecord]) -> Result<DataFrame> {
-    let ids: Vec<&str> = records.iter().map(|r| r.id.as_str()).collect();
-    let emails: Vec<&str> = records.iter().map(|r| r.email.as_str()).collect();
-    let first_names: Vec<&str> = records.iter().map(|r| r.first_name.as_str()).collect();
-    let last_names: Vec<&str> = records.iter().map(|r| r.last_name.as_str()).collect();
-    let picture_urls: Vec<&str> = records.iter().map(|r| r.picture_url.as_str()).collect();
-    let start_dates: Vec<&str> = records.iter().map(|r| r.employment_start_date.as_str()).collect();
-    let dobs: Vec<&str> = records.iter().map(|r| r.date_of_birth.as_str()).collect();
-    let teams: Vec<&str> = records.iter().map(|r| r.team.as_str()).collect();
-    let team_ids: Vec<&str> = records.iter().map(|r| r.team_id.as_str()).collect();
-    let positions: Vec<&str> = records.iter().map(|r| r.position.as_str()).collect();
-    let position_ids: Vec<&str> = records.iter().map(|r| r.position_id.as_str()).collect();
-    let reports_to: Vec<&str> = records.iter().map(|r| r.reports_to_employee_id.as_str()).collect();
-    let work_phones: Vec<&str> = records.iter().map(|r| r.work_phone.as_str()).collect();
-    let home_phones: Vec<&str> = records.iter().map(|r| r.home_phone.as_str()).collect();
-    let mobile_phones: Vec<&str> = records.iter().map(|r| r.mobile_phone.as_str()).collect();
-    let genders: Vec<&str> = records.iter().map(|r| r.gender.as_str()).collect();
-    let street_firsts: Vec<&str> = records.iter().map(|r| r.street_first.as_str()).collect();
-    let street_seconds: Vec<&str> = records.iter().map(|r| r.street_second.as_str()).collect();
-    let cities: Vec<&str> = records.iter().map(|r| r.city.as_str()).collect();
-    let post_codes: Vec<&str> = records.iter().map(|r| r.post_code.as_str()).collect();
-    let countries: Vec<&str> = records.iter().map(|r| r.country.as_str()).collect();
-    let employee_numbers: Vec<&str> = records.iter().map(|r| r.employee_number.as_str()).collect();
-    let employment_statuses: Vec<&str> = records.iter().map(|r| r.employment_status.as_str()).collect();
+/// Defines the column-name ↔ field-accessor mapping in one place.
+///
+/// Generates:
+/// - `SAGE_HR_COLUMNS` — the fixed column list for schema / provenance.
+/// - `employees_to_dataframe` — columnar extraction that is guaranteed
+///    to stay aligned because both the column name and the struct field
+///    come from the same macro arm.
+macro_rules! sage_hr_fields {
+    ( $( ($col:expr, $field:ident) ),* $(,)? ) => {
+        /// The fixed set of columns produced by the Sage HR connector.
+        const SAGE_HR_COLUMNS: &[&str] = &[ $( $col ),* ];
 
-    let df = DataFrame::new_infer_height(vec![
-        Column::new("id".into(), &ids),
-        Column::new("email".into(), &emails),
-        Column::new("first_name".into(), &first_names),
-        Column::new("last_name".into(), &last_names),
-        Column::new("picture_url".into(), &picture_urls),
-        Column::new("employment_start_date".into(), &start_dates),
-        Column::new("date_of_birth".into(), &dobs),
-        Column::new("team".into(), &teams),
-        Column::new("team_id".into(), &team_ids),
-        Column::new("position".into(), &positions),
-        Column::new("position_id".into(), &position_ids),
-        Column::new("reports_to_employee_id".into(), &reports_to),
-        Column::new("work_phone".into(), &work_phones),
-        Column::new("home_phone".into(), &home_phones),
-        Column::new("mobile_phone".into(), &mobile_phones),
-        Column::new("gender".into(), &genders),
-        Column::new("street_first".into(), &street_firsts),
-        Column::new("street_second".into(), &street_seconds),
-        Column::new("city".into(), &cities),
-        Column::new("post_code".into(), &post_codes),
-        Column::new("country".into(), &countries),
-        Column::new("employee_number".into(), &employee_numbers),
-        Column::new("employment_status".into(), &employment_statuses),
-    ])
-    .map_err(|e| Error::IngestionError(format!("Failed to build DataFrame: {}", e)))?;
+        /// Convert a vector of flat employee records into a Polars DataFrame.
+        pub fn employees_to_dataframe(records: &[SageHrRecord]) -> Result<DataFrame> {
+            $(
+                let $field: Vec<&str> = records.iter().map(|r| r.$field.as_str()).collect();
+            )*
 
-    Ok(df)
+            let df = DataFrame::new_infer_height(vec![
+                $(
+                    Column::new($col.into(), &$field),
+                )*
+            ])
+            .map_err(|e| Error::IngestionError(format!("Failed to build DataFrame: {}", e)))?;
+
+            Ok(df)
+        }
+    };
 }
+
+sage_hr_fields!(
+    ("id",                        id),
+    ("email",                     email),
+    ("first_name",                first_name),
+    ("last_name",                 last_name),
+    ("picture_url",               picture_url),
+    ("employment_start_date",     employment_start_date),
+    ("date_of_birth",             date_of_birth),
+    ("team",                      team),
+    ("team_id",                   team_id),
+    ("position",                  position),
+    ("position_id",               position_id),
+    ("reports_to_employee_id",    reports_to_employee_id),
+    ("work_phone",                work_phone),
+    ("home_phone",                home_phone),
+    ("mobile_phone",              mobile_phone),
+    ("gender",                    gender),
+    ("street_first",              street_first),
+    ("street_second",             street_second),
+    ("city",                      city),
+    ("post_code",                 post_code),
+    ("country",                   country),
+    ("employee_number",           employee_number),
+    ("employment_status",         employment_status),
+);
 
 // ───────────────────────────────────────────────────────────────────────────
 // Connector
@@ -206,32 +206,6 @@ impl SageHrConnector {
     }
 }
 
-/// The fixed set of columns produced by the Sage HR connector.
-const SAGE_HR_COLUMNS: &[&str] = &[
-    "id",
-    "email",
-    "first_name",
-    "last_name",
-    "picture_url",
-    "employment_start_date",
-    "date_of_birth",
-    "team",
-    "team_id",
-    "position",
-    "position_id",
-    "reports_to_employee_id",
-    "work_phone",
-    "home_phone",
-    "mobile_phone",
-    "gender",
-    "street_first",
-    "street_second",
-    "city",
-    "post_code",
-    "country",
-    "employee_number",
-    "employment_status",
-];
 
 impl HrisConnector for SageHrConnector {
     fn fetch_data(&self) -> Result<LazyFrame> {
@@ -543,6 +517,45 @@ mod tests {
         let df = employees_to_dataframe(&records).unwrap();
 
         insta::assert_snapshot!("dataframe_shape", format_dataframe_shape(&df));
+    }
+
+    // ── Row-alignment integrity ─────────────────────────────────────────
+    //
+    // Proves that every column in the DataFrame is aligned with the source
+    // record at the same row index.  If the macro-generated extraction
+    // ever re-ordered a column relative to its data, this snapshot would
+    // change.
+
+    fn format_row(df: &DataFrame, row: usize) -> String {
+        SAGE_HR_COLUMNS
+            .iter()
+            .map(|col| {
+                let val = df
+                    .column(*col)
+                    .unwrap()
+                    .str()
+                    .unwrap()
+                    .get(row)
+                    .unwrap_or("");
+                format!("{}={}", col, val)
+            })
+            .collect::<Vec<_>>()
+            .join(" | ")
+    }
+
+    #[tokio::test]
+    async fn sage_hr_row_alignment() {
+        let client = MockRestClient::single(SINGLE_PAGE_RESPONSE);
+        let connector = SageHrConnector::with_client(default_config(), Box::new(client));
+
+        let records = connector.fetch_all_employees().await.unwrap();
+        let df = employees_to_dataframe(&records).unwrap();
+
+        let rows: Vec<String> = (0..df.height())
+            .map(|i| format!("row {}: {}", i, format_row(&df, i)))
+            .collect();
+
+        insta::assert_snapshot!("row_alignment", rows.join("\n"));
     }
 
     // ── Column calculation tests ────────────────────────────────────────
