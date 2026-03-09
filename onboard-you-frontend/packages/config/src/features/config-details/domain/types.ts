@@ -107,9 +107,9 @@ export function buildResponseGroup(csv: string): Record<string, boolean> {
  * `value` maps to the `SageHrFields` boolean key.
  */
 export const SAGE_HR_HISTORY_OPTIONS = [
-  { value: 'includeTeamHistory', labelKey: 'configDetails.connection.historyLabels.includeTeamHistory' },
-  { value: 'includeEmploymentStatusHistory', labelKey: 'configDetails.connection.historyLabels.includeEmploymentStatusHistory' },
-  { value: 'includePositionHistory', labelKey: 'configDetails.connection.historyLabels.includePositionHistory' },
+  { value: 'includeTeamHistory', configKey: 'include_team_history', labelKey: 'configDetails.connection.historyLabels.includeTeamHistory' },
+  { value: 'includeEmploymentStatusHistory', configKey: 'include_employment_status_history', labelKey: 'configDetails.connection.historyLabels.includeEmploymentStatusHistory' },
+  { value: 'includePositionHistory', configKey: 'include_position_history', labelKey: 'configDetails.connection.historyLabels.includePositionHistory' },
 ] as const;
 
 /** Build the Sage HR API config payload from form fields. */

@@ -8,7 +8,7 @@ export class SageHrConnectorConfig implements IConnectorConfig {
         // Implement the logic to return the ActionConfig for CSV connector
         return {
             id: 'ingest',
-            action_type: 'csv_hris_connector',
+            action_type: 'sage_hr_connector',
             config: {
                 subdomain: form.sageHr.subdomain.trim(),
                 api_token: form.sageHr.apiToken,
