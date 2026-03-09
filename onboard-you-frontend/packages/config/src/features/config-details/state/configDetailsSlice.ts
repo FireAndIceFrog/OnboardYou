@@ -53,9 +53,9 @@ function parseValidationErrors(
 }
 import { actionCategory, businessLabel } from '@/shared/domain/types';
 import type { ConfigDetailsState, ConnectionForm } from '../domain/types';
-import { buildResponseGroup, buildSageHrConfig } from '../domain/types';
 import { fetchConfig, createConfig as createConfigService, saveConfig as saveConfigService, deleteConfig as deleteConfigService, validateConfig as validateConfigService } from '../services/configDetailsService';
 import { convertToFlow } from '../services/pipelineLayoutService';
+import { ConnectorConfigFactory } from './connectorConfigs/connectorConfigFactory';
 
 /* ── Layout constants ──────────────────────────────────────── */
 
@@ -374,37 +374,7 @@ const configDetailsSlice = createSlice({
     initNewConfig(state, action: PayloadAction<ConnectionForm>) {
       const form = action.payload;
 
-      // Map the wizard system id to the generated ActionType
-      const actionType: ActionType =
-        form.system === 'workday'
-          ? 'workday_hris_connector'
-          : form.system === 'sage_hr'
-            ? 'sage_hr_connector'
-            : 'csv_hris_connector';
-
-      // Build connector-specific config payload
-      const connectorConfig: WorkdayConfig | SageHrConfig | CsvHrisConnectorConfig =
-        form.system === 'workday'
-          ? {
-              tenant_url: form.workday.tenantUrl,
-              tenant_id: form.workday.tenantId,
-              username: form.workday.username,
-              password: form.workday.password,
-              worker_count_limit: Number(form.workday.workerCountLimit) || 200,
-              response_group: buildResponseGroup(form.workday.responseGroup),
-            }
-          : form.system === 'sage_hr'
-            ? buildSageHrConfig(form.sageHr)
-            : {
-                filename: form.csv.filename,
-                columns: form.csv.columns,
-              };
-
-      const ingestionAction: ActionConfig = {
-        id: 'ingest',
-        action_type: actionType,
-        config: connectorConfig,
-      };
+      
 
       const newConfig: PipelineConfig = {
         name: form.displayName || 'New Configuration',
@@ -413,7 +383,9 @@ const configDetailsSlice = createSlice({
         customerCompanyId: '',
         pipeline: {
           version: '1.0',
-          actions: [ingestionAction],
+          actions: [
+            new ConnectorConfigFactory().getConfig(form.system).getActionConfig(form)
+          ],
         },
       };
 

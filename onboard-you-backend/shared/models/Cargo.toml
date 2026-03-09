@@ -13,3 +13,4 @@ utoipa = { workspace = true }
 serde_yaml =  { workspace = true }
 macro_rules_attribute.workspace = true
 regex = { workspace = true }
+tracing = { workspace = true }

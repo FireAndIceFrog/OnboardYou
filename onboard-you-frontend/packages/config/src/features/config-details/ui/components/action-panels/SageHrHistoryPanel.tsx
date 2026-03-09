@@ -13,8 +13,8 @@ export function SageHrHistoryPanel({ config, onChange, availableColumns }: Actio
     [],
   );
 
-  const toggle = (field: string) => {
-    onChange(field, !config[field]);
+  const toggle = (configKey: string) => {
+    onChange(configKey, !config[configKey]);
   };
 
   return (
@@ -59,8 +59,8 @@ export function SageHrHistoryPanel({ config, onChange, availableColumns }: Actio
               py="1"
               borderRadius="full"
               border="1px solid"
-              borderColor={config[opt.value] ? 'blue.400' : 'gray.200'}
-              bg={config[opt.value] ? 'blue.50' : 'white'}
+              borderColor={config[opt.configKey] ? 'blue.400' : 'gray.200'}
+              bg={config[opt.configKey] ? 'blue.50' : 'white'}
               cursor="pointer"
               fontSize="xs"
               transition="all 0.15s"
@@ -68,10 +68,10 @@ export function SageHrHistoryPanel({ config, onChange, availableColumns }: Actio
             >
               <input
                 type="checkbox"
-                checked={!!config[opt.value]}
-                onChange={() => toggle(opt.value)}
+                checked={!!config[opt.configKey]}
+                onChange={() => toggle(opt.configKey)}
                 style={{ display: 'none' }}
-                data-testid={`history-${opt.value}`}
+                data-testid={`history-${opt.configKey}`}
               />
               <Text>{t(opt.labelKey)}</Text>
             </Box>

@@ -110,7 +110,7 @@ impl IEtlRepo for EtlRepository {
                 cfg.resolve_s3_key(organization_id, customer_company_id);
                 tracing::info!(
                     action_id = %action.id,
-                    filename = %cfg.filename,
+                    filename = %cfg.filename.clone().unwrap_or_default(),
                     s3_key = ?cfg.resolved_s3_key,
                     "Resolved CSV S3 key"
                 );
@@ -203,7 +203,7 @@ mod tests {
                 action_type: onboard_you_models::ActionType::CsvHrisConnector,
                 config: onboard_you_models::ActionConfigPayload::CsvHrisConnector(
                     onboard_you_models::CsvHrisConnectorConfig {
-                        filename: "data.csv".into(),
+                        filename: Some("data.csv".into()),
                         resolved_s3_key: None,
                         columns: vec![],
                     },

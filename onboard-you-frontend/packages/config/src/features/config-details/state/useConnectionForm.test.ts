@@ -16,15 +16,16 @@ vi.mock('../services/csvUploadService', () => ({
 }));
 
 import { useConnectionForm } from './useConnectionForm';
+import { ConnectorType } from './connectorConfigs/connectorConfigFactory';
 
 /* ── Helpers ─────────────────────────────────────────────── */
 
 type HookResult = ReturnType<typeof useConnectionForm>;
 const fakeEvent = (value: string) => ({ target: { value } }) as React.ChangeEvent<HTMLInputElement>;
 
-function applyFields(
+async function applyFields(
   result: { current: HookResult },
-  system: 'workday' | 'sage_hr' | 'csv',
+  system: ConnectorType,
   displayName: string,
   fields: Record<string, string>,
 ) {
@@ -32,12 +33,8 @@ function applyFields(
   act(() => result.current.handleChange('displayName')(fakeEvent(displayName)));
 
   for (const [key, value] of Object.entries(fields)) {
-    act(() => {
-      if (system === 'workday') {
-        result.current.handleWorkdayChange(key as any)(fakeEvent(value));
-      } else if (system === 'sage_hr') {
-        result.current.handleSageHrChange(key as any)(fakeEvent(value));
-      }
+    await act(async () => {
+      result.current.handleConnectorChange({ type: 'field', key, value });
     });
   }
 }
@@ -46,7 +43,7 @@ function applyFields(
 
 interface ValidityCase {
   name: string;
-  system: 'workday' | 'sage_hr' | 'csv';
+  system: ConnectorType;
   displayName: string;
   fields: Record<string, string>;
   expectedValid: boolean;
@@ -55,35 +52,35 @@ interface ValidityCase {
 const validityCases: ValidityCase[] = [
   {
     name: 'sage_hr: valid when subdomain and token >= 8 chars',
-    system: 'sage_hr',
+    system: ConnectorType.SageHR,
     displayName: 'My SageHR',
     fields: { subdomain: 'acme', apiToken: 'longenoughtoken' },
     expectedValid: true,
   },
   {
     name: 'sage_hr: invalid when subdomain missing',
-    system: 'sage_hr',
+    system: ConnectorType.SageHR,
     displayName: 'Sage Test',
     fields: { subdomain: '', apiToken: 'longenoughtoken' },
     expectedValid: false,
   },
   {
     name: 'sage_hr: invalid when token too short',
-    system: 'sage_hr',
+    system: ConnectorType.SageHR,
     displayName: 'Sage Test',
     fields: { subdomain: 'acme', apiToken: 'short' },
     expectedValid: false,
   },
   {
     name: 'sage_hr: invalid when token missing',
-    system: 'sage_hr',
+    system: ConnectorType.SageHR,
     displayName: 'Sage Test',
     fields: { subdomain: 'acme', apiToken: '' },
     expectedValid: false,
   },
   {
     name: 'workday: valid with all required fields',
-    system: 'workday',
+    system: ConnectorType.Workday,
     displayName: 'My Workday',
     fields: {
       tenantUrl: 'https://example.workday.com',
@@ -95,7 +92,7 @@ const validityCases: ValidityCase[] = [
   },
   {
     name: 'workday: invalid when url not https',
-    system: 'workday',
+    system: ConnectorType.Workday,
     displayName: 'My Workday',
     fields: {
       tenantUrl: 'not-a-url',
@@ -107,7 +104,7 @@ const validityCases: ValidityCase[] = [
   },
   {
     name: 'workday: invalid when password too short',
-    system: 'workday',
+    system: ConnectorType.Workday,
     displayName: 'My Workday',
     fields: {
       tenantUrl: 'https://example.workday.com',
@@ -119,7 +116,7 @@ const validityCases: ValidityCase[] = [
   },
   {
     name: 'any system: invalid when displayName empty',
-    system: 'sage_hr',
+    system: ConnectorType.SageHR,
     displayName: '',
     fields: { subdomain: 'acme', apiToken: 'longenoughtoken' },
     expectedValid: false,
@@ -134,9 +131,24 @@ describe('useConnectionForm', () => {
     expect(result.current.isValid).toBe(false);
   });
 
-  it.each(validityCases)('$name', ({ system, displayName, fields, expectedValid }) => {
+  it.each(validityCases)('$name', async ({ system, displayName, fields, expectedValid }) => {
     const { result } = renderHook(() => useConnectionForm());
-    applyFields(result, system, displayName, fields);
+    await applyFields(result, system, displayName, fields);
     expect(result.current.isValid).toBe(expectedValid);
+  });
+
+  it('exposes no connector-specific handlers', () => {
+    const source = useConnectionForm.toString();
+    const leakedHandlers = [
+      'handleWorkdayChange',
+      'handleSageHrChange',
+      'handleSageHrHistoryToggle',
+      'handleCsvFileSelect',
+      'handleResponseGroupToggle',
+      'activeGroups',
+    ];
+    for (const name of leakedHandlers) {
+      expect(source).not.toContain(name);
+    }
   });
 });

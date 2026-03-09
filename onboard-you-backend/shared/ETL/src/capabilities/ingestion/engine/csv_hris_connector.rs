@@ -55,15 +55,25 @@ impl CsvHrisConnector {
                 "CsvHrisConnector requires at least one declared column".into(),
             ));
         }
-        if config.filename.is_empty() {
+
+        let filename =  match config.filename.clone() {
+            Some(name) => name,
+            None => {
+                return Err(Error::ConfigurationError(
+                    "CsvHrisConnector requires a filename".into(),
+                ));
+            }
+        };
+
+        if filename.is_empty() {
             return Err(Error::ConfigurationError(
                 "CsvHrisConnector requires a non-empty filename".into(),
             ));
         }
 
-        if config.filename.contains("/")
-            || config.filename.contains("\\")
-            || config.filename.contains("..")
+        if filename.contains("/")
+            || filename.contains("\\")
+            || filename.contains("..")
         {
             return Err(Error::ConfigurationError(
                 "CsvHrisConnector filename must not contain path separators or '..'".into(),
@@ -71,7 +81,7 @@ impl CsvHrisConnector {
         }
 
         let mut cleaned_config = config.clone();
-        cleaned_config.filename = cleaned_config.filename.trim().to_string();
+        cleaned_config.filename = Some(filename.trim().to_string());
 
         Ok(Self::new(cleaned_config))
     }
@@ -128,7 +138,7 @@ impl HrisConnector for CsvHrisConnector {
         let df = CsvReader::new(cursor).finish().map_err(|e| {
             Error::IngestionError(format!(
                 "Failed to parse CSV '{}': {e}",
-                self.config.filename
+                self.config.filename.clone().unwrap_or_default()
             ))
         })?;
 
@@ -166,7 +176,7 @@ impl OnboardingAction for CsvHrisConnector {
 
     fn execute(&self, _context: RosterContext) -> Result<RosterContext> {
         tracing::info!(
-            filename = %self.config.filename,
+            filename = %self.config.filename.clone().unwrap_or_default(),
             s3_key = ?self.config.resolved_s3_key,
             declared_columns = self.config.columns.len(),
             "CsvHrisConnector: ingesting CSV from S3"
@@ -207,7 +217,7 @@ mod tests {
 
     fn test_config() -> CsvHrisConnectorConfig {
         CsvHrisConnectorConfig {
-            filename: "data.csv".into(),
+            filename: Some("data.csv".into()),
             columns: vec![
                 "employee_id".into(),
                 "first_name".into(),
@@ -234,7 +244,7 @@ mod tests {
             "columns": ["a", "b", "c"]
         });
         let config = CsvHrisConnectorConfig::from_json(&json).unwrap();
-        assert_eq!(config.filename, "data.csv");
+        assert_eq!(config.filename.as_deref(), Some("data.csv"));
         assert_eq!(config.columns, vec!["a", "b", "c"]);
         assert!(config.resolved_s3_key.is_none());
     }
@@ -267,7 +277,7 @@ mod tests {
     #[test]
     fn test_from_action_config_empty_columns_rejected() {
         let config = CsvHrisConnectorConfig {
-            filename: "data.csv".into(),
+            filename: Some("data.csv".into()),
             columns: vec![],
             resolved_s3_key: None,
         };
@@ -278,7 +288,7 @@ mod tests {
     #[test]
     fn test_from_action_config_empty_filename_rejected() {
         let config = CsvHrisConnectorConfig {
-            filename: "".into(),
+            filename: Some("".into()),
             columns: vec!["a".into()],
             resolved_s3_key: None,
         };

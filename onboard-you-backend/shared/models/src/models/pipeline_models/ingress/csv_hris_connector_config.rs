@@ -27,7 +27,7 @@ pub struct CsvHrisConnectorConfig {
     ///
     /// The full S3 key `{org_id}/{company_id}/{filename}` is resolved at
     /// runtime by the ETL trigger before pipeline execution.
-    pub filename: String,
+    pub filename: Option<String>,
 
     /// Declared column names — set when the CSV is first uploaded.
     ///
@@ -57,9 +57,18 @@ impl CsvHrisConnectorConfig {
     /// Called by the ETL trigger's manifest pre-processor before the factory
     /// builds the action.
     pub fn resolve_s3_key(&mut self, organization_id: &str, customer_company_id: &str) {
+        if let None = self.filename.clone() {
+            tracing::warn!(
+                organization_id = %organization_id,
+                customer_company_id = %customer_company_id,
+                "CsvHrisConnectorConfig missing filename — cannot resolve S3 key"
+            );
+            return;
+        }
+
         self.resolved_s3_key = Some(format!(
             "{}/{}/{}",
-            organization_id, customer_company_id, self.filename
+            organization_id, customer_company_id, self.filename.clone().unwrap()
         ));
     }
 
