@@ -22,7 +22,7 @@ import { useConnectionForm } from './useConnectionForm';
 type HookResult = ReturnType<typeof useConnectionForm>;
 const fakeEvent = (value: string) => ({ target: { value } }) as React.ChangeEvent<HTMLInputElement>;
 
-function applyFields(
+async function applyFields(
   result: { current: HookResult },
   system: 'workday' | 'sage_hr' | 'csv',
   displayName: string,
@@ -32,12 +32,8 @@ function applyFields(
   act(() => result.current.handleChange('displayName')(fakeEvent(displayName)));
 
   for (const [key, value] of Object.entries(fields)) {
-    act(() => {
-      if (system === 'workday') {
-        result.current.handleWorkdayChange(key as any)(fakeEvent(value));
-      } else if (system === 'sage_hr') {
-        result.current.handleSageHrChange(key as any)(fakeEvent(value));
-      }
+    await act(async () => {
+      result.current.handleConnectorChange({ type: 'field', key, value });
     });
   }
 }
@@ -134,9 +130,24 @@ describe('useConnectionForm', () => {
     expect(result.current.isValid).toBe(false);
   });
 
-  it.each(validityCases)('$name', ({ system, displayName, fields, expectedValid }) => {
+  it.each(validityCases)('$name', async ({ system, displayName, fields, expectedValid }) => {
     const { result } = renderHook(() => useConnectionForm());
-    applyFields(result, system, displayName, fields);
+    await applyFields(result, system, displayName, fields);
     expect(result.current.isValid).toBe(expectedValid);
+  });
+
+  it('exposes no connector-specific handlers', () => {
+    const source = useConnectionForm.toString();
+    const leakedHandlers = [
+      'handleWorkdayChange',
+      'handleSageHrChange',
+      'handleSageHrHistoryToggle',
+      'handleCsvFileSelect',
+      'handleResponseGroupToggle',
+      'activeGroups',
+    ];
+    for (const name of leakedHandlers) {
+      expect(source).not.toContain(name);
+    }
   });
 });

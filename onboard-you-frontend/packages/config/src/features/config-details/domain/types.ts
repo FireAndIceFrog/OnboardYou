@@ -1,5 +1,8 @@
 import type { Node, Edge } from '@xyflow/react';
 import type { PipelineConfig, ValidationResult, WorkdayResponseGroup, SageHrConfig as SageHrConfigApi } from '@/generated/api';
+import { ConnectorConfigFactory, ConnectorType } from '../state/connectorConfigs/connectorConfigFactory';
+
+const connectorFactory = new ConnectorConfigFactory();
 
 export interface ConfigDetailsState {
   config: PipelineConfig | null;
@@ -24,9 +27,9 @@ export interface ConfigDetailsState {
 
 /** Only connectors backed by Rust ingestion code. */
 export const HR_SYSTEMS = [
-  { id: 'workday', nameKey: 'configDetails.connection.systems.workday', icon: '🏢' },
-  { id: 'sage_hr', nameKey: 'configDetails.connection.systems.sage_hr', icon: '🌿' },
-  { id: 'csv', nameKey: 'configDetails.connection.systems.csv', icon: '📄' },
+  { id: ConnectorType.Workday, nameKey: 'configDetails.connection.systems.workday', icon: '🏢' },
+  { id: ConnectorType.SageHR, nameKey: 'configDetails.connection.systems.sage_hr', icon: '🌿' },
+  { id: ConnectorType.Csv, nameKey: 'configDetails.connection.systems.csv', icon: '📄' },
 ] as const;
 
 export type SystemId = (typeof HR_SYSTEMS)[number]['id'];
@@ -50,6 +53,9 @@ export interface SageHrFields {
 
 export type CsvUploadStatus = 'idle' | 'uploading' | 'discovering' | 'done' | 'error';
 
+/** Per-field validation error map (field path → error message). */
+export type ValidationErrors = Record<string, string | undefined>;
+
 export interface CsvFields {
   filename: string;
   columns: string[];
@@ -58,7 +64,7 @@ export interface CsvFields {
 }
 
 export interface ConnectionForm {
-  system: SystemId | '';
+  system: SystemId;
   displayName: string;
   workday: WorkdayFields;
   sageHr: SageHrFields;
@@ -66,29 +72,11 @@ export interface ConnectionForm {
 }
 
 export const INITIAL_CONNECTION_FORM: ConnectionForm = {
-  system: '',
+  system: ConnectorType.Csv,
   displayName: '',
-  workday: {
-    tenantUrl: '',
-    tenantId: '',
-    username: '',
-    password: '',
-    workerCountLimit: '200',
-    responseGroup: 'include_personal_information,include_employment_information',
-  },
-  sageHr: {
-    subdomain: '',
-    apiToken: '',
-    includeTeamHistory: false,
-    includeEmploymentStatusHistory: false,
-    includePositionHistory: false,
-  },
-  csv: {
-    filename: '',
-    columns: [],
-    uploadStatus: 'idle',
-    uploadError: null,
-  },
+  workday: connectorFactory.getConfig(ConnectorType.Workday).getDefaultState().workday!,
+  sageHr: connectorFactory.getConfig(ConnectorType.SageHR).getDefaultState().sageHr!,
+  csv: connectorFactory.getConfig(ConnectorType.Csv).getDefaultState().csv!,
 };
 
 /**
@@ -106,19 +94,10 @@ export const RESPONSE_GROUP_OPTIONS = [
   { value: 'include_roles', labelKey: 'configDetails.connection.responseGroupLabels.include_roles' },
 ] as const;
 
-/**
- * Convert the comma-separated toggle string kept in the connection
- * form into a typed `WorkdayResponseGroup` object for the manifest.
- */
-export function buildResponseGroup(csv: string): WorkdayResponseGroup {
+/** Build a response-group boolean map from a CSV string of active group keys. */
+export function buildResponseGroup(csv: string): Record<string, boolean> {
   const active = new Set(csv.split(',').filter(Boolean));
-  return {
-    include_personal_information: active.has('include_personal_information'),
-    include_employment_information: active.has('include_employment_information'),
-    include_compensation: active.has('include_compensation'),
-    include_organizations: active.has('include_organizations'),
-    include_roles: active.has('include_roles'),
-  };
+  return Object.fromEntries(RESPONSE_GROUP_OPTIONS.map((opt) => [opt.value, active.has(opt.value)]));
 }
 
 /* ── Sage HR ──────────────────────────────────────────────── */
@@ -133,10 +112,8 @@ export const SAGE_HR_HISTORY_OPTIONS = [
   { value: 'includePositionHistory', labelKey: 'configDetails.connection.historyLabels.includePositionHistory' },
 ] as const;
 
-/**
- * Convert the wizard form fields into a typed `SageHrConfig` for the manifest.
- */
-export function buildSageHrConfig(fields: SageHrFields): SageHrConfigApi {
+/** Build the Sage HR API config payload from form fields. */
+export function buildSageHrConfig(fields: SageHrFields): Record<string, unknown> {
   return {
     subdomain: fields.subdomain.trim(),
     api_token: fields.apiToken,
