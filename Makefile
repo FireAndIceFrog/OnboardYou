@@ -17,7 +17,7 @@ VENV := .venv/bin/activate
 
 .PHONY: setup build-lambdas build-config-api build-etl-trigger build-authorizer \
         plan apply deploy clean smoke-test assemble-pages openapi-ts setup-hooks \
-        build-mcp sync-env-mcp \
+        build-mcp sync-env-mcp snapshots
 
 ##──────────────────────────────────────────────────────────────
 ## Setup — create venv and install cargo-lambda
@@ -60,6 +60,8 @@ build-authorizer:
 	@echo "▸ Building authorizer Lambda..."
 	. $(VENV) && cargo lambda build --release -p authorizer
 
+snapshots:
+	cargo insta test --all
 ##──────────────────────────────────────────────────────────────
 ## MCP server — native binary (not a Lambda)
 ##──────────────────────────────────────────────────────────────
