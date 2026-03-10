@@ -81,3 +81,21 @@ output "frontend_hosting_mode" {
   description = "Where the frontend is hosted: 'github-pages' or 's3-cloudfront'"
   value       = var.environment == "prod" ? "s3-cloudfront" : "github-pages"
 }
+
+output "db_connection_string_pooler" {
+  description = "Supabase postgres connection string for lambdas (pooler)."
+  value       = module.database.connection_string_pooler
+  sensitive   = true
+}
+
+output "db_connection_string_direct" {
+  description = "Direct Supabase postgres connection string (for migrations)."
+  value       = module.database.connection_string_direct
+  sensitive   = true
+}
+
+output "db_password" {
+  description = "Generated postgres password (sensitive)"
+  value       = module.database.database_password
+  sensitive   = true
+}

@@ -16,3 +16,11 @@ demo_users = [
 
 # Environment: "local" (CORS=*), "staging" (GitHub Pages), "prod" (S3+CloudFront)
 # environment = "prod"
+
+# Supabase provisioning ----------------------------------------------------
+# You need an access token with project creation rights. Obtain from
+# https://app.supabase.com/account/tokens
+# supabase_access_token = "sbp_xxx"
+
+# Organization slug appearing in dashboard URL, e.g. continued-brown-smelt
+# supabase_organization_id = "your-org-slug"
