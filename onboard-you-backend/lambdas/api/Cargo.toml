@@ -22,11 +22,10 @@ async-trait = { workspace = true }
 lambda_http = { workspace = true }
 aws-config = { workspace = true }
 aws-sdk-cognitoidentityprovider = { workspace = true }
-aws-sdk-dynamodb = { workspace = true }
+sqlx = { workspace = true }
 aws-sdk-s3 = { workspace = true }
 aws-sdk-scheduler = { workspace = true }
 aws-sdk-sqs = { workspace = true }
-serde_dynamo = { workspace = true }
 chrono = { workspace = true }
 uuid = { workspace = true }
 utoipa = { workspace = true }

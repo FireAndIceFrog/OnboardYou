@@ -1,12 +1,11 @@
-//! Config repository — reads PipelineConfig from DynamoDB using serde_dynamo.
+//! Config repository — reads PipelineConfig from PostgreSQL.
 
 use async_trait::async_trait;
-use aws_sdk_dynamodb::types::AttributeValue;
 use lambda_runtime::Error;
-use serde_dynamo::aws_sdk_dynamodb_1 as dynamo_serde;
 use std::sync::Arc;
 
-use onboard_you_models::PipelineConfig;
+use sqlx::PgPool;
+use onboard_you_models::{PipelineConfig, PipelineConfigRow};
 
 /// Repository trait used by the pipeline engine to fetch pipeline configs.
 #[async_trait]
@@ -18,51 +17,39 @@ pub trait IConfigRepo: Send + Sync {
     ) -> Result<PipelineConfig, Error>;
 }
 
-/// Dynamo-backed implementation of `IConfigRepo`.
-pub struct DynamoConfigRepo {
-    pub dynamo: aws_sdk_dynamodb::Client,
-    pub table_name: String,
+/// PostgreSQL-backed implementation of `IConfigRepo`.
+pub struct PgConfigRepo {
+    pub pool: PgPool,
 }
 
-impl DynamoConfigRepo {
-    pub fn new(dynamo: aws_sdk_dynamodb::Client, table_name: String) -> Arc<Self> {
-        Arc::new(Self { dynamo, table_name })
+impl PgConfigRepo {
+    pub fn new(pool: PgPool) -> Arc<Self> {
+        Arc::new(Self { pool })
     }
 }
 
 #[async_trait]
-impl IConfigRepo for DynamoConfigRepo {
-    /// Fetch a pipeline config by organization ID + customer company ID (composite key).
+impl IConfigRepo for PgConfigRepo {
     async fn get(
         &self,
         organization_id: &str,
         customer_company_id: &str,
     ) -> Result<PipelineConfig, Error> {
-        let result = self
-            .dynamo
-            .get_item()
-            .table_name(&self.table_name)
-            .key(
-                "organizationId",
-                AttributeValue::S(organization_id.to_string()),
-            )
-            .key(
-                "customerCompanyId",
-                AttributeValue::S(customer_company_id.to_string()),
-            )
-            .send()
-            .await
-            .map_err(|e| Error::from(format!("get_item failed: {e}")))?;
+        let row = sqlx::query_as::<_, PipelineConfigRow>(
+            "SELECT * FROM pipeline_configs WHERE organization_id = $1 AND customer_company_id = $2",
+        )
+        .bind(organization_id)
+        .bind(customer_company_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| Error::from(format!("query failed: {e}")))?;
 
-        let item = result.item.ok_or_else(|| {
+        let row = row.ok_or_else(|| {
             Error::from(format!(
                 "No config found for org: {organization_id}, customer: {customer_company_id}"
             ))
         })?;
 
-        let config: PipelineConfig = dynamo_serde::from_item(item)
-            .map_err(|e| Error::from(format!("Failed to deserialize config: {e}")))?;
-
-        Ok(config)
+        Ok(PipelineConfig::from(row))
     }
 }
