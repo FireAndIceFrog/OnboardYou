@@ -38,6 +38,7 @@ impl ConfigRepo for PgConfigRepo {
                ON CONFLICT (organization_id, customer_company_id)
                DO UPDATE SET name = $3, image = $4, cron = $5, last_edited = $6, pipeline = $7"#,
         )
+        .persistent(false)
         .bind(&config.organization_id)
         .bind(&config.customer_company_id)
         .bind(&config.name)
@@ -65,6 +66,7 @@ impl ConfigRepo for PgConfigRepo {
         let row = sqlx::query_as::<_, PipelineConfigRow>(
             "SELECT * FROM pipeline_configs WHERE organization_id = $1 AND customer_company_id = $2",
         )
+        .persistent(false)
         .bind(organization_id)
         .bind(customer_company_id)
         .fetch_optional(&self.pool)
@@ -82,6 +84,7 @@ impl ConfigRepo for PgConfigRepo {
         sqlx::query(
             "DELETE FROM pipeline_configs WHERE organization_id = $1 AND customer_company_id = $2",
         )
+        .persistent(false)
         .bind(organization_id)
         .bind(customer_company_id)
         .execute(&self.pool)
@@ -100,6 +103,7 @@ impl ConfigRepo for PgConfigRepo {
         let rows = sqlx::query_as::<_, PipelineConfigRow>(
             "SELECT * FROM pipeline_configs WHERE organization_id = $1",
         )
+        .persistent(false)
         .bind(organization_id)
         .fetch_all(&self.pool)
         .await

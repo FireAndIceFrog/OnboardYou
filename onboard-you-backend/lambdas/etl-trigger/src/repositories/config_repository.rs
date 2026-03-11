@@ -38,6 +38,7 @@ impl IConfigRepo for PgConfigRepo {
         let row = sqlx::query_as::<_, PipelineConfigRow>(
             "SELECT * FROM pipeline_configs WHERE organization_id = $1 AND customer_company_id = $2",
         )
+        .persistent(false)
         .bind(organization_id)
         .bind(customer_company_id)
         .fetch_optional(&self.pool)

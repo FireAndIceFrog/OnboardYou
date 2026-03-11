@@ -24,6 +24,7 @@ pub struct PgSettingsRepo {
 impl SettingsRepo for PgSettingsRepo {
     async fn put(&self, settings: &OrgSettings) -> Result<(), ApiError> {
         sqlx::query("UPDATE organisation SET default_auth = $1 WHERE id = $2")
+            .persistent(false)
             .bind(sqlx::types::Json(&settings.default_auth))
             .bind(&settings.organization_id)
             .execute(&self.pool)
@@ -41,6 +42,7 @@ impl SettingsRepo for PgSettingsRepo {
         let row = sqlx::query_as::<_, OrgSettingsRow>(
             "SELECT id, default_auth FROM organisation WHERE id = $1",
         )
+        .persistent(false)
         .bind(organization_id)
         .fetch_optional(&self.pool)
         .await

@@ -33,6 +33,7 @@ impl ISettingsRepo for PgSettingsRepo {
         let row = sqlx::query_as::<_, OrgSettingsRow>(
             "SELECT id, default_auth FROM organisation WHERE id = $1",
         )
+        .persistent(false)
         .bind(organization_id)
         .fetch_optional(&self.pool)
         .await
