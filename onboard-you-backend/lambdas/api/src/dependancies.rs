@@ -1,20 +1,31 @@
 use std::sync::Arc;
 
 use crate::repositories::cognito_repository::{AuthRepo, CognitoAuthRepo};
-use crate::repositories::config_repository::{ConfigRepo, DynamoConfigRepo};
+use crate::repositories::config_repository::{ConfigRepo, PgConfigRepo};
 use crate::repositories::etl_repository::{EtlRepo, EtlRepository};
 use crate::repositories::s3_repository::{S3Repo, S3Repository};
 use crate::repositories::schedule_repository::{EventBridgeScheduleRepo, ScheduleRepo};
-use crate::repositories::settings_repository::{DynamoSettingsRepo, SettingsRepo};
+use crate::repositories::settings_repository::{PgSettingsRepo, SettingsRepo};
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Env {
-    pub config_table_name: String,
-    pub settings_table_name: String,
+    pub database_url: String,
     pub etl_lambda_arn: String,
     pub scheduler_role_arn: String,
     pub csv_upload_bucket: String,
     pub cognito_client_id: String,
+}
+
+impl Default for Env {
+    fn default() -> Self {
+        Self {
+            database_url: "postgres://localhost/unused".into(),
+            etl_lambda_arn: String::new(),
+            scheduler_role_arn: String::new(),
+            csv_upload_bucket: String::new(),
+            cognito_client_id: String::new(),
+        }
+    }
 }
 
 /// Shared application state, injected via axum's State extractor.
@@ -34,10 +45,8 @@ pub struct Dependancies {
 impl Dependancies {
     pub fn create_env() -> Env {
         Env {
-            config_table_name: std::env::var("CONFIG_TABLE_NAME")
-                .unwrap_or_else(|_| "PipelineConfigs".into()),
-            settings_table_name: std::env::var("SETTINGS_TABLE_NAME")
-                .unwrap_or_else(|_| "OrgSettings".into()),
+            database_url: std::env::var("DATABASE_URL")
+                .expect("DATABASE_URL must be set"),
             etl_lambda_arn: std::env::var("ETL_LAMBDA_ARN").expect("ETL_LAMBDA_ARN must be set"),
             scheduler_role_arn: std::env::var("SCHEDULER_ROLE_ARN")
                 .expect("SCHEDULER_ROLE_ARN must be set"),
@@ -51,16 +60,19 @@ impl Dependancies {
     pub async fn new(env: Env) -> Self {
         let aws_config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
 
-        let dynamo = aws_sdk_dynamodb::Client::new(&aws_config);
+        let pool_opts: sqlx::postgres::PgConnectOptions = env.database_url
+            .parse()
+            .expect("Failed to parse DATABASE_URL");
+        let pool = sqlx::pool::PoolOptions::new()
+            .connect_lazy_with(pool_opts.statement_cache_capacity(0));
+
 
         Self {
-            config_repo: Arc::new(DynamoConfigRepo {
-                dynamo: dynamo.clone(),
-                table_name: env.config_table_name.clone(),
+            config_repo: Arc::new(PgConfigRepo {
+                pool: pool.clone(),
             }),
-            settings_repo: Arc::new(DynamoSettingsRepo {
-                dynamo: dynamo.clone(),
-                table_name: env.settings_table_name.clone(),
+            settings_repo: Arc::new(PgSettingsRepo {
+                pool,
             }),
             schedule_repo: Arc::new(EventBridgeScheduleRepo {
                 scheduler: aws_sdk_scheduler::Client::new(&aws_config),

@@ -33,7 +33,7 @@ export function Header() {
       bg="bg"
       borderBottomWidth="1px"
       borderColor="border"
-      zIndex="sticky"
+      zIndex="modal"
       alignItems="center"
       justifyContent="space-between"
     >

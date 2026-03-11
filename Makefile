@@ -179,6 +179,15 @@ smoke-test:
 	@echo "▸ Running smoke tests…"
 	cd onboard-you-backend/test/smoke-test && pnpm test
 
+migrate:
+	@echo "▸ Running SQL migrations against database…"
+	@db_url=$$(cd infra && tofu output -raw db_connection_string_pooler | sed 's/[?&]pgbouncer=[^&]*//' ) && \
+	for f in migrations/*.sql; do \
+		echo "  ▸ Applying $$f …" && \
+		psql "$$db_url" -f "$$f" || exit 1; \
+	done
+	@echo "✓ Migrations applied"
+
 clean:
 	cargo clean
 	rm -rf infra/.build infra/plan.out _site

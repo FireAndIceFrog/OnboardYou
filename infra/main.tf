@@ -18,6 +18,10 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.6"
     }
+    supabase = {
+      source  = "supabase/supabase"
+      version = "~> 1.0"
+    }
   }
 
   # Uncomment and configure for remote state:
@@ -28,6 +32,10 @@ terraform {
   #   dynamodb_table = "onboardyou-tflock"
   #   encrypt        = true
   # }
+}
+
+provider "supabase" {
+  access_token = var.supabase_access_token
 }
 
 provider "aws" {
@@ -51,6 +59,18 @@ locals {
   )
 }
 
+
+
+# ══════════════════════════════════════════════════════════════
+# Supabase database project
+# ══════════════════════════════════════════════════════════════
+module "database" {
+  source                 = "./modules/database"
+  supabase_access_token  = var.supabase_access_token
+  organization_id        = var.supabase_organization_id
+  region                 = var.aws_region
+  # project_name defaults to "onboardYou"
+}
 
 
 # ══════════════════════════════════════════════════════════════
@@ -128,6 +148,7 @@ module "etl_trigger" {
     CSV_UPLOAD_BUCKET    = module.csv_upload_bucket.bucket_name
     RUST_LOG             = "info"
     GITHUB_TOKEN         = var.gh_token
+    DATABASE_URL         = module.database.connection_string_pooler
   }
 
   iam_policy_statements = [
@@ -196,6 +217,7 @@ module "config_api" {
     SCHEDULER_ROLE_ARN                    = aws_iam_role.scheduler_execution.arn
     COGNITO_CLIENT_ID                     = module.cognito.client_id
     CSV_UPLOAD_BUCKET                     = module.csv_upload_bucket.bucket_name
+    DATABASE_URL                          = module.database.connection_string_pooler
     AWS_LAMBDA_HTTP_IGNORE_STAGE_IN_PATH  = "true"
     RUST_LOG                              = "info"
     SQS_QUEUE_URL = aws_sqs_queue.etl_events.id

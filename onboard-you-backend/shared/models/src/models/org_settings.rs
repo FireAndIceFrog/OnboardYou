@@ -4,7 +4,7 @@ use crate::ApiDispatcherConfig;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-/// Per-organization settings stored in DynamoDB.
+/// Per-organization settings stored in the database.
 ///
 /// `default_auth` holds the full auth configuration that maps to a
 /// concrete `ApiDispatcherConfig` variant (Bearer, OAuth, OAuth2).
@@ -36,16 +36,19 @@ use utoipa::ToSchema;
 ///   }
 /// }
 /// ```
+#[macro_rules_attribute::apply(crate::SqlRow!)]
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct OrgSettings {
     /// Unique identifier for the organization (partition key)
+    #[column(id)]
     pub organization_id: String,
 
     /// Full auth configuration — typed to `ApiDispatcherConfig`.
     ///
     /// Must contain `"auth_type"` plus all fields required by the
     /// chosen strategy (bearer, oauth, oauth2).
+    #[json]
     pub default_auth: ApiDispatcherConfig,
 }
 

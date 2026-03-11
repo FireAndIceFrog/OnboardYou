@@ -2,7 +2,7 @@ use crate::Manifest;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-/// The pipeline config as stored in DynamoDB and exchanged via the API.
+/// The pipeline config as stored in the database and exchanged via the API.
 ///
 /// ```json
 /// {
@@ -14,6 +14,7 @@ use utoipa::ToSchema;
 ///   "pipeline": { "version": "1.0", "actions": [...] }
 /// }
 /// ```
+#[macro_rules_attribute::apply(crate::SqlRow!)]
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PipelineConfig {
@@ -37,5 +38,6 @@ pub struct PipelineConfig {
     pub last_edited: String,
 
     /// The full ETL pipeline manifest (passed through to the ETL Lambda)
+    #[json]
     pub pipeline: Manifest,
 }

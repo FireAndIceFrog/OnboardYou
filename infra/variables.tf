@@ -56,3 +56,14 @@ variable "github_pages_url" {
   type        = string
   default     = "https://fireandicefrog.github.io"
 }
+
+variable "supabase_access_token" {
+  description = "Supabase access token for provisioning and seeding the database"
+  type        = string
+  sensitive   = true
+}
+
+variable "supabase_organization_id" {
+  description = "Slug for the Supabase organization (found in dashboard URL)"
+  type        = string
+}
