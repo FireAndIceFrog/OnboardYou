@@ -51,7 +51,7 @@ export function Sidebar() {
         bg="bg"
         borderRightWidth="1px"
         borderColor="border"
-        zIndex="sticky"
+        zIndex="modal"
         overflowY="auto"
         transition="width 0.25s ease, transform 0.25s ease"
         transform={{
