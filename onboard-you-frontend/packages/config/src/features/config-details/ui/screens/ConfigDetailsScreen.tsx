@@ -29,7 +29,6 @@ import {
   onEdgesChange as onEdgesChangeAction,
   selectNode as selectNodeAction,
   deselectNode,
-  toggleChat,
   toggleAddStepPanel,
   setAddStepPanelOpen,
   addFlowAction,
@@ -37,16 +36,13 @@ import {
   selectNodes,
   selectEdges,
   selectSelectedNode,
-  selectIsChatOpen,
   selectAddStepPanelOpen,
   selectConfigDetailsLoading,
   selectConfigDetailsSaving,
   selectConfigDetailsDeleting,
   selectConfigDetailsError,
 } from '../../state/configDetailsSlice';
-import { selectLastFlowAction } from '@/features/chat/state/chatSlice';
 import { ActionEditPanel, AddButtonEdge, AddStepPanel, PipelineNode } from '../components';
-import { ChatWindow } from '@/features/chat/ui';
 
 const nodeTypes = {
   ingestion: PipelineNode,
@@ -80,9 +76,7 @@ function ConfigDetailsContent({
   const isSaving = useAppSelector(selectConfigDetailsSaving);
   const isDeleting = useAppSelector(selectConfigDetailsDeleting);
   const error = useAppSelector(selectConfigDetailsError);
-  const chatOpen = useAppSelector(selectIsChatOpen);
   const addStepOpen = useAppSelector(selectAddStepPanelOpen);
-  const lastFlowAction = useAppSelector(selectLastFlowAction);
 
   // Derive a stable boolean so we don't re-render on every new {} reference.
   const hasValidationErrors = useAppSelector(
@@ -116,16 +110,6 @@ function ConfigDetailsContent({
     return () => clearTimeout(validateTimerRef.current);
   }, [dispatch, customerCompanyId, config, pipelineActions]);
 
-  // ── Real-time flow updates from chat ──────────────────────
-  const processedActionsRef = useRef(new Set<string>());
-
-  useEffect(() => {
-    if (lastFlowAction && !processedActionsRef.current.has(lastFlowAction.id)) {
-      processedActionsRef.current.add(lastFlowAction.id);
-      dispatch(addFlowAction(lastFlowAction));
-    }
-  }, [lastFlowAction, dispatch]);
-
   const handleNodeClick: NodeMouseHandler = useCallback(
     (_event, node) => {
       dispatch(selectNodeAction(node));
@@ -150,10 +134,6 @@ function ConfigDetailsContent({
     },
     [dispatch],
   );
-
-  const handleToggleChat = useCallback(() => {
-    dispatch(toggleChat());
-  }, [dispatch]);
 
   const handleToggleAddStep = useCallback(() => {
     dispatch(toggleAddStepPanel());
@@ -269,9 +249,6 @@ function ConfigDetailsContent({
           <Button variant="ghost" size="sm" onClick={handleToggleAddStep}>
             ➕ {t('configDetails.addStep')}
           </Button>
-          <Button variant="ghost" size="sm" onClick={handleToggleChat}>
-            💬 {chatOpen ? t('configDetails.closeChat') : t('configDetails.openChat')}
-          </Button>
           <Button colorPalette="blue" size="sm" onClick={handleSave} disabled={isSaving}>
             {isSaving ? t('configDetails.saving') : t('configDetails.save')}
           </Button>
@@ -309,19 +286,7 @@ function ConfigDetailsContent({
           {addStepOpen && <AddStepPanel onClose={handleCloseAddStep} />}
         </Box>
 
-        {/* Chat Panel */}
-        <Box
-          as="aside"
-          w={chatOpen ? '380px' : '0px'}
-          overflow="hidden"
-          transition="width 0.2s ease"
-          borderLeft={chatOpen ? '1px solid' : 'none'}
-          borderColor="gray.200"
-          bg="white"
-          flexShrink={0}
-        >
-          {chatOpen && <ChatWindow onClose={handleToggleChat} />}
-        </Box>
+
       </Flex>
     </Flex>
   );

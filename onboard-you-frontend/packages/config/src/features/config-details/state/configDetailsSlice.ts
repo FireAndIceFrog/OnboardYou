@@ -81,7 +81,6 @@ const initialState: ConfigDetailsState = {
   isDeleting: false,
   isValidating: false,
   error: null,
-  chatOpen: false,
   addStepPanelOpen: false,
   insertIndex: null,
   validationResult: null,
@@ -215,12 +214,6 @@ const configDetailsSlice = createSlice({
     },
     deselectNode(state) {
       state.selectedNode = null;
-    },
-    toggleChat(state) {
-      state.chatOpen = !state.chatOpen;
-    },
-    setChatOpen(state, action: PayloadAction<boolean>) {
-      state.chatOpen = action.payload;
     },
     addFlowAction(state, action: PayloadAction<ActionConfig>) {
       const actionCfg = action.payload;
@@ -482,8 +475,6 @@ export const {
   onEdgesChange,
   selectNode,
   deselectNode,
-  toggleChat,
-  setChatOpen,
   addFlowAction,
   removeFlowAction,
   updateFlowActionConfig,
@@ -501,7 +492,6 @@ export const selectConfig = (state: RootState) => state.configDetails.config;
 export const selectNodes = (state: RootState) => state.configDetails.nodes;
 export const selectEdges = (state: RootState) => state.configDetails.edges;
 export const selectSelectedNode = (state: RootState) => state.configDetails.selectedNode;
-export const selectIsChatOpen = (state: RootState) => state.configDetails.chatOpen;
 export const selectAddStepPanelOpen = (state: RootState) => state.configDetails.addStepPanelOpen;
 export const selectConfigDetailsLoading = (state: RootState) => state.configDetails.isLoading;
 export const selectConfigDetailsSaving = (state: RootState) => state.configDetails.isSaving;

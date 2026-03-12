@@ -8,7 +8,6 @@ import { type Mock, vi } from 'vitest';
 import i18n from '@/i18n';
 import { system } from '@/theme';
 import type { RootState } from '@/store';
-import chatReducer from '@/features/chat/state/chatSlice';
 import configDetailsReducer from '@/features/config-details/state/configDetailsSlice';
 import configListReducer from '@/features/config-list/state/configListSlice';
 
@@ -24,7 +23,6 @@ const mockThunkExtra = {
 export function createTestStore(preloadedState?: Partial<RootState>): EnhancedStore {
   return configureStore({
     reducer: {
-      chat: chatReducer,
       configDetails: configDetailsReducer,
       configList: configListReducer,
     },

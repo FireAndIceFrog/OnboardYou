@@ -14,7 +14,6 @@ export interface ConfigDetailsState {
   isDeleting: boolean;
   isValidating: boolean;
   error: string | null;
-  chatOpen: boolean;
   addStepPanelOpen: boolean;
   /** Index at which the next added step will be inserted (null = append) */
   insertIndex: number | null;
