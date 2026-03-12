@@ -54,30 +54,30 @@ interface ToggleCase {
 const toggleCases: ToggleCase[] = [
   {
     name: 'toggle on team history',
-    config: { includeTeamHistory: false, includeEmploymentStatusHistory: false, includePositionHistory: false },
+    config: { include_team_history: false, include_employment_status_history: false, include_position_history: false },
     clickText: 'Team History',
-    expectedKey: 'includeTeamHistory',
+    expectedKey: 'include_team_history',
     expectedValue: true,
   },
   {
     name: 'toggle off team history',
-    config: { includeTeamHistory: true },
+    config: { include_team_history: true },
     clickText: 'Team History',
-    expectedKey: 'includeTeamHistory',
+    expectedKey: 'include_team_history',
     expectedValue: false,
   },
   {
     name: 'toggle on employment status history',
-    config: { includeEmploymentStatusHistory: false },
+    config: { include_employment_status_history: false },
     clickText: 'Employment Status History',
-    expectedKey: 'includeEmploymentStatusHistory',
+    expectedKey: 'include_employment_status_history',
     expectedValue: true,
   },
   {
     name: 'toggle on position history',
-    config: { includePositionHistory: false },
+    config: { include_position_history: false },
     clickText: 'Position History',
-    expectedKey: 'includePositionHistory',
+    expectedKey: 'include_position_history',
     expectedValue: true,
   },
 ];
