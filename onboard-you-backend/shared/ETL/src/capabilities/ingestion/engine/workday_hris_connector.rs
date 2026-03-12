@@ -237,54 +237,56 @@ impl StringOrElse for String {
     }
 }
 
-/// Convert a vector of flat worker records into a Polars DataFrame.
-pub fn workers_to_dataframe(records: &[WorkdayWorkerRecord]) -> Result<DataFrame> {
-    let worker_ids: Vec<&str> = records.iter().map(|r| r.worker_id.as_str()).collect();
-    let employee_ids: Vec<&str> = records.iter().map(|r| r.employee_id.as_str()).collect();
-    let first_names: Vec<&str> = records.iter().map(|r| r.first_name.as_str()).collect();
-    let last_names: Vec<&str> = records.iter().map(|r| r.last_name.as_str()).collect();
-    let emails: Vec<&str> = records.iter().map(|r| r.email.as_str()).collect();
-    let phones: Vec<&str> = records.iter().map(|r| r.phone.as_str()).collect();
-    let job_titles: Vec<&str> = records.iter().map(|r| r.job_title.as_str()).collect();
-    let business_titles: Vec<&str> = records.iter().map(|r| r.business_title.as_str()).collect();
-    let departments: Vec<&str> = records.iter().map(|r| r.department.as_str()).collect();
-    let locations: Vec<&str> = records.iter().map(|r| r.location.as_str()).collect();
-    let hire_dates: Vec<&str> = records.iter().map(|r| r.hire_date.as_str()).collect();
-    let worker_types: Vec<&str> = records.iter().map(|r| r.worker_type.as_str()).collect();
-    let statuses: Vec<&str> = records.iter().map(|r| r.worker_status.as_str()).collect();
-    let manager_ids: Vec<&str> = records.iter().map(|r| r.manager_id.as_str()).collect();
-    let manager_names: Vec<&str> = records.iter().map(|r| r.manager_name.as_str()).collect();
-    let position_ids: Vec<&str> = records.iter().map(|r| r.position_id.as_str()).collect();
-    let comp_grades: Vec<&str> = records
-        .iter()
-        .map(|r| r.compensation_grade.as_str())
-        .collect();
-    let pay_rates: Vec<&str> = records.iter().map(|r| r.pay_rate_type.as_str()).collect();
+/// Defines the column-name ↔ field-accessor mapping in one place.
+///
+/// Generates:
+/// - `WORKDAY_COLUMNS` — the fixed column list for schema / provenance.
+/// - `workers_to_dataframe` — columnar extraction that is guaranteed
+///    to stay aligned because both the column name and the struct field
+///    come from the same macro arm.
+macro_rules! workday_fields {
+    ( $( ($col:expr, $field:ident) ),* $(,)? ) => {
+        /// The fixed set of columns produced by the Workday `Get_Workers` connector.
+        const WORKDAY_COLUMNS: &[&str] = &[ $( $col ),* ];
 
-    let df = DataFrame::new_infer_height(vec![
-        Column::new("worker_id".into(), &worker_ids),
-        Column::new("employee_id".into(), &employee_ids),
-        Column::new("first_name".into(), &first_names),
-        Column::new("last_name".into(), &last_names),
-        Column::new("email".into(), &emails),
-        Column::new("phone".into(), &phones),
-        Column::new("job_title".into(), &job_titles),
-        Column::new("business_title".into(), &business_titles),
-        Column::new("department".into(), &departments),
-        Column::new("location".into(), &locations),
-        Column::new("hire_date".into(), &hire_dates),
-        Column::new("worker_type".into(), &worker_types),
-        Column::new("worker_status".into(), &statuses),
-        Column::new("manager_id".into(), &manager_ids),
-        Column::new("manager_name".into(), &manager_names),
-        Column::new("position_id".into(), &position_ids),
-        Column::new("compensation_grade".into(), &comp_grades),
-        Column::new("pay_rate_type".into(), &pay_rates),
-    ])
-    .map_err(|e| Error::IngestionError(format!("Failed to build DataFrame: {}", e)))?;
+        /// Convert a vector of flat worker records into a Polars DataFrame.
+        pub fn workers_to_dataframe(records: &[WorkdayWorkerRecord]) -> Result<DataFrame> {
+            $(
+                let $field: Vec<&str> = records.iter().map(|r| r.$field.as_str()).collect();
+            )*
 
-    Ok(df)
+            let df = DataFrame::new_infer_height(vec![
+                $(
+                    Column::new($col.into(), &$field),
+                )*
+            ])
+            .map_err(|e| Error::IngestionError(format!("Failed to build DataFrame: {}", e)))?;
+
+            Ok(df)
+        }
+    };
 }
+
+workday_fields!(
+    ("worker_id",           worker_id),
+    ("employee_id",         employee_id),
+    ("first_name",          first_name),
+    ("last_name",           last_name),
+    ("email",               email),
+    ("phone",               phone),
+    ("job_title",           job_title),
+    ("business_title",      business_title),
+    ("department",          department),
+    ("location",            location),
+    ("hire_date",           hire_date),
+    ("worker_type",         worker_type),
+    ("worker_status",       worker_status),
+    ("manager_id",          manager_id),
+    ("manager_name",        manager_name),
+    ("position_id",         position_id),
+    ("compensation_grade",  compensation_grade),
+    ("pay_rate_type",       pay_rate_type),
+);
 
 // ───────────────────────────────────────────────────────────────────────────
 // Response_Results pagination metadata
@@ -467,27 +469,7 @@ impl WorkdayHrisConnector {
     }
 }
 
-/// The fixed set of columns produced by the Workday `Get_Workers` connector.
-const WORKDAY_COLUMNS: &[&str] = &[
-    "worker_id",
-    "employee_id",
-    "first_name",
-    "last_name",
-    "email",
-    "phone",
-    "job_title",
-    "business_title",
-    "department",
-    "location",
-    "hire_date",
-    "worker_type",
-    "worker_status",
-    "manager_id",
-    "manager_name",
-    "position_id",
-    "compensation_grade",
-    "pay_rate_type",
-];
+
 
 impl HrisConnector for WorkdayHrisConnector {
     fn fetch_data(&self) -> Result<LazyFrame> {
