@@ -3,6 +3,7 @@ use crate::repositories::{
     config_repository::{self, PgConfigRepo},
     etl_repository::{EtlRepository, IEtlRepo},
     pipeline_repository::{IPipelineRepo, PipelineRepository},
+    run_log_repository::{IRunLogRepo, PgRunLogRepo},
     settings_repository::{self, PgSettingsRepo},
 };
 use config_repository::IConfigRepo;
@@ -40,6 +41,7 @@ pub struct Dependancies {
     pub settings_repo: Arc<dyn ISettingsRepo>,
     pub etl_repo: Arc<dyn IEtlRepo>,
     pub pipeline_repo: Arc<dyn IPipelineRepo>,
+    pub run_log_repo: Arc<dyn IRunLogRepo>,
     pub action_factory: Arc<dyn ActionFactoryTrait>,
 }
 
@@ -55,9 +57,10 @@ impl Dependancies {
 
         Self {
             config_repo: PgConfigRepo::new(pool.clone()),
-            settings_repo: PgSettingsRepo::new(pool),
+            settings_repo: PgSettingsRepo::new(pool.clone()),
             etl_repo: EtlRepository::new(),
             pipeline_repo: PipelineRepository::new(),
+            run_log_repo: PgRunLogRepo::new(pool),
             action_factory: Arc::new(onboard_you::ActionFactory::new()),
         }
     }

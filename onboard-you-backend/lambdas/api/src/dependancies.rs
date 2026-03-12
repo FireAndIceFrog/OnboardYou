@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::repositories::cognito_repository::{AuthRepo, CognitoAuthRepo};
 use crate::repositories::config_repository::{ConfigRepo, PgConfigRepo};
 use crate::repositories::etl_repository::{EtlRepo, EtlRepository};
+use crate::repositories::run_history_repository::{PgRunHistoryRepo, RunHistoryRepo};
 use crate::repositories::s3_repository::{S3Repo, S3Repository};
 use crate::repositories::schedule_repository::{EventBridgeScheduleRepo, ScheduleRepo};
 use crate::repositories::settings_repository::{PgSettingsRepo, SettingsRepo};
@@ -40,6 +41,7 @@ pub struct Dependancies {
     pub s3_repo: Arc<dyn S3Repo>,
     pub auth_repo: Arc<dyn AuthRepo>,
     pub etl_repo: Arc<dyn EtlRepo>,
+    pub run_history_repo: Arc<dyn RunHistoryRepo>,
 }
 
 impl Dependancies {
@@ -72,6 +74,9 @@ impl Dependancies {
                 pool: pool.clone(),
             }),
             settings_repo: Arc::new(PgSettingsRepo {
+                pool: pool.clone(),
+            }),
+            run_history_repo: Arc::new(PgRunHistoryRepo {
                 pool,
             }),
             schedule_repo: Arc::new(EventBridgeScheduleRepo {

@@ -1213,6 +1213,7 @@ impl OnboardingAction for IsoCountrySanitizer {
 
         let fmt = self.config.output_format;
         let lf = std::mem::replace(&mut context.data, LazyFrame::default());
+        let collector = context.warning_collector.clone();
 
         context.data = lf.with_column(
             col(&self.config.source_column)
@@ -1248,6 +1249,13 @@ impl OnboardingAction for IsoCountrySanitizer {
                             .collect();
 
                         if !unrecognised.is_empty() {
+                            let total: usize = unrecognised.values().sum();
+                            let top_values: Vec<String> = unrecognised
+                                .iter()
+                                .take(10)
+                                .map(|(v, c)| format!("{v} ({c}x)"))
+                                .collect();
+
                             for (value, count) in &unrecognised {
                                 tracing::warn!(
                                     raw_value = %value,
@@ -1258,9 +1266,21 @@ impl OnboardingAction for IsoCountrySanitizer {
                             }
                             tracing::warn!(
                                 distinct_unrecognised = unrecognised.len(),
-                                total_unrecognised = unrecognised.values().sum::<usize>(),
+                                total_unrecognised = total,
                                 "IsoCountrySanitizer: summary of unrecognised country values"
                             );
+
+                            if let Ok(mut guard) = collector.lock() {
+                                guard.push(onboard_you_models::PipelineWarning {
+                                    action_id: "iso_country_sanitizer".into(),
+                                    message: format!(
+                                        "{} country value(s) could not be resolved to ISO codes",
+                                        total
+                                    ),
+                                    count: total,
+                                    detail: Some(top_values.join(", ")),
+                                });
+                            }
                         }
 
                         Ok(result.into_column())

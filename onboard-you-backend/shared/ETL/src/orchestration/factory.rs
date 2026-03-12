@@ -21,6 +21,19 @@ use std::sync::Arc;
 /// Factory for creating OnboardingAction instances from manifest action configs.
 pub struct ActionFactory;
 
+/// Captures which action failed and the error details.
+#[derive(Debug)]
+pub struct StepError {
+    pub action_id: String,
+    pub error: onboard_you_models::Error,
+}
+
+impl std::fmt::Display for StepError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Action '{}' failed: {}", self.action_id, self.error)
+    }
+}
+
 impl ActionFactory {
     pub fn new() -> Self {
         ActionFactory {}
@@ -34,7 +47,7 @@ pub trait ActionFactoryTrait: Send + Sync {
         &self,
         actions: Vec<Arc<dyn OnboardingAction>>,
         context: RosterContext,
-    ) -> Result<RosterContext>;
+    ) -> std::result::Result<RosterContext, StepError>;
 }
 
 impl ActionFactoryTrait for ActionFactory {
@@ -119,15 +132,19 @@ impl ActionFactoryTrait for ActionFactory {
     /// Execute a pipeline defined by a manifest.
     ///
     /// Each action receives the `RosterContext` produced by the previous step
-    /// (fold pattern). The final context is returned.
+    /// (fold pattern). The final context is returned. On failure the
+    /// `StepError` identifies which action broke.
     fn run(
         &self,
         actions: Vec<Arc<dyn OnboardingAction>>,
         mut context: RosterContext,
-    ) -> Result<RosterContext> {
+    ) -> std::result::Result<RosterContext, StepError> {
         for action in &actions {
             tracing::info!(action_id = action.id(), "PipelineRunner: executing action");
-            context = action.execute(context)?;
+            context = action.execute(context).map_err(|e| StepError {
+                action_id: action.id().to_string(),
+                error: e,
+            })?;
         }
         Ok(context)
     }

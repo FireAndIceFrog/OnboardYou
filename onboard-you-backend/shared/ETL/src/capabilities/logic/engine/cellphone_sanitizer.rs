@@ -374,6 +374,7 @@ impl OnboardingAction for CellphoneSanitizer {
 
         let phone_col_name = self.config.phone_column.clone();
         let country_col_names = self.config.country_columns.clone();
+        let collector = context.warning_collector.clone();
 
         context.data = lf.with_column(
             as_struct(all_cols)
@@ -405,6 +406,8 @@ impl OnboardingAction for CellphoneSanitizer {
                         let country_cas: Vec<&StringChunked> =
                             country_fields.iter().filter_map(|f| f.str().ok()).collect();
 
+                        let mut no_country_count: usize = 0;
+
                         let result: StringChunked = phone_ca
                             .into_iter()
                             .enumerate()
@@ -413,10 +416,32 @@ impl OnboardingAction for CellphoneSanitizer {
                                     let calling_code = country_cas
                                         .iter()
                                         .find_map(|cc| cc.get(idx).and_then(resolve_dial_code));
+                                    if calling_code.is_none() {
+                                        no_country_count += 1;
+                                    }
                                     sanitise_number(phone, calling_code)
                                 })
                             })
                             .collect();
+
+                        if no_country_count > 0 {
+                            tracing::warn!(
+                                count = no_country_count,
+                                "CellphoneSanitizer: phone numbers without resolvable country code"
+                            );
+                            if let Ok(mut guard) = collector.lock() {
+                                guard.push(onboard_you_models::PipelineWarning {
+                                    action_id: "cellphone_sanitizer".into(),
+                                    message: format!(
+                                        "{} phone number(s) had no resolvable country code — \
+                                         returned without international prefix",
+                                        no_country_count
+                                    ),
+                                    count: no_country_count,
+                                    detail: None,
+                                });
+                            }
+                        }
 
                         Ok(result.into_column())
                     },

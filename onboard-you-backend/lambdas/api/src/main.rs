@@ -18,6 +18,7 @@ use controllers::login;
 use controllers::{
     create_config, delete_config, get_config, list_configs, update_config, validate_config,
 };
+use controllers::{get_run, list_runs};
 use controllers::{csv_columns, csv_presigned_upload};
 use controllers::{get_settings, upsert_settings};
 use dependancies::Dependancies;
@@ -28,7 +29,7 @@ use models::{
 use onboard_you_models::{
     ActionConfig, ActionConfigPayload, ActionType, ApiDispatcherConfig, BearerPlacement,
     BearerRepoConfig, Manifest, OAuth2GrantType, OAuth2RepoConfig, OAuthRepoConfig, OrgSettings,
-    PipelineConfig, SageHrApiResponse, SageHrConfig, SageHrEmployee,
+    PipelineConfig, PipelineRun, PipelineWarning, SageHrApiResponse, SageHrConfig, SageHrEmployee,
     SageHrEmploymentStatusHistory, SageHrMeta, SageHrPositionHistory, SageHrTeamHistory,
 };
 use tower_http::cors::{Any, CorsLayer};
@@ -55,6 +56,8 @@ use utoipa_swagger_ui::SwaggerUi;
         controllers::config_controller::validate_config,
         controllers::csv_upload_controller::csv_presigned_upload,
         controllers::csv_upload_controller::csv_columns,
+        controllers::runs_controller::list_runs,
+        controllers::runs_controller::get_run,
         controllers::settings_controller::get_settings,
         controllers::settings_controller::upsert_settings,
     ),
@@ -80,6 +83,8 @@ use utoipa_swagger_ui::SwaggerUi;
         SettingsRequest,
         PresignedUploadResponse,
         CsvColumnsResponse,
+        PipelineRun,
+        PipelineWarning,
         SageHrConfig,
         SageHrApiResponse,
         SageHrEmployee,
@@ -93,6 +98,7 @@ use utoipa_swagger_ui::SwaggerUi;
         (name = "Configuration", description = "Pipeline configuration CRUD operations"),
         (name = "Validation", description = "Dry-run pipeline validation"),
         (name = "CSV Upload", description = "CSV file upload and column discovery"),
+        (name = "Runs", description = "Pipeline run history and diagnostics"),
         (name = "Settings", description = "Organization settings management"),
     ),
     security(
@@ -190,6 +196,14 @@ fn router(state: Dependancies) -> Router {
         .route(
             "/config/{customer_company_id}/csv-columns",
             get(csv_columns),
+        )
+        .route(
+            "/config/{customer_company_id}/runs",
+            get(list_runs),
+        )
+        .route(
+            "/config/{customer_company_id}/runs/{run_id}",
+            get(get_run),
         )
         .route("/settings", get(get_settings).put(upsert_settings))
         .with_state(state)
