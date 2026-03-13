@@ -72,6 +72,7 @@ impl Dependancies {
             .parse()
             .expect("Failed to parse DATABASE_URL");
         let pool = sqlx::pool::PoolOptions::new()
+            .max_connections(1)
             .connect_lazy_with(pool_opts.statement_cache_capacity(0));
 
 

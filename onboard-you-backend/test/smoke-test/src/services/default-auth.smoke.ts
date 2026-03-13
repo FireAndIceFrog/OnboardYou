@@ -27,6 +27,14 @@ describe('Default auth end-to-end', () => {
         auth_type: 'bearer',
         destination_url: 'https://httpbin.org/post',
         token: 'smoke-test-token',
+        schema: {
+          employee_id: 'string',
+          cellphone: 'string',
+          first_name: 'string',
+          country: 'string',
+          country_code: 'string',
+          international_phone: 'string',
+        },
       },
     });
 
@@ -46,7 +54,7 @@ describe('Default auth end-to-end', () => {
             action_type: 'csv_hris_connector',
             config: {
               filename: 'employees.csv',
-              columns: ['employee_id', 'first_name', 'email'],
+              columns: ['employee_id', 'cellphone', 'first_name', 'country'],
             },
           },
           {
@@ -81,7 +89,7 @@ describe('Default auth end-to-end', () => {
               action_type: 'csv_hris_connector',
               config: {
                 filename: 'employees.csv',
-                columns: ['employee_id', 'first_name', 'email'],
+                columns: ['employee_id', 'cellphone', 'first_name', 'country'],
               },
             },
             {
@@ -100,7 +108,7 @@ describe('Default auth end-to-end', () => {
     // api_dispatcher is a pass-through — columns unchanged
     expect(body.steps[1].action_id).toBe('egress');
     expect(body.steps[1].columns_after).toEqual(
-      expect.arrayContaining(['employee_id', 'first_name', 'email']),
+      expect.arrayContaining(['employee_id', 'cellphone', 'first_name', 'country']),
     );
     expect(body.final_columns).toEqual(body.steps[1].columns_after);
   });

@@ -84,7 +84,7 @@ impl ApiEngine {
             Error::EgressError("ApiEngine::dispatch requires a running tokio runtime".into())
         })?;
 
-        handle.block_on(self.dispatch_with_retry(payload))
+        tokio::task::block_in_place(|| handle.block_on(self.dispatch_with_retry(payload)))
     }
 
     /// Internal async dispatch with retry loop.

@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateConfigData, CreateConfigErrors, CreateConfigResponses, CsvColumnsData, CsvColumnsErrors, CsvColumnsResponses, CsvPresignedUploadData, CsvPresignedUploadErrors, CsvPresignedUploadResponses, DeleteConfigData, DeleteConfigErrors, DeleteConfigResponses, GetConfigData, GetConfigErrors, GetConfigResponses, GetRunData, GetRunErrors, GetRunResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, ListConfigsData, ListConfigsErrors, ListConfigsResponses, ListRunsData, ListRunsErrors, ListRunsResponses, LoginData, LoginErrors, LoginResponses, UpdateConfigData, UpdateConfigErrors, UpdateConfigResponses, UpsertSettingsData, UpsertSettingsErrors, UpsertSettingsResponses, ValidateConfigData, ValidateConfigErrors, ValidateConfigResponses } from './types.gen';
+import type { CreateConfigData, CreateConfigErrors, CreateConfigResponses, CsvColumnsData, CsvColumnsErrors, CsvColumnsResponses, CsvPresignedUploadData, CsvPresignedUploadErrors, CsvPresignedUploadResponses, DeleteConfigData, DeleteConfigErrors, DeleteConfigResponses, GetConfigData, GetConfigErrors, GetConfigResponses, GetRunData, GetRunErrors, GetRunResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, ListConfigsData, ListConfigsErrors, ListConfigsResponses, ListRunsData, ListRunsErrors, ListRunsResponses, LoginData, LoginErrors, LoginResponses, TriggerRunData, TriggerRunErrors, TriggerRunResponses, UpdateConfigData, UpdateConfigErrors, UpdateConfigResponses, UpsertSettingsData, UpsertSettingsErrors, UpsertSettingsResponses, ValidateConfigData, ValidateConfigErrors, ValidateConfigResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -135,6 +135,15 @@ export const csvPresignedUpload = <ThrowOnError extends boolean = false>(options
 export const listRuns = <ThrowOnError extends boolean = false>(options: Options<ListRunsData, ThrowOnError>) => (options.client ?? client).get<ListRunsResponses, ListRunsErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/config/{customer_company_id}/runs',
+    ...options
+});
+
+/**
+ * Trigger a pipeline run immediately via SQS.
+ */
+export const triggerRun = <ThrowOnError extends boolean = false>(options: Options<TriggerRunData, ThrowOnError>) => (options.client ?? client).post<TriggerRunResponses, TriggerRunErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/config/{customer_company_id}/runs/trigger',
     ...options
 });
 
