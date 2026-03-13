@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { client } from '../env.js';
 import type { PipelineConfig } from '../models/pipeline-config.js';
+import { ListConfigsResponse } from '../generated/api/types.gen.js';
 
 beforeAll(async () => {
   await client.login();
@@ -10,10 +11,10 @@ const testId = `smoke-test-${Date.now()}`;
 
 describe('GET /config', () => {
   it('lists pipeline configs', async () => {
-    const { status, body } = await client.get<PipelineConfig[]>('/config');
+    const { status, body } = await client.get<ListConfigsResponse>('/config');
 
     expect(status).toBe(200);
-    expect(Array.isArray(body)).toBe(true);
+    expect(Array.isArray(body.data)).toBe(true);
   });
 });
 
