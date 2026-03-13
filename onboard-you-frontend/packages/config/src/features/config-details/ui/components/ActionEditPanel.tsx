@@ -1,7 +1,7 @@
 import { useCallback, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box, Flex, Text, Heading, chakra } from '@chakra-ui/react';
-import { useAppDispatch, useAppSelector } from '@/store';
+import { useAppDispatch, useAppSelector, store } from '@/store';
 import type { RootState } from '@/store';
 import type { ActionConfigPayload, ActionType } from '@/generated/api';
 import { businessLabel } from '@/shared/domain/types';
@@ -81,15 +81,20 @@ export function ActionEditPanel() {
 
   const handleFieldChange = useCallback(
     (key: string, value: unknown) => {
-      if (!actionId || !config) return;
+      if (!actionId) return;
+      // Read the current config from the store to avoid stale closure issues
+      // when multiple onChange calls happen in the same tick.
+      const state = store.getState();
+      const action = state.configDetails.config?.pipeline.actions.find((a) => a.id === actionId);
+      const freshConfig = action?.config;
       const configObj =
-        typeof config === 'object' && config !== null
-          ? (config as Record<string, unknown>)
+        typeof freshConfig === 'object' && freshConfig !== null
+          ? (freshConfig as Record<string, unknown>)
           : {};
       const updated = setField(configObj, key, value);
       dispatch(updateFlowActionConfig({ actionId, config: updated as ActionConfigPayload }));
     },
-    [actionId, config, dispatch],
+    [actionId, dispatch],
   );
 
   const handleRemove = useCallback(() => {

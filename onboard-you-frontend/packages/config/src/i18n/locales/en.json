@@ -93,6 +93,16 @@
       }
     },
     "panels": {
+      "csv": {
+        "currentFile": "Current file",
+        "dropHint": "Drop a CSV file here",
+        "orClick": "or use the button below to browse",
+        "chooseFile": "Choose CSV file",
+        "replaceFile": "Replace CSV file",
+        "uploading": "Uploading…",
+        "uploadSuccess": "CSV uploaded and columns updated",
+        "uploadFailed": "Upload failed"
+      },
       "responseGroup": {
         "title": "Response Groups",
         "hint": "Data sections to include in the Workday response"

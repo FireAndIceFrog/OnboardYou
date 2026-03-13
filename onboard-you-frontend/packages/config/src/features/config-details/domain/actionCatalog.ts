@@ -126,10 +126,6 @@ export interface FieldSchema {
  * Used by ActionEditPanel to render proper form inputs instead of raw JSON.
  */
 export const ACTION_FIELD_SCHEMAS: Partial<Record<ActionType, FieldSchema[]>> = {
-  csv_hris_connector: [
-    { key: 'filename', label: 'CSV File', type: 'readonly', hint: 'Set during connection setup' },
-    { key: 'columns', label: 'Detected Columns', type: 'readonly', hint: 'Auto-discovered from the CSV header' },
-  ],
   workday_hris_connector: [
     { key: 'tenant_url', label: 'Tenant URL', type: 'text', hint: 'Workday tenant base URL', placeholder: 'https://wd3-impl-services1.workday.com' },
     { key: 'tenant_id', label: 'Tenant ID', type: 'text', hint: 'Workday tenant identifier', placeholder: 'acme_corp' },
