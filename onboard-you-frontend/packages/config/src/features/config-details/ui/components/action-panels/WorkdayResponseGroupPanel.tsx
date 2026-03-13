@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box, Flex, Text } from '@chakra-ui/react';
+import { Box, Flex, Heading, Text } from '@chakra-ui/react';
 import { ACTION_FIELD_SCHEMAS } from '../../../domain/actionCatalog';
 import { RESPONSE_GROUP_OPTIONS } from '../../../domain/types';
 import { FieldEditor } from '../FieldEditor';
@@ -22,7 +22,7 @@ export function WorkdayResponseGroupPanel({ config, onChange, availableColumns }
   };
 
   return (
-    <Box data-testid="workday-response-group-panel">
+    <Box as="section" data-testid="workday-response-group-panel">
       {/* Render all standard fields except response_group via generic FieldEditor */}
       {fieldSchemas
         .filter((schema) => schema.key !== 'response_group')
@@ -46,10 +46,10 @@ export function WorkdayResponseGroupPanel({ config, onChange, availableColumns }
         ))}
 
       {/* Custom response_group toggle chips */}
-      <Box>
-        <Text fontSize="sm" fontWeight="600" mb="1">
+      <Box as="section">
+        <Heading as="h3" fontSize="sm" fontWeight="600" mb="1">
           {t('configDetails.panels.responseGroup.title')}
-        </Text>
+        </Heading>
         <Text fontSize="xs" color="gray.500" mb="2">
           {t('configDetails.panels.responseGroup.hint')}
         </Text>

@@ -41,6 +41,7 @@ import {
   selectConfigDetailsSaving,
   selectConfigDetailsDeleting,
   selectConfigDetailsError,
+  fetchSettingsSchemaThunk,
 } from '../../state/configDetailsSlice';
 import { ActionEditPanel, AddButtonEdge, AddStepPanel, PipelineNode } from '../components';
 
@@ -85,6 +86,7 @@ function ConfigDetailsContent({
 
   // ── Fetch existing config or initialise a blank one ───────
   useEffect(() => {
+    dispatch(fetchSettingsSchemaThunk());
     if (isNewConfig && connectionForm) {
       dispatch(initNewConfig(connectionForm));
     } else {

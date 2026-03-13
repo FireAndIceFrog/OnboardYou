@@ -170,7 +170,8 @@
       "mappingTo": "New Name",
       "piiColumns": "Sensitive Columns",
       "piiHint": "Choose which columns to mask and how",
-      "addColumn": "Add column"
+      "addColumn": "Add column",
+      "columns": "Columns"
     }
   }
 }

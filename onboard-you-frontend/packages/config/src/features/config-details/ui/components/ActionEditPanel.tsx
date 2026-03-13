@@ -214,10 +214,10 @@ export function ActionEditPanel() {
           />
         ) : fieldSchemas.length > 0 && configObj ? (
           fieldSchemas.map((schema) => (
-            <Box key={schema.key}>
-              <Text fontSize="sm" fontWeight="600" mb="1">
+            <Box as="section" key={schema.key}>
+              <Heading as="h3" fontSize="sm" fontWeight="600" mb="1">
                 {schema.label}
-              </Text>
+              </Heading>
               {schema.hint && (
                 <Text fontSize="xs" color="gray.500" mb="2">
                   {schema.hint}
@@ -233,10 +233,10 @@ export function ActionEditPanel() {
           ))
         ) : configObj ? (
           Object.entries(configObj).map(([key, value]) => (
-            <Box key={key}>
-              <Text fontSize="sm" fontWeight="600" mb="1">
+            <Box as="section" key={key}>
+              <Heading as="h3" fontSize="sm" fontWeight="600" mb="1">
                 {key}
-              </Text>
+              </Heading>
               <Text fontSize="sm" color="gray.600" whiteSpace="pre-wrap">
                 {typeof value === 'string' || typeof value === 'number'
                   ? String(value)
@@ -245,10 +245,10 @@ export function ActionEditPanel() {
             </Box>
           ))
         ) : (
-          <Box>
-            <Text fontSize="sm" fontWeight="600" mb="1">
+          <Box as="section">
+            <Heading as="h3" fontSize="sm" fontWeight="600" mb="1">
               {t('flow.edit.configuration', 'Configuration')}
-            </Text>
+            </Heading>
             <Text fontSize="sm" color="gray.600">
               {String(config ?? '—')}
             </Text>

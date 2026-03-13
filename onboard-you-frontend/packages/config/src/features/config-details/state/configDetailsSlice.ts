@@ -53,7 +53,7 @@ function parseValidationErrors(
 }
 import { actionCategory, businessLabel } from '@/shared/domain/types';
 import type { ConfigDetailsState, ConnectionForm } from '../domain/types';
-import { fetchConfig, createConfig as createConfigService, saveConfig as saveConfigService, deleteConfig as deleteConfigService, validateConfig as validateConfigService } from '../services/configDetailsService';
+import { fetchConfig, createConfig as createConfigService, saveConfig as saveConfigService, deleteConfig as deleteConfigService, validateConfig as validateConfigService, fetchSettings } from '../services/configDetailsService';
 import { convertToFlow } from '../services/pipelineLayoutService';
 import { ConnectorConfigFactory } from './connectorConfigs/connectorConfigFactory';
 
@@ -85,6 +85,7 @@ const initialState: ConfigDetailsState = {
   insertIndex: null,
   validationResult: null,
   validationErrors: {},
+  settingsSchema: null,
 };
 
 /* ── Async thunks ──────────────────────────────────────────── */
@@ -184,6 +185,24 @@ export const validateConfigThunk = createAsyncThunk<
     } catch (err) {
       const message = extractApiError(err, 'Failed to validate configuration');
       return rejectWithValue(message);
+    }
+  },
+);
+
+export const fetchSettingsSchemaThunk = createAsyncThunk<
+  Record<string, string> | null,
+  void,
+  { extra: ThunkExtra }
+>(
+  'configDetails/fetchSettingsSchema',
+  async (_, { rejectWithValue }) => {
+    try {
+      const settings = await fetchSettings();
+      const auth = settings.defaultAuth as Record<string, unknown>;
+      return (auth?.schema as Record<string, string>) ?? null;
+    } catch {
+      // Settings may not exist (404) — not a critical error
+      return null;
     }
   },
 );
@@ -464,6 +483,9 @@ const configDetailsSlice = createSlice({
           msg,
           state.config?.pipeline?.actions ?? [],
         );
+      })
+      .addCase(fetchSettingsSchemaThunk.fulfilled, (state, action) => {
+        state.settingsSchema = action.payload;
       });
   },
 });
@@ -500,6 +522,7 @@ export const selectConfigDetailsError = (state: RootState) => state.configDetail
 export const selectValidationResult = (state: RootState) => state.configDetails.validationResult;
 export const selectIsValidating = (state: RootState) => state.configDetails.isValidating;
 export const selectValidationErrors = (state: RootState) => state.configDetails.validationErrors;
+export const selectSettingsSchema = (state: RootState) => state.configDetails.settingsSchema;
 
 /**
  * Returns the columns available as input to a given action.

@@ -4,8 +4,9 @@ import {
   updateConfig as updateConfigApi,
   deleteConfig as deleteConfigApi,
   validateConfig as validateConfigApi,
+  getSettings as getSettingsApi,
 } from '@/generated/api';
-import type { PipelineConfig, ValidationResult, ConfigRequest } from '@/generated/api';
+import type { PipelineConfig, ValidationResult, ConfigRequest, OrgSettings } from '@/generated/api';
 
 export async function fetchConfig(
   customerCompanyId: string,
@@ -59,5 +60,10 @@ export async function validateConfig(
     body,
     throwOnError: true,
   });
+  return data;
+}
+
+export async function fetchSettings(): Promise<OrgSettings> {
+  const { data } = await getSettingsApi({ throwOnError: true });
   return data;
 }

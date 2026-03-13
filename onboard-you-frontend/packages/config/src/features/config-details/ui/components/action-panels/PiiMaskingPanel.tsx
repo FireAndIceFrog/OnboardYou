@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box, Flex, Text, chakra } from '@chakra-ui/react';
+import { Box, Flex, Heading, Text, chakra } from '@chakra-ui/react';
 import { selectStyles } from '../styles';
 import type { ActionEditorProps } from './registry';
 
@@ -81,10 +81,10 @@ export function PiiMaskingPanel({ config, onChange, availableColumns }: ActionEd
   }, [columns, onChange]);
 
   return (
-    <Box data-testid="pii-masking-panel">
-      <Text fontSize="sm" fontWeight="600" mb="1">
+    <Box as="section" data-testid="pii-masking-panel">
+      <Heading as="h3" fontSize="sm" fontWeight="600" mb="1">
         {t('flow.edit.piiColumns', 'Sensitive Columns')}
-      </Text>
+      </Heading>
       <Text fontSize="xs" color="gray.500" mb="3">
         {t('flow.edit.piiHint', 'Choose which columns to mask and how')}
       </Text>

@@ -20,6 +20,8 @@ export interface ConfigDetailsState {
   validationResult: ValidationResult | null;
   /** Per-action validation errors: actionId → error message */
   validationErrors: Record<string, string>;
+  /** Column schema from org settings (field name → type), shown for default auth */
+  settingsSchema: Record<string, string> | null;
 }
 
 /* ── Connection wizard types ─────────────────────────────── */

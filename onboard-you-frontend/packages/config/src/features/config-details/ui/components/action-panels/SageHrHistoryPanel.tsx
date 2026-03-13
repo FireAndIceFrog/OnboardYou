@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box, Flex, Text } from '@chakra-ui/react';
+import { Box, Flex, Heading, Text } from '@chakra-ui/react';
 import { ACTION_FIELD_SCHEMAS } from '../../../domain/actionCatalog';
 import { SAGE_HR_HISTORY_OPTIONS } from '../../../domain/types';
 import { FieldEditor } from '../FieldEditor';
@@ -18,7 +18,7 @@ export function SageHrHistoryPanel({ config, onChange, availableColumns }: Actio
   };
 
   return (
-    <Box data-testid="sage-hr-history-panel">
+    <Box as="section" data-testid="sage-hr-history-panel">
       {/* Render standard fields (subdomain, api_token) via generic FieldEditor */}
       {fieldSchemas.map((schema) => (
           <Box key={schema.key} mb="4">
@@ -40,10 +40,10 @@ export function SageHrHistoryPanel({ config, onChange, availableColumns }: Actio
         ))}
 
       {/* Custom history toggle chips */}
-      <Box>
-        <Text fontSize="sm" fontWeight="600" mb="1">
+      <Box as="section">
+        <Heading as="h3" fontSize="sm" fontWeight="600" mb="1">
           {t('configDetails.panels.historyOptions.title')}
-        </Text>
+        </Heading>
         <Text fontSize="xs" color="gray.500" mb="2">
           {t('configDetails.panels.historyOptions.hint')}
         </Text>

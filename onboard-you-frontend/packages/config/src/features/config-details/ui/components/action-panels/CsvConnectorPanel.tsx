@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
-import { Box, Flex, Text, Button, chakra } from '@chakra-ui/react';
+import { Box, Flex, Heading, Text, Button, chakra } from '@chakra-ui/react';
 import { validateCsvFile, uploadCsvAndDiscoverColumns } from '../../../services/csvUploadService';
 import type { ActionEditorProps } from './registry';
 
@@ -73,13 +73,13 @@ export function CsvConnectorPanel({ config, onChange }: ActionEditorProps) {
   const isUploading = status === 'uploading';
 
   return (
-    <Box data-testid="csv-connector-panel">
+    <Box as="section" data-testid="csv-connector-panel">
       {/* Current file */}
       {currentFilename && (
         <Box mb="4" p="3" bg="blue.50" borderRadius="md" border="1px solid" borderColor="blue.200">
-          <Text fontSize="xs" fontWeight="600" color="blue.700" mb="1">
+          <Heading as="h3" fontSize="xs" fontWeight="600" color="blue.700" mb="1">
             {t('configDetails.panels.csv.currentFile')}
-          </Text>
+          </Heading>
           <Text fontSize="sm" color="blue.800" fontFamily="mono">
             {currentFilename}
           </Text>
