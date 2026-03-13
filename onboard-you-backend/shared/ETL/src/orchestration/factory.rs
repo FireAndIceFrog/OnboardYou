@@ -26,6 +26,8 @@ pub struct ActionFactory;
 pub struct StepError {
     pub action_id: String,
     pub error: onboard_you_models::Error,
+    /// Warnings accumulated by earlier (successful) actions before this step failed.
+    pub warnings: Vec<onboard_you_models::PipelineWarning>,
 }
 
 impl std::fmt::Display for StepError {
@@ -141,9 +143,22 @@ impl ActionFactoryTrait for ActionFactory {
     ) -> std::result::Result<RosterContext, StepError> {
         for action in &actions {
             tracing::info!(action_id = action.id(), "PipelineRunner: executing action");
-            context = action.execute(context).map_err(|e| StepError {
-                action_id: action.id().to_string(),
-                error: e,
+
+            // Snapshot warnings before execute — if execute() fails the
+            // context is consumed and we'd lose accumulated warnings.
+            let collector = context.warning_collector.clone();
+            let warnings_snapshot = context.warnings.clone();
+
+            context = action.execute(context).map_err(|e| {
+                let mut warnings = warnings_snapshot;
+                if let Ok(mut guard) = collector.lock() {
+                    warnings.append(&mut *guard);
+                }
+                StepError {
+                    action_id: action.id().to_string(),
+                    error: e,
+                    warnings,
+                }
             })?;
         }
         Ok(context)
@@ -341,5 +356,86 @@ mod tests {
             .create(&config)
             .expect("Default should create an unconfigured dispatcher");
         assert_eq!(action.id(), "api_dispatcher");
+    }
+
+    // -----------------------------------------------------------------------
+    // StepError warning preservation tests
+    // -----------------------------------------------------------------------
+
+    /// An action that adds a warning, then succeeds.
+    struct WarnThenSucceed;
+    impl onboard_you_models::ColumnCalculator for WarnThenSucceed {
+        fn calculate_columns(&self, ctx: RosterContext) -> Result<RosterContext> {
+            Ok(ctx)
+        }
+    }
+    impl OnboardingAction for WarnThenSucceed {
+        fn id(&self) -> &str {
+            "warn_action"
+        }
+        fn execute(&self, mut ctx: RosterContext) -> Result<RosterContext> {
+            ctx.warn(self.id(), "test warning".into(), 1, None);
+            Ok(ctx)
+        }
+    }
+
+    /// An action that always fails.
+    struct AlwaysFail;
+    impl onboard_you_models::ColumnCalculator for AlwaysFail {
+        fn calculate_columns(&self, ctx: RosterContext) -> Result<RosterContext> {
+            Ok(ctx)
+        }
+    }
+    impl OnboardingAction for AlwaysFail {
+        fn id(&self) -> &str {
+            "failing_action"
+        }
+        fn execute(&self, _ctx: RosterContext) -> Result<RosterContext> {
+            Err(onboard_you_models::Error::LogicError("boom".into()))
+        }
+    }
+
+    #[test]
+    fn test_step_error_preserves_warnings_from_earlier_steps() {
+        let ctx = RosterContext::new(LazyFrame::default());
+        let actions: Vec<Arc<dyn OnboardingAction>> = vec![
+            Arc::new(WarnThenSucceed),
+            Arc::new(AlwaysFail),
+        ];
+        let err = ActionFactory::new()
+            .run(actions, ctx)
+            .expect_err("should fail");
+
+        assert_eq!(err.action_id, "failing_action");
+        assert_eq!(err.warnings.len(), 1);
+        assert_eq!(err.warnings[0].action_id, "warn_action");
+        assert_eq!(err.warnings[0].message, "test warning");
+    }
+
+    #[test]
+    fn test_step_error_empty_warnings_when_first_action_fails() {
+        let ctx = RosterContext::new(LazyFrame::default());
+        let actions: Vec<Arc<dyn OnboardingAction>> = vec![Arc::new(AlwaysFail)];
+        let err = ActionFactory::new()
+            .run(actions, ctx)
+            .expect_err("should fail");
+
+        assert_eq!(err.action_id, "failing_action");
+        assert!(err.warnings.is_empty());
+    }
+
+    #[test]
+    fn test_successful_pipeline_preserves_warnings() {
+        let ctx = RosterContext::new(LazyFrame::default());
+        let actions: Vec<Arc<dyn OnboardingAction>> = vec![
+            Arc::new(WarnThenSucceed),
+            Arc::new(NoopAction),
+        ];
+        let result = ActionFactory::new()
+            .run(actions, ctx)
+            .expect("should succeed");
+
+        assert_eq!(result.warnings.len(), 1);
+        assert_eq!(result.warnings[0].message, "test warning");
     }
 }

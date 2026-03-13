@@ -84,6 +84,12 @@ impl OnboardingAction for PIIMasking {
                     column = %col_mask.name,
                     "PIIMasking: column not found in data — skipping"
                 );
+                context.warn(
+                    self.id(),
+                    format!("Column '{}' not found in data — masking skipped", col_mask.name),
+                    0,
+                    None,
+                );
                 continue;
             }
 
@@ -383,5 +389,60 @@ mod tests {
             .into_iter()
             .collect();
         assert_eq!(bonuses[0], Some(0));
+    }
+
+    #[test]
+    fn test_missing_column_emits_warning() {
+        let config = PIIMaskingConfig {
+            columns: vec![ColumnMask {
+                name: "nonexistent".into(),
+                strategy: MaskStrategy::Zero,
+            }],
+        };
+        let ctx = RosterContext::new(test_df().lazy());
+        let action = PIIMasking::new(config);
+        let result = action.execute(ctx).expect("should succeed with warning");
+
+        assert_eq!(result.warnings.len(), 1);
+        assert_eq!(result.warnings[0].action_id, "pii_masking");
+        assert!(result.warnings[0].message.contains("nonexistent"));
+        assert!(result.warnings[0].message.contains("not found"));
+    }
+
+    #[test]
+    fn test_existing_columns_no_warning() {
+        let config = PIIMaskingConfig {
+            columns: vec![ColumnMask {
+                name: "salary".into(),
+                strategy: MaskStrategy::Zero,
+            }],
+        };
+        let ctx = RosterContext::new(test_df().lazy());
+        let action = PIIMasking::new(config);
+        let result = action.execute(ctx).expect("execute");
+
+        assert!(result.warnings.is_empty());
+    }
+
+    #[test]
+    fn test_mixed_columns_warns_only_for_missing() {
+        let config = PIIMaskingConfig {
+            columns: vec![
+                ColumnMask {
+                    name: "salary".into(),
+                    strategy: MaskStrategy::Zero,
+                },
+                ColumnMask {
+                    name: "ghost_col".into(),
+                    strategy: MaskStrategy::Zero,
+                },
+            ],
+        };
+        let ctx = RosterContext::new(test_df().lazy());
+        let action = PIIMasking::new(config);
+        let result = action.execute(ctx).expect("should succeed");
+
+        assert_eq!(result.warnings.len(), 1);
+        assert!(result.warnings[0].message.contains("ghost_col"));
     }
 }

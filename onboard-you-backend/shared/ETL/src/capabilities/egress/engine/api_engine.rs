@@ -74,6 +74,14 @@ impl ApiEngine {
         self
     }
 
+    /// Construct from an arbitrary repository (for testing / custom integrations).
+    pub fn with_repo(repo: Box<dyn EgressRepository>) -> Self {
+        Self {
+            repo,
+            retry_policy: RetryPolicy::default(),
+        }
+    }
+
     /// Dispatch data to the configured destination.
     ///
     /// **This is the sync boundary.** Internally spawns async work via tokio.

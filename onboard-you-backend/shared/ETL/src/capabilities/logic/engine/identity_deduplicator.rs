@@ -108,6 +108,15 @@ impl OnboardingAction for IdentityDeduplicator {
                 configured = ?self.config.columns,
                 "IdentityDeduplicator: none of the configured columns found — skipping"
             );
+            context.warn(
+                self.id(),
+                format!(
+                    "None of the configured dedup columns ({}) were found in the data — deduplication skipped",
+                    self.config.columns.join(", ")
+                ),
+                0,
+                None,
+            );
             context.data = df.lazy();
             return Ok(context);
         }
@@ -380,5 +389,39 @@ mod tests {
         assert_eq!(canonical[0], Some("A1"));
         assert_eq!(canonical[1], Some("A1")); // dup → points to A1
         assert_eq!(canonical[2], Some("A3"));
+    }
+
+    #[test]
+    fn test_no_configured_columns_emits_warning() {
+        let df = df! {
+            "employee_id" => &["001", "002"],
+            "first_name"  => &["John", "Jane"],
+        }
+        .unwrap();
+        let config = DedupConfig {
+            columns: vec!["nonexistent_col".into()],
+            ..Default::default()
+        };
+        let ctx = RosterContext::new(df.lazy());
+        let action = IdentityDeduplicator::new(config);
+        let result = action.execute(ctx).expect("should succeed with warning");
+
+        assert_eq!(result.warnings.len(), 1);
+        assert_eq!(result.warnings[0].action_id, "identity_deduplicator");
+        assert!(result.warnings[0].message.contains("deduplication skipped"));
+        assert!(result.warnings[0].message.contains("nonexistent_col"));
+    }
+
+    #[test]
+    fn test_matching_columns_no_warning() {
+        let config = DedupConfig {
+            columns: vec!["email".into()],
+            ..Default::default()
+        };
+        let ctx = RosterContext::new(test_df_with_email_dupes().lazy());
+        let action = IdentityDeduplicator::new(config);
+        let result = action.execute(ctx).expect("execute");
+
+        assert!(result.warnings.is_empty());
     }
 }

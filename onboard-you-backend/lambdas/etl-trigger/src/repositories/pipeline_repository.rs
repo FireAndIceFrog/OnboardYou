@@ -99,6 +99,8 @@ impl IPipelineRepo for PipelineRepository {
                     "Pipeline failed"
                 );
 
+                let warnings = step_err.warnings.clone();
+
                 // Persist failure
                 let _ = deps
                     .run_log_repo
@@ -107,7 +109,7 @@ impl IPipelineRepo for PipelineRepository {
                         &step_err.error.to_string(),
                         Some(&step_err.action_id),
                         None,
-                        &[],
+                        &warnings,
                     )
                     .await;
 
@@ -116,7 +118,7 @@ impl IPipelineRepo for PipelineRepository {
                     organization_id,
                     customer_company_id,
                     step_err,
-                    vec![],
+                    warnings,
                 ))
             }
         }

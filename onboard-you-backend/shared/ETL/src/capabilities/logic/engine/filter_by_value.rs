@@ -91,6 +91,8 @@ impl OnboardingAction for FilterByValue {
             .collect()
             .map_err(|e| Error::LogicError(format!("Failed to collect LazyFrame: {e}")))?;
 
+        let total_rows = df.height();
+
         let series = df.column(&self.config.column).map_err(|e| {
             Error::LogicError(format!(
                 "filter_by_value: column '{}' not found: {e}",
@@ -118,6 +120,20 @@ impl OnboardingAction for FilterByValue {
                 self.config.column
             ))
         })?;
+
+        let kept = filtered.height();
+        let dropped = total_rows - kept;
+        if dropped > 0 {
+            context.warn(
+                self.id(),
+                format!(
+                    "{dropped} of {total_rows} row(s) did not match filter on column '{}'",
+                    self.config.column
+                ),
+                dropped,
+                None,
+            );
+        }
 
         context.data = filtered.lazy();
 
@@ -417,5 +433,66 @@ mod tests {
         let ctx = RosterContext::new(df.lazy());
         let result = action.execute(ctx);
         assert!(result.is_err());
+    }
+
+    // -----------------------------------------------------------------------
+    // Warning tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_filter_emits_warning_for_dropped_rows() {
+        let cfg: FilterByValueConfig = serde_json::from_value(serde_json::json!({
+            "column": "department",
+            "pattern": "^Engineering$"
+        }))
+        .unwrap();
+        let action = FilterByValue::from_action_config(&cfg).unwrap();
+        let ctx = RosterContext::new(sample_df().lazy());
+        let result = action.execute(ctx).unwrap();
+        let df = result.data.collect().unwrap();
+
+        // 2 of 4 rows matched Engineering, so 2 were dropped
+        assert_eq!(df.height(), 2);
+        assert_eq!(result.warnings.len(), 1);
+        assert_eq!(result.warnings[0].action_id, "filter_by_value");
+        assert_eq!(result.warnings[0].count, 2);
+        assert!(result.warnings[0].message.contains("2 of 4"));
+        assert!(result.warnings[0].message.contains("department"));
+    }
+
+    #[test]
+    fn test_filter_all_match_no_warning() {
+        let df = df! {
+            "val" => &["abc", "abc"],
+        }
+        .unwrap();
+        let cfg: FilterByValueConfig = serde_json::from_value(serde_json::json!({
+            "column": "val",
+            "pattern": "abc"
+        }))
+        .unwrap();
+        let action = FilterByValue::from_action_config(&cfg).unwrap();
+        let ctx = RosterContext::new(df.lazy());
+        let result = action.execute(ctx).unwrap();
+
+        assert!(result.warnings.is_empty());
+    }
+
+    #[test]
+    fn test_filter_no_match_emits_warning_for_all_rows() {
+        let cfg: FilterByValueConfig = serde_json::from_value(serde_json::json!({
+            "column": "department",
+            "pattern": "^Finance$"
+        }))
+        .unwrap();
+        let action = FilterByValue::from_action_config(&cfg).unwrap();
+        let ctx = RosterContext::new(sample_df().lazy());
+        let result = action.execute(ctx).unwrap();
+        let df = result.data.collect().unwrap();
+
+        assert_eq!(df.height(), 0);
+        assert_eq!(result.warnings.len(), 1);
+        assert_eq!(result.warnings[0].count, 4);
+        assert!(result.warnings[0].message.contains("4 of 4"));
     }
 }

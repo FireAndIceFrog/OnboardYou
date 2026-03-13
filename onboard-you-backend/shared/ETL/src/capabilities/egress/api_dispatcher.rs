@@ -64,7 +64,7 @@ impl OnboardingAction for ApiDispatcher {
         "api_dispatcher"
     }
 
-    fn execute(&self, context: RosterContext) -> Result<RosterContext> {
+    fn execute(&self, mut context: RosterContext) -> Result<RosterContext> {
         let engine = self.engine.as_ref().ok_or_else(|| {
             Error::ConfigurationError(
                 "ApiDispatcher has no engine configured. \
@@ -90,20 +90,46 @@ impl OnboardingAction for ApiDispatcher {
         );
 
         // 3. Dispatch through the engine (sync boundary → async internals)
-        let response = engine.dispatch(&payload)?;
-
-        if response.status_code >= 400 {
-            warn!(
-                status_code = response.status_code,
-                body = %response.body,
-                "Destination returned error status"
-            );
-        } else {
-            info!(
-                status_code = response.status_code,
-                records_sent = response.records_sent,
-                "Dispatch successful"
-            );
+        match engine.dispatch(&payload) {
+            Ok(response) => {
+                if response.status_code >= 400 {
+                    warn!(
+                        status_code = response.status_code,
+                        body = %response.body,
+                        "Destination returned error status"
+                    );
+                    let body_preview = if response.body.len() > 200 {
+                        format!("{}…", &response.body[..200])
+                    } else {
+                        response.body.clone()
+                    };
+                    context.warn(
+                        self.id(),
+                        format!(
+                            "Destination API returned HTTP {} for {} record(s)",
+                            response.status_code,
+                            df.height()
+                        ),
+                        df.height(),
+                        Some(body_preview),
+                    );
+                } else {
+                    info!(
+                        status_code = response.status_code,
+                        records_sent = response.records_sent,
+                        "Dispatch successful"
+                    );
+                }
+            }
+            Err(e) => {
+                warn!(error = %e, "ApiEngine dispatch failed");
+                context.warn(
+                    self.id(),
+                    format!("Dispatch failed: {e}"),
+                    df.height(),
+                    None,
+                );
+            }
         }
 
         Ok(context)
@@ -287,5 +313,135 @@ mod tests {
 
         let data = parsed.get("data").unwrap().as_array().unwrap();
         assert!(data.is_empty());
+    }
+
+    // -----------------------------------------------------------------------
+    // Warning tests
+    // -----------------------------------------------------------------------
+
+    use crate::capabilities::egress::engine::api_engine::ApiEngine;
+    use crate::capabilities::egress::traits::EgressRepository;
+    use onboard_you_models::DispatchResponse;
+
+    /// Fake repository that returns a configurable response.
+    struct FakeRepo {
+        status_code: u16,
+        body: String,
+    }
+
+    impl EgressRepository for FakeRepo {
+        fn retrieve_token(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = onboard_you_models::Result<Option<String>>> + Send + '_>> {
+            Box::pin(async { Ok(None) })
+        }
+
+        fn send_data(
+            &self,
+            payload: &str,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = onboard_you_models::Result<DispatchResponse>> + Send + '_>> {
+            let status_code = self.status_code;
+            let body = self.body.clone();
+            let records = serde_json::from_str::<serde_json::Value>(payload)
+                .ok()
+                .and_then(|v| v.get("data")?.as_array().map(|a| a.len()))
+                .unwrap_or(1);
+            Box::pin(async move {
+                Ok(DispatchResponse {
+                    status_code,
+                    body,
+                    records_sent: records,
+                })
+            })
+        }
+    }
+
+    /// Fake repository that always returns an error.
+    struct FailingRepo;
+
+    impl EgressRepository for FailingRepo {
+        fn retrieve_token(
+            &self,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = onboard_you_models::Result<Option<String>>> + Send + '_>> {
+            Box::pin(async { Ok(None) })
+        }
+
+        fn send_data(
+            &self,
+            _payload: &str,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = onboard_you_models::Result<DispatchResponse>> + Send + '_>> {
+            Box::pin(async {
+                Err(onboard_you_models::Error::EgressError(
+                    "connection refused".into(),
+                ))
+            })
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn test_dispatch_4xx_produces_warning() {
+        let repo = FakeRepo {
+            status_code: 404,
+            body: "Not Found".into(),
+        };
+        let engine = ApiEngine::with_repo(Box::new(repo));
+        let dispatcher = ApiDispatcher::with_engine(engine);
+        let ctx = RosterContext::new(
+            polars::prelude::df!("id" => ["E001", "E002"]).unwrap().lazy(),
+        );
+
+        let result = dispatcher.execute(ctx).expect("should not return Err");
+        assert_eq!(result.warnings.len(), 1);
+        assert_eq!(result.warnings[0].action_id, "api_dispatcher");
+        assert!(result.warnings[0].message.contains("HTTP 404"));
+        assert_eq!(result.warnings[0].count, 2);
+        assert_eq!(result.warnings[0].detail.as_deref(), Some("Not Found"));
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn test_dispatch_5xx_produces_warning() {
+        let repo = FakeRepo {
+            status_code: 500,
+            body: "Internal Server Error".into(),
+        };
+        let engine = ApiEngine::with_repo(Box::new(repo));
+        let dispatcher = ApiDispatcher::with_engine(engine);
+        let ctx = RosterContext::new(
+            polars::prelude::df!("id" => ["E001"]).unwrap().lazy(),
+        );
+
+        let result = dispatcher.execute(ctx).expect("should not return Err");
+        assert_eq!(result.warnings.len(), 1);
+        assert!(result.warnings[0].message.contains("HTTP 500"));
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn test_dispatch_2xx_no_warning() {
+        let repo = FakeRepo {
+            status_code: 200,
+            body: "OK".into(),
+        };
+        let engine = ApiEngine::with_repo(Box::new(repo));
+        let dispatcher = ApiDispatcher::with_engine(engine);
+        let ctx = RosterContext::new(
+            polars::prelude::df!("id" => ["E001"]).unwrap().lazy(),
+        );
+
+        let result = dispatcher.execute(ctx).expect("should not return Err");
+        assert!(result.warnings.is_empty());
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn test_dispatch_network_error_produces_warning() {
+        let engine = ApiEngine::with_repo(Box::new(FailingRepo));
+        let dispatcher = ApiDispatcher::with_engine(engine);
+        let ctx = RosterContext::new(
+            polars::prelude::df!("id" => ["E001"]).unwrap().lazy(),
+        );
+
+        let result = dispatcher.execute(ctx).expect("should not return Err");
+        assert_eq!(result.warnings.len(), 1);
+        assert!(result.warnings[0].message.contains("Dispatch failed"));
+        assert!(result.warnings[0].message.contains("connection refused"));
     }
 }
