@@ -8,6 +8,8 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
+use crate::models::Manifest;
+
 /// Result of validating a single step in the pipeline.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct StepValidation {
@@ -119,4 +121,8 @@ pub struct PipelineRun {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[json]
     pub validation_result: Option<ValidationResult>,
+    /// Snapshot of the manifest at the time of the run.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[json]
+    pub manifest_snapshot: Option<Manifest>,
 }

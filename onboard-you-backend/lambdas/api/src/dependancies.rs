@@ -7,6 +7,7 @@ use crate::repositories::run_history_repository::{PgRunHistoryRepo, RunHistoryRe
 use crate::repositories::s3_repository::{S3Repo, S3Repository};
 use crate::repositories::schedule_repository::{EventBridgeScheduleRepo, ScheduleRepo};
 use crate::repositories::settings_repository::{PgSettingsRepo, SettingsRepo};
+use crate::repositories::trigger_repository::{SqsTriggerRepo, TriggerRepo};
 
 #[derive(Debug, Clone)]
 pub struct Env {
@@ -15,6 +16,7 @@ pub struct Env {
     pub scheduler_role_arn: String,
     pub csv_upload_bucket: String,
     pub cognito_client_id: String,
+    pub sqs_queue_url: String,
 }
 
 impl Default for Env {
@@ -25,6 +27,7 @@ impl Default for Env {
             scheduler_role_arn: String::new(),
             csv_upload_bucket: String::new(),
             cognito_client_id: String::new(),
+            sqs_queue_url: String::new(),
         }
     }
 }
@@ -42,6 +45,7 @@ pub struct Dependancies {
     pub auth_repo: Arc<dyn AuthRepo>,
     pub etl_repo: Arc<dyn EtlRepo>,
     pub run_history_repo: Arc<dyn RunHistoryRepo>,
+    pub trigger_repo: Arc<dyn TriggerRepo>,
 }
 
 impl Dependancies {
@@ -56,6 +60,8 @@ impl Dependancies {
                 .expect("CSV_UPLOAD_BUCKET must be set"),
             cognito_client_id: std::env::var("COGNITO_CLIENT_ID")
                 .expect("COGNITO_CLIENT_ID must be set"),
+            sqs_queue_url: std::env::var("SQS_QUEUE_URL")
+                .expect("SQS_QUEUE_URL must be set"),
         }
     }
 
@@ -92,6 +98,10 @@ impl Dependancies {
                 client_id: env.cognito_client_id.clone(),
             }),
             etl_repo: Arc::new(EtlRepository {}),
+            trigger_repo: Arc::new(SqsTriggerRepo {
+                sqs: aws_sdk_sqs::Client::new(&aws_config),
+                queue_url: env.sqs_queue_url.clone(),
+            }),
         }
     }
 }

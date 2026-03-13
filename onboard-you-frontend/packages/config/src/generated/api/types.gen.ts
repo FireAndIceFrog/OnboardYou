@@ -469,6 +469,7 @@ export type ListResponsePipelineRun = {
          * UUID identifying this specific run.
          */
         id: string;
+        manifestSnapshot?: null | Manifest;
         /**
          * Organization that owns the pipeline.
          */
@@ -806,6 +807,7 @@ export type PipelineRun = {
      * UUID identifying this specific run.
      */
     id: string;
+    manifestSnapshot?: null | Manifest;
     /**
      * Organization that owns the pipeline.
      */
@@ -1093,6 +1095,16 @@ export type StepValidation = {
      * Columns present *after* this step completes.
      */
     columns_after: Array<string>;
+};
+
+/**
+ * Response returned when a run is triggered.
+ */
+export type TriggerRunResponse = {
+    /**
+     * Confirmation message
+     */
+    message: string;
 };
 
 /**
@@ -1510,6 +1522,34 @@ export type ListRunsResponses = {
 };
 
 export type ListRunsResponse = ListRunsResponses[keyof ListRunsResponses];
+
+export type TriggerRunData = {
+    body?: never;
+    path: {
+        /**
+         * Customer company ID
+         */
+        customer_company_id: string;
+    };
+    query?: never;
+    url: '/config/{customer_company_id}/runs/trigger';
+};
+
+export type TriggerRunErrors = {
+    /**
+     * Unauthorized
+     */
+    401: unknown;
+};
+
+export type TriggerRunResponses = {
+    /**
+     * Run triggered
+     */
+    202: TriggerRunResponse;
+};
+
+export type TriggerRunResponse2 = TriggerRunResponses[keyof TriggerRunResponses];
 
 export type GetRunData = {
     body?: never;

@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useEffect, useRef } from 'react';
+import { useMemo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -43,7 +43,9 @@ import {
   selectConfigDetailsError,
   fetchSettingsSchemaThunk,
 } from '../../state/configDetailsSlice';
+import { triggerRun as triggerRunService } from '../../services/configDetailsService';
 import { ActionEditPanel, AddButtonEdge, AddStepPanel, PipelineNode } from '../components';
+import { RunHistoryView } from '@/features/run-history/ui/components';
 
 const nodeTypes = {
   ingestion: PipelineNode,
@@ -83,6 +85,10 @@ function ConfigDetailsContent({
   const hasValidationErrors = useAppSelector(
     (state: RootState) => Object.keys(state.configDetails.validationErrors).length > 0,
   );
+
+  // ── Current / History tab state ───────────────────────────
+  const [activeTab, setActiveTab] = useState<'current' | 'history'>('current');
+  const [isTriggering, setIsTriggering] = useState(false);
 
   // ── Fetch existing config or initialise a blank one ───────
   useEffect(() => {
@@ -140,6 +146,21 @@ function ConfigDetailsContent({
   const handleToggleAddStep = useCallback(() => {
     dispatch(toggleAddStepPanel());
   }, [dispatch]);
+
+  const handleTriggerRun = useCallback(async () => {
+    setIsTriggering(true);
+    try {
+      await triggerRunService(customerCompanyId);
+      showNotification(t('configDetails.triggerRunSuccess', 'Pipeline run triggered'), 'success');
+    } catch (err) {
+      const message = err && typeof err === 'object' && 'error' in err
+        ? (err as { error: string }).error
+        : t('configDetails.triggerRunFailed', 'Failed to trigger run');
+      showNotification(message, 'error');
+    } finally {
+      setIsTriggering(false);
+    }
+  }, [customerCompanyId, showNotification, t]);
 
   const handleCloseAddStep = useCallback(() => {
     dispatch(setAddStepPanelOpen(false));
@@ -239,56 +260,93 @@ function ConfigDetailsContent({
   return (
     <Flex direction="column" h="100%" bg="gray.50">
       {/* Header */}
-      <Flex as="header" align="center" justify="space-between" px="6" py="3" bg="white" borderBottom="1px solid" borderColor="gray.200">
-        <Flex align="center" gap="3">
+      <Flex as="header" align="center" px="6" py="3" bg="white" borderBottom="1px solid" borderColor="gray.200">
+        {/* Left: navigation + title */}
+        <Flex align="center" gap="3" flex="1">
           <Button variant="ghost" size="sm" onClick={handleBack}>
             {t('configDetails.back')}
           </Button>
           <Heading size="md" fontWeight="600">{config.name}</Heading>
           <Badge colorPalette="blue">{humanFrequency(config.cron)}</Badge>
         </Flex>
-        <Flex align="center" gap="2">
-          <Button variant="ghost" size="sm" onClick={handleToggleAddStep}>
-            ➕ {t('configDetails.addStep')}
-          </Button>
-          <Button colorPalette="blue" size="sm" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? t('configDetails.saving') : t('configDetails.save')}
-          </Button>
-          {!isNewConfig && (
-            <Button colorPalette="red" variant="outline" size="sm" onClick={handleDelete} disabled={isDeleting}>
-              {isDeleting ? t('configDetails.deleting') : t('configDetails.delete')}
+
+        {/* Center: tab toggle (fixed position) */}
+        {!isNewConfig && (
+          <Flex bg="gray.100" borderRadius="md" p="1" gap="1" data-testid="tab-toggle">
+            <Button
+              size="xs"
+              variant={activeTab === 'current' ? 'solid' : 'ghost'}
+              colorPalette={activeTab === 'current' ? 'blue' : undefined}
+              onClick={() => setActiveTab('current')}
+              data-testid="tab-current"
+            >
+              {t('configDetails.tabCurrent', 'Current')}
             </Button>
-          )}
+            <Button
+              size="xs"
+              variant={activeTab === 'history' ? 'solid' : 'ghost'}
+              colorPalette={activeTab === 'history' ? 'blue' : undefined}
+              onClick={() => setActiveTab('history')}
+              data-testid="tab-history"
+            >
+              {t('configDetails.tabHistory', 'History')}
+            </Button>
+          </Flex>
+        )}
+
+        {/* Right: action buttons — use visibility to reserve space on both tabs */}
+        <Flex align="center" gap="2" flex="1" justify="flex-end" visibility={activeTab === 'current' ? 'visible' : 'hidden'}>
+            <>
+              <Button variant="ghost" size="sm" onClick={handleToggleAddStep}>
+                ➕ {t('configDetails.addStep')}
+              </Button>
+              {!isNewConfig && (
+                <Button colorPalette="green" variant="outline" size="sm" onClick={handleTriggerRun} disabled={isTriggering} data-testid="trigger-run">
+                  {isTriggering ? t('configDetails.triggering', 'Triggering…') : t('configDetails.runNow', '▶ Run Now')}
+                </Button>
+              )}
+              <Button colorPalette="blue" size="sm" onClick={handleSave} disabled={isSaving}>
+                {isSaving ? t('configDetails.saving') : t('configDetails.save')}
+              </Button>
+              {!isNewConfig && (
+                <Button colorPalette="red" variant="outline" size="sm" onClick={handleDelete} disabled={isDeleting}>
+                  {isDeleting ? t('configDetails.deleting') : t('configDetails.delete')}
+                </Button>
+              )}
+            </>
         </Flex>
       </Flex>
 
       {/* Body */}
       <Flex flex="1" overflow="hidden">
-        {/* Canvas */}
-        <Box flex="1" position="relative" role="application" aria-label="Pipeline flow editor">
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            nodeTypes={memoizedNodeTypes}
-            edgeTypes={memoizedEdgeTypes}
-            defaultEdgeOptions={defaultEdgeOptions}
-            onNodesChange={handleNodesChange}
-            onEdgesChange={handleEdgesChange}
-            onNodeClick={handleNodeClick}
-            onPaneClick={handlePaneClick}
-            fitView
-            fitViewOptions={{ padding: 0.2 }}
-            proOptions={{ hideAttribution: true }}
-          >
-            <Controls />
-            <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
-          </ReactFlow>
+        {activeTab === 'current' ? (
+          /* ── Current: editable pipeline flow ── */
+          <Box flex="1" position="relative" role="application" aria-label="Pipeline flow editor">
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              nodeTypes={memoizedNodeTypes}
+              edgeTypes={memoizedEdgeTypes}
+              defaultEdgeOptions={defaultEdgeOptions}
+              onNodesChange={handleNodesChange}
+              onEdgesChange={handleEdgesChange}
+              onNodeClick={handleNodeClick}
+              onPaneClick={handlePaneClick}
+              fitView
+              fitViewOptions={{ padding: 0.2 }}
+              proOptions={{ hideAttribution: true }}
+            >
+              <Controls />
+              <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
+            </ReactFlow>
 
-          {selectedNode && <ActionEditPanel />}
-          {addStepOpen && <AddStepPanel onClose={handleCloseAddStep} />}
-        </Box>
-
-
+            {selectedNode && <ActionEditPanel />}
+            {addStepOpen && <AddStepPanel onClose={handleCloseAddStep} />}
+          </Box>
+        ) : (
+          /* ── History: run list + detail view ── */
+          <RunHistoryView customerCompanyId={customerCompanyId} />
+        )}
       </Flex>
     </Flex>
   );

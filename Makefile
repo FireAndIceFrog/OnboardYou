@@ -148,7 +148,9 @@ deploy: plan apply build-mcp smoke-test openapi sync-env-mcp upload-frontend
 ## OpenAPI spec — build the API binary and dump the spec to JSON
 ##──────────────────────────────────────────────────────────────
 
-openapi: build-config-api
+openapi:
+	@echo "▸ Building config-api (debug)…"
+	cargo build --bin config-api
 	@echo "▸ Generating OpenAPI spec…"
 	./target/debug/config-api --openapi > openapi.json
 	@echo "✓ Wrote openapi.json"

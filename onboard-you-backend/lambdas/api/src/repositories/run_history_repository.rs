@@ -69,7 +69,7 @@ impl RunHistoryRepo for PgRunHistoryRepo {
                       started_at::text, finished_at::text,
                       rows_processed, current_action,
                       error_message, error_action_id, error_row,
-                      warnings, validation_result
+                      warnings, validation_result, manifest_snapshot
                FROM pipeline_runs
                WHERE organization_id = $1 AND customer_company_id = $2
                ORDER BY started_at DESC
@@ -97,7 +97,7 @@ impl RunHistoryRepo for PgRunHistoryRepo {
                       started_at::text, finished_at::text,
                       rows_processed, current_action,
                       error_message, error_action_id, error_row,
-                      warnings, validation_result
+                      warnings, validation_result, manifest_snapshot
                FROM pipeline_runs
                WHERE organization_id = $1 AND id = $2"#,
         )

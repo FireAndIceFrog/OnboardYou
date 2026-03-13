@@ -18,13 +18,13 @@ use controllers::login;
 use controllers::{
     create_config, delete_config, get_config, list_configs, update_config, validate_config,
 };
-use controllers::{get_run, list_runs};
+use controllers::{get_run, list_runs, trigger_run};
 use controllers::{csv_columns, csv_presigned_upload};
 use controllers::{get_settings, upsert_settings};
 use dependancies::Dependancies;
 use models::{
     ConfigRequest, CsvColumnsResponse, ErrorResponse, LoginRequest, LoginResponse,
-    PresignedUploadResponse, SettingsRequest, StepValidation, ValidationResult,
+    PresignedUploadResponse, SettingsRequest, StepValidation, TriggerRunResponse, ValidationResult,
 };
 use onboard_you_models::{
     ActionConfig, ActionConfigPayload, ActionType, ApiDispatcherConfig, BearerPlacement,
@@ -58,6 +58,7 @@ use utoipa_swagger_ui::SwaggerUi;
         controllers::csv_upload_controller::csv_columns,
         controllers::runs_controller::list_runs,
         controllers::runs_controller::get_run,
+        controllers::runs_controller::trigger_run,
         controllers::settings_controller::get_settings,
         controllers::settings_controller::upsert_settings,
     ),
@@ -85,6 +86,7 @@ use utoipa_swagger_ui::SwaggerUi;
         CsvColumnsResponse,
         PipelineRun,
         PipelineWarning,
+        TriggerRunResponse,
         SageHrConfig,
         SageHrApiResponse,
         SageHrEmployee,
@@ -200,6 +202,10 @@ fn router(state: Dependancies) -> Router {
         .route(
             "/config/{customer_company_id}/runs",
             get(list_runs),
+        )
+        .route(
+            "/config/{customer_company_id}/runs/trigger",
+            post(trigger_run),
         )
         .route(
             "/config/{customer_company_id}/runs/{run_id}",

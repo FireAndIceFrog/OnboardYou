@@ -5,6 +5,7 @@ mod config_request;
 mod config_validation;
 mod csv_upload;
 mod list_response;
+mod runs;
 mod settings_request;
 
 pub use api_error::{ApiError, ErrorResponse};
@@ -14,4 +15,5 @@ pub use config_request::ConfigRequest;
 pub use config_validation::{StepValidation, ValidationResult};
 pub use csv_upload::{CsvColumnsResponse, CsvFileQuery, PresignedUploadResponse};
 pub use list_response::{ListResponse};
+pub use runs::{ListRunsQuery, TriggerRunResponse};
 pub use settings_request::SettingsRequest;

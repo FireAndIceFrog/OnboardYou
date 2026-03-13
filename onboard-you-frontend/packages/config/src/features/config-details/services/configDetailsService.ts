@@ -5,6 +5,7 @@ import {
   deleteConfig as deleteConfigApi,
   validateConfig as validateConfigApi,
   getSettings as getSettingsApi,
+  triggerRun as triggerRunApi,
 } from '@/generated/api';
 import type { PipelineConfig, ValidationResult, ConfigRequest, OrgSettings } from '@/generated/api';
 
@@ -66,4 +67,13 @@ export async function validateConfig(
 export async function fetchSettings(): Promise<OrgSettings> {
   const { data } = await getSettingsApi({ throwOnError: true });
   return data;
+}
+
+export async function triggerRun(
+  customerCompanyId: string,
+): Promise<void> {
+  await triggerRunApi({
+    path: { customer_company_id: customerCompanyId },
+    throwOnError: true,
+  });
 }

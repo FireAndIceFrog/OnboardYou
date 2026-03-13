@@ -47,24 +47,6 @@ pub async fn run(
 
     let run_id = new_run_id();
 
-    // Create the run record (status = "running")
-    let run_record = PipelineRun {
-        id: run_id.clone(),
-        organization_id: organization_id.to_string(),
-        customer_company_id: customer_company_id.to_string(),
-        status: "running".to_string(),
-        started_at: String::new(), // DB defaults to NOW()
-        finished_at: None,
-        rows_processed: None,
-        current_action: None,
-        error_message: None,
-        error_action_id: None,
-        error_row: None,
-        warnings: vec![],
-        validation_result: None,
-    };
-    let _ = deps.run_log_repo.create_run(&run_record).await;
-
     // 1. Fetch config via injected repository
     let config = deps
         .config_repo
@@ -84,6 +66,25 @@ pub async fn run(
     manifest =
         deps.etl_repo
             .resolve_csv_s3_keys(&mut manifest, organization_id, customer_company_id)?;
+
+    // Create the run record (status = "running") with resolved manifest snapshot
+    let run_record = PipelineRun {
+        id: run_id.clone(),
+        organization_id: organization_id.to_string(),
+        customer_company_id: customer_company_id.to_string(),
+        status: "running".to_string(),
+        started_at: String::new(), // DB defaults to NOW()
+        finished_at: None,
+        rows_processed: None,
+        current_action: None,
+        error_message: None,
+        error_action_id: None,
+        error_row: None,
+        warnings: vec![],
+        validation_result: None,
+        manifest_snapshot: Some(manifest.clone()),
+    };
+    let _ = deps.run_log_repo.create_run(&run_record).await;
 
     // 4. Pre-flight validation: dry-run column propagation
     let action_factory = deps.action_factory.clone();

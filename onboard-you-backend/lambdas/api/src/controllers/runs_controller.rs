@@ -4,17 +4,8 @@ use axum::extract::{Path, Query, State};
 use axum::Json;
 
 use crate::dependancies::Dependancies;
-use crate::models::{ApiError, Claims, ListResponse};
+use crate::models::{ApiError, Claims, ListResponse, ListRunsQuery, TriggerRunResponse};
 use onboard_you_models::PipelineRun;
-
-/// Query parameters for listing runs.
-#[derive(Debug, serde::Deserialize)]
-pub struct ListRunsQuery {
-    /// Page number (1-based, default 1).
-    pub page: Option<i64>,
-    /// Items per page (default 20, max 100).
-    pub count_per_page: Option<i64>,
-}
 
 /// List recent pipeline runs for a customer company.
 #[utoipa::path(
@@ -81,4 +72,35 @@ pub async fn get_run(
         .await?
         .ok_or_else(|| ApiError::NotFound(format!("Run {run_id} for {customer_company_id}")))?;
     Ok(Json(run))
+}
+
+/// Trigger a pipeline run immediately via SQS.
+#[utoipa::path(
+    post,
+    path = "/config/{customer_company_id}/runs/trigger",
+    params(
+        ("customer_company_id" = String, Path, description = "Customer company ID"),
+    ),
+    responses(
+        (status = 202, description = "Run triggered", body = TriggerRunResponse),
+        (status = 401, description = "Unauthorized"),
+    ),
+    security(("bearer" = [])),
+    tag = "Runs",
+)]
+pub async fn trigger_run(
+    State(deps): State<Dependancies>,
+    claims: Claims,
+    Path(customer_company_id): Path<String>,
+) -> Result<(axum::http::StatusCode, Json<TriggerRunResponse>), ApiError> {
+    deps.trigger_repo
+        .trigger_run(&claims.organization_id, &customer_company_id)
+        .await?;
+
+    Ok((
+        axum::http::StatusCode::ACCEPTED,
+        Json(TriggerRunResponse {
+            message: format!("Pipeline run triggered for {customer_company_id}"),
+        }),
+    ))
 }

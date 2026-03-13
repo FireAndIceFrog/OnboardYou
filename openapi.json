@@ -591,6 +591,46 @@
         ]
       }
     },
+    "/config/{customer_company_id}/runs/trigger": {
+      "post": {
+        "tags": [
+          "Runs"
+        ],
+        "summary": "Trigger a pipeline run immediately via SQS.",
+        "operationId": "trigger_run",
+        "parameters": [
+          {
+            "name": "customer_company_id",
+            "in": "path",
+            "description": "Customer company ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Run triggered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TriggerRunResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/config/{customer_company_id}/runs/{run_id}": {
       "get": {
         "tags": [
@@ -1456,6 +1496,17 @@
                   "type": "string",
                   "description": "UUID identifying this specific run."
                 },
+                "manifestSnapshot": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Manifest",
+                      "description": "Snapshot of the manifest at the time of the run."
+                    }
+                  ]
+                },
                 "organizationId": {
                   "type": "string",
                   "description": "Organization that owns the pipeline."
@@ -1867,6 +1918,17 @@
           "id": {
             "type": "string",
             "description": "UUID identifying this specific run."
+          },
+          "manifestSnapshot": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Manifest",
+                "description": "Snapshot of the manifest at the time of the run."
+              }
+            ]
           },
           "organizationId": {
             "type": "string",
@@ -2424,6 +2486,19 @@
               "type": "string"
             },
             "description": "Columns present *after* this step completes."
+          }
+        }
+      },
+      "TriggerRunResponse": {
+        "type": "object",
+        "description": "Response returned when a run is triggered.",
+        "required": [
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Confirmation message"
           }
         }
       },
