@@ -21,7 +21,7 @@ output "login_endpoint_example" {
 
 output "demo_credentials" {
   description = "Map of email → password for every demo user (rotated every deploy)"
-  value       = var.environment == "local" ? module.demo_user[0].credentials : null
+  value       = var.environment == "local" ? module.demo_user[0].credentials : module.demo_user[0].credentials
   sensitive   = true
 }
 

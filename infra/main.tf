@@ -108,7 +108,7 @@ module "cognito" {
 
 module "demo_user" {
   source       = "./modules/demo-user"
-  count        = var.environment == "local" ? 1 : 0
+  count        = var.environment == "local" ? 1 : 1
   user_pool_id = module.cognito.user_pool_id
   aws_region   = var.aws_region
   users        = var.demo_users
