@@ -171,7 +171,7 @@ describe('CsvConnectorPanel', () => {
   describe('drag and drop', () => {
     it('uploads file on drop', async () => {
       const { onChange } = renderPanel();
-      const dropZone = screen.getByText('📂').parentElement!;
+      const dropZone = screen.getByText(/drop|drag|click/i).closest('div')!;
       const file = csvFile();
 
       fireEvent.drop(dropZone, {

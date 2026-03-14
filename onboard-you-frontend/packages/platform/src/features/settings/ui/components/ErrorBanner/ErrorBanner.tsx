@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Button, Card, Flex, Text } from '@chakra-ui/react';
 import { useTranslation } from 'react-i18next';
+import { CloseIcon } from '@/shared/ui';
 
 interface ErrorBannerProps {
   message: string;
@@ -28,7 +29,7 @@ export function ErrorBanner({ message, onDismiss }: ErrorBannerProps) {
             onClick={onDismiss}
             aria-label={t('settings.dismissError')}
           >
-            ✕
+            <CloseIcon size="0.75em" />
           </Button>
         </Flex>
       </Card.Body>

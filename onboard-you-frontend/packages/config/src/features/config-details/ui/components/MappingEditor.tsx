@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box, Flex, Text, Input, chakra } from '@chakra-ui/react';
+import { CloseIcon, ArrowLeftIcon } from '@/shared/ui';
 import { inputStyles, selectStyles } from './styles';
 
 const StyledSelect = chakra('select');
@@ -85,7 +86,7 @@ export function MappingEditor({ value, onChange, availableColumns }: MappingEdit
             ))}
             {key && !availableColumns.includes(key) && <option value={key}>{key}</option>}
           </StyledSelect>
-          <Text color="gray.400">→</Text>
+          <ArrowLeftIcon size="0.85em" style={{ transform: 'rotate(180deg)' }} color="gray.400" />
           <Input
             flex="1"
             type="text"
@@ -105,7 +106,7 @@ export function MappingEditor({ value, onChange, availableColumns }: MappingEdit
             onClick={() => handleRemoveRow(key)}
             aria-label={t('flow.edit.removeMapping', 'Remove')}
           >
-            ✕
+            <CloseIcon size="0.75em" />
           </StyledButton>
         </Flex>
       ))}

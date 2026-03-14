@@ -42,19 +42,19 @@ export function HomeScreen() {
   }, [t]);
 
   const placeholderStats: StatCardData[] = [
-    { label: t('home.stats.connectedSystems'), value: '—', icon: '🔗' },
-    { label: t('home.stats.pendingReviews'), value: '—', icon: '📋' },
-    { label: t('home.stats.teamMembers'), value: '—', icon: '👥' },
-    { label: t('home.stats.activityToday'), value: '—', icon: '📊' },
+    { label: t('home.stats.connectedSystems'), value: '—', iconName: 'link' },
+    { label: t('home.stats.pendingReviews'), value: '—', iconName: 'clipboard' },
+    { label: t('home.stats.teamMembers'), value: '—', iconName: 'users' },
+    { label: t('home.stats.activityToday'), value: '—', iconName: 'chart' },
   ];
 
   return (
     <Box as="section" maxW="1200px" mx="auto" aria-label="Dashboard overview">
       <Box mb={7}>
-        <Heading as="h1" size="2xl" fontWeight="bold" mb={1}>
+        <Heading as="h1" size="2xl" fontWeight="bold" mb={1} color="primary.500">
           {t('home.welcome', { name: userName })}
         </Heading>
-        <Text fontSize="sm" color="fg.muted">
+        <Text fontSize="sm" color="tertiary.500">
           {t('home.subtitle')}
         </Text>
       </Box>
@@ -62,7 +62,7 @@ export function HomeScreen() {
       <Box as="dl">
         {loading ? (
           <Center py={8}>
-            <Spinner size="md" />
+            <Spinner size="md" color="secondary.500" />
           </Center>
         ) : (
           <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} gap={5}>

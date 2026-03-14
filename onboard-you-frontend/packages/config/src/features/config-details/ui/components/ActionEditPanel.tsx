@@ -15,14 +15,23 @@ import {
 } from '../../state/configDetailsSlice';
 import { FieldEditor } from './FieldEditor';
 import { getActionPanel } from './action-panels/registry';
+import {
+  ImportIcon,
+  CogIcon,
+  ExportIcon,
+  WrenchIcon,
+  CloseIcon,
+  TrashIcon,
+  AlertTriangleIcon,
+} from '@/shared/ui';
 
 const StyledButton = chakra('button');
 
 /* ── Category icons ────────────────────────────────────────── */
-const CATEGORY_ICONS: Record<string, string> = {
-  ingestion: '📥',
-  logic: '⚙️',
-  egress: '📤',
+const CATEGORY_ICONS: Record<string, React.ComponentType<{ size?: number | string }>> = {
+  ingestion: ImportIcon,
+  logic: CogIcon,
+  egress: ExportIcon,
 };
 
 /* ── helpers ───────────────────────────────────────────────── */
@@ -126,7 +135,7 @@ export function ActionEditPanel() {
       bg="white"
       borderRadius="lg"
       border="1px solid"
-      borderColor="gray.200"
+      borderColor="tertiary.200"
       shadow="xl"
       zIndex="10"
       display="flex"
@@ -141,15 +150,17 @@ export function ActionEditPanel() {
         px="4"
         py="3"
         borderBottom="1px solid"
-        borderColor="gray.100"
-        bg="gray.50"
+        borderColor="tertiary.100"
+        bg="tertiary.50"
         borderTopRadius="lg"
       >
         <Flex align="center" gap="2">
-          <Text fontSize="lg">{CATEGORY_ICONS[category] ?? '🔧'}</Text>
+          <Box color="secondary.500">
+            {(() => { const CatIcon = CATEGORY_ICONS[category] ?? WrenchIcon; return <CatIcon size="1.25em" />; })()}
+          </Box>
           <Box>
-            <Heading size="sm">{label}</Heading>
-            <Text fontSize="xs" color="gray.500">
+            <Heading size="sm" color="primary.500">{label}</Heading>
+            <Text fontSize="xs" color="tertiary.500">
               {t(`configDetails.form.categoryLabels.${category}`, category)}
             </Text>
           </Box>
@@ -158,15 +169,15 @@ export function ActionEditPanel() {
           onClick={handleClose}
           aria-label={t('common.close', 'Close')}
           cursor="pointer"
-          fontSize="lg"
-          color="gray.400"
-          _hover={{ color: 'gray.600' }}
+          color="tertiary.400"
+          _hover={{ color: 'tertiary.600' }}
           bg="transparent"
           border="none"
           p="0"
+          display="flex"
           data-testid="action-edit-close"
         >
-          ✕
+          <CloseIcon size="1em" />
         </StyledButton>
       </Flex>
 
@@ -174,12 +185,12 @@ export function ActionEditPanel() {
       {catalogEntry?.description && (
         <Text
           fontSize="sm"
-          color="gray.600"
+          color="secondary.700"
           px="4"
           py="2"
           borderBottom="1px solid"
-          borderColor="gray.50"
-          bg="blue.50"
+          borderColor="secondary.50"
+          bg="secondary.50"
         >
           {catalogEntry.description}
         </Text>
@@ -195,9 +206,12 @@ export function ActionEditPanel() {
           borderColor="red.200"
           data-testid="action-validation-error"
         >
-          <Text fontSize="xs" fontWeight="600" color="red.700" mb="0.5">
-            ⚠️ Validation Error
-          </Text>
+          <Flex align="center" gap="1" mb="0.5">
+            <Box color="red.600"><AlertTriangleIcon size="0.875em" /></Box>
+            <Text fontSize="xs" fontWeight="600" color="red.700">
+              Validation Error
+            </Text>
+          </Flex>
           <Text fontSize="xs" color="red.600" whiteSpace="pre-wrap">
             {validationError}
           </Text>
@@ -258,26 +272,30 @@ export function ActionEditPanel() {
 
       {/* Footer */}
       {!isIngestion && (
-        <Box px="4" py="3" borderTop="1px solid" borderColor="gray.100">
+        <Box px="4" py="3" borderTop="1px solid" borderColor="tertiary.100">
           <StyledButton
             w="full"
             py="2"
             borderRadius="md"
             border="1px solid"
-            borderColor={confirmRemove ? 'red.300' : 'gray.200'}
+            borderColor={confirmRemove ? 'red.300' : 'tertiary.300'}
             bg={confirmRemove ? 'red.50' : 'white'}
-            color={confirmRemove ? 'red.600' : 'gray.600'}
+            color={confirmRemove ? 'red.600' : 'tertiary.600'}
             cursor="pointer"
             fontSize="sm"
             fontWeight="500"
             transition="all 0.15s"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            gap="2"
             _hover={{ borderColor: 'red.300', bg: 'red.50', color: 'red.600' }}
             onClick={handleRemove}
             data-testid="action-edit-remove"
           >
             {confirmRemove
-              ? t('flow.edit.confirmRemove', '⚠️ Click again to confirm removal')
-              : t('flow.edit.removeStep', '🗑️ Remove this step')}
+              ? (<><AlertTriangleIcon size="0.875em" /> {t('flow.edit.confirmRemove', 'Click again to confirm removal')}</>)
+              : (<><TrashIcon size="0.875em" /> {t('flow.edit.removeStep', 'Remove this step')}</>)}
           </StyledButton>
         </Box>
       )}

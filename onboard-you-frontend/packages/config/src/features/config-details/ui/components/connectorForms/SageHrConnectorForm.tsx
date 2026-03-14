@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Box, Flex, Text, chakra } from '@chakra-ui/react';
+import { GearIcon, LockIcon } from '@/shared/ui';
 import type { SageHrFields } from '../../../domain';
 import { SAGE_HR_HISTORY_OPTIONS } from '../../../domain';
 import { FieldError } from '../FieldError';
@@ -31,7 +32,7 @@ export function SageHrConnectorForm({ form, errors, onChange, validateField }: C
     <>
       <Box as="fieldset" border="none" p="0" m="0" mb="5">
         <Flex as="legend" align="center" gap="2" fontSize="sm" fontWeight="700" color="gray.700" mb="4" pb="2" borderBottom="1px solid" borderColor="gray.100">
-          <Text>🔐</Text>
+          <LockIcon size="1em" />
           <Text>{t('configDetails.connection.sageHr.credentialsTitle')}</Text>
         </Flex>
 
@@ -54,7 +55,7 @@ export function SageHrConnectorForm({ form, errors, onChange, validateField }: C
 
       <Box as="fieldset" border="none" p="0" m="0" mb="5">
         <Flex as="legend" align="center" gap="2" fontSize="sm" fontWeight="700" color="gray.700" mb="4" pb="2" borderBottom="1px solid" borderColor="gray.100">
-          <Text>⚙️</Text>
+          <GearIcon size="1em" />
           <Text>{t('configDetails.connection.sageHr.historyOptionsTitle')}</Text>
         </Flex>
 

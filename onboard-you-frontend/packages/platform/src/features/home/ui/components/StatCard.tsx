@@ -1,5 +1,13 @@
-import { Card, Flex, Text } from '@chakra-ui/react';
+import { Card, Flex, Text, Box } from '@chakra-ui/react';
 import type { StatCardData } from '@/features/home/domain/types';
+import { LinkIcon, ClipboardIcon, UsersIcon, BarChartIcon } from '@/shared/ui';
+
+const ICON_MAP: Record<string, React.ComponentType<{ size?: number | string }>> = {
+  link: LinkIcon,
+  clipboard: ClipboardIcon,
+  users: UsersIcon,
+  chart: BarChartIcon,
+};
 
 interface StatCardProps {
   data: StatCardData;
@@ -16,16 +24,21 @@ export function StatCard({ data }: StatCardProps) {
         ? 'red'
         : 'gray';
 
+  const Icon = ICON_MAP[data.iconName];
+
   return (
     <Card.Root
       variant="outline"
       cursor="pointer"
-      _hover={{ shadow: 'md', transform: 'translateY(-2px)' }}
+      borderColor="tertiary.200"
+      _hover={{ shadow: 'md', transform: 'translateY(-2px)', borderColor: 'secondary.300' }}
       transition="all 0.15s ease"
     >
       <Card.Body>
         <Flex justifyContent="space-between" alignItems="center" mb={3}>
-          <Text fontSize="2xl">{data.icon}</Text>
+          <Box color="secondary.500">
+            {Icon ? <Icon size="1.5em" /> : null}
+          </Box>
           {data.change && (
             <Text
               fontSize="xs"
@@ -40,10 +53,10 @@ export function StatCard({ data }: StatCardProps) {
             </Text>
           )}
         </Flex>
-        <Text as="dd" fontSize="3xl" fontWeight="bold" mb={1}>
+        <Text as="dd" fontSize="3xl" fontWeight="bold" mb={1} color="primary.500">
           {data.value}
         </Text>
-        <Text as="dt" fontSize="sm" color="fg.muted">
+        <Text as="dt" fontSize="sm" color="tertiary.500">
           {data.label}
         </Text>
       </Card.Body>

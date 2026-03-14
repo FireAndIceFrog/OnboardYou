@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box, Flex, Heading, Text, chakra } from '@chakra-ui/react';
+import { CloseIcon } from '@/shared/ui';
 import { selectStyles } from '../styles';
 import type { ActionEditorProps } from './registry';
 
@@ -139,7 +140,7 @@ export function PiiMaskingPanel({ config, onChange, availableColumns }: ActionEd
             onClick={() => handleRemove(idx)}
             aria-label="Remove"
           >
-            ✕
+            <CloseIcon size="0.75em" />
           </StyledButton>
         </Flex>
       ))}

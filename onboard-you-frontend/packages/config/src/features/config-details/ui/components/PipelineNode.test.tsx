@@ -52,7 +52,6 @@ describe('PipelineNode', () => {
     const node = screen.getByTestId('pipeline-node-ingestion');
     expect(node).toBeInTheDocument();
     expect(screen.getByText('CSV Upload')).toBeInTheDocument();
-    expect(screen.getByText('📥')).toBeInTheDocument();
   });
 
   it('renders a logic node with blue styling', () => {
@@ -60,7 +59,6 @@ describe('PipelineNode', () => {
     const node = screen.getByTestId('pipeline-node-logic');
     expect(node).toBeInTheDocument();
     expect(screen.getAllByText('Rename Fields').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('⚙️')).toBeInTheDocument();
   });
 
   it('renders an egress node with orange styling', () => {
@@ -68,7 +66,6 @@ describe('PipelineNode', () => {
     const node = screen.getByTestId('pipeline-node-egress');
     expect(node).toBeInTheDocument();
     expect(screen.getAllByText('Send to API').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('📤')).toBeInTheDocument();
   });
 
   it('falls back to logic styling for unknown category', () => {
@@ -76,7 +73,6 @@ describe('PipelineNode', () => {
     // Unknown category should use the default style
     const node = screen.getByTestId('pipeline-node-unknown');
     expect(node).toBeInTheDocument();
-    expect(screen.getByText('🔧')).toBeInTheDocument();
   });
 
   it('displays the action type as a business label badge', () => {

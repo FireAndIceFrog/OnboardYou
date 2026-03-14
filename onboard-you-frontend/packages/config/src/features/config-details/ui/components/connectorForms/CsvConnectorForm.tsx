@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box, Flex, Text, Button, chakra } from '@chakra-ui/react';
+import { FolderIcon } from '@/shared/ui';
 import { FieldError } from '../FieldError';
 import type { ConnectorFormProps } from './types';
 
@@ -13,7 +14,7 @@ export function CsvConnectorForm({ form, errors, onChange }: ConnectorFormProps)
   return (
     <Box as="fieldset" border="none" p="0" m="0" mb="5">
       <Flex as="legend" align="center" gap="2" fontSize="sm" fontWeight="700" color="gray.700" mb="4" pb="2" borderBottom="1px solid" borderColor="gray.100">
-        <Text>📁</Text>
+        <FolderIcon size="1em" />
         <Text>{t('configDetails.connection.csv.uploadTitle')}</Text>
       </Flex>
 

@@ -1,6 +1,7 @@
 import { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { Box, Button, Center, Heading, Text, VStack } from '@chakra-ui/react';
+import { AlertTriangleIcon } from '../Icons';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -46,7 +47,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       return (
         <Center minH="300px" p={8} role="alert" aria-live="assertive">
           <VStack gap={4} maxW="420px" textAlign="center">
-            <Text fontSize="4xl" aria-hidden="true">⚠️</Text>
+            <AlertTriangleIcon size="2.5rem" aria-hidden="true" />
             <Heading size="lg">Something went wrong</Heading>
             <Text fontSize="sm" color="fg.muted">
               An unexpected error occurred. Please try again.

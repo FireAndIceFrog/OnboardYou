@@ -1,6 +1,8 @@
+import type { ComponentType, SVGProps } from 'react';
 import type { Node, Edge } from '@xyflow/react';
 import type { PipelineConfig, ValidationResult, WorkdayResponseGroup, SageHrConfig as SageHrConfigApi } from '@/generated/api';
 import { ConnectorConfigFactory, ConnectorType } from '../state/connectorConfigs/connectorConfigFactory';
+import { OfficeBuildingIcon, LeafIcon, FileSpreadsheetIcon } from '@/shared/ui';
 
 const connectorFactory = new ConnectorConfigFactory();
 
@@ -28,9 +30,9 @@ export interface ConfigDetailsState {
 
 /** Only connectors backed by Rust ingestion code. */
 export const HR_SYSTEMS = [
-  { id: ConnectorType.Workday, nameKey: 'configDetails.connection.systems.workday', icon: '🏢' },
-  { id: ConnectorType.SageHR, nameKey: 'configDetails.connection.systems.sage_hr', icon: '🌿' },
-  { id: ConnectorType.Csv, nameKey: 'configDetails.connection.systems.csv', icon: '📄' },
+  { id: ConnectorType.Workday, nameKey: 'configDetails.connection.systems.workday', icon: OfficeBuildingIcon },
+  { id: ConnectorType.SageHR, nameKey: 'configDetails.connection.systems.sage_hr', icon: LeafIcon },
+  { id: ConnectorType.Csv, nameKey: 'configDetails.connection.systems.csv', icon: FileSpreadsheetIcon },
 ] as const;
 
 export type SystemId = (typeof HR_SYSTEMS)[number]['id'];

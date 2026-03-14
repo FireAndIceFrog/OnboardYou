@@ -1,11 +1,25 @@
+import type { ComponentType, SVGProps } from 'react';
 import type { ActionType, ActionConfigPayload } from '@/generated/api';
+import {
+  SearchIcon,
+  LockIcon,
+  EditIcon,
+  TrashIcon,
+  TargetIcon,
+  PhoneIcon,
+  GlobeIcon,
+  TypeIcon,
+  EraserIcon,
+  CalendarIcon,
+  RocketIcon,
+} from '@/shared/ui';
 
 /* ── Catalog entry ─────────────────────────────────────────── */
 
 export interface ActionCatalogEntry {
   actionType: ActionType;
   label: string;
-  icon: string;
+  icon: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
   description: string;
   category: 'ingestion' | 'logic' | 'egress';
   defaultConfig: ActionConfigPayload;
@@ -20,7 +34,7 @@ export const ACTION_CATALOG: ActionCatalogEntry[] = [
   {
     actionType: 'identity_deduplicator',
     label: 'Remove Duplicates',
-    icon: '🔍',
+    icon: SearchIcon,
     description: 'Find and remove duplicate employee records based on matching columns.',
     category: 'logic',
     defaultConfig: { columns: ['email'], employee_id_column: 'employee_id' },
@@ -28,7 +42,7 @@ export const ACTION_CATALOG: ActionCatalogEntry[] = [
   {
     actionType: 'pii_masking',
     label: 'Mask Sensitive Data',
-    icon: '🔒',
+    icon: LockIcon,
     description: 'Hide personal information like SSNs and salaries before sending data out.',
     category: 'logic',
     defaultConfig: { columns: [{ name: 'ssn', strategy: { Redact: { keep_last: 4, mask_prefix: '***-**-' } } }] },
@@ -36,7 +50,7 @@ export const ACTION_CATALOG: ActionCatalogEntry[] = [
   {
     actionType: 'rename_column',
     label: 'Rename Fields',
-    icon: '✏️',
+    icon: EditIcon,
     description: 'Change column names to match the format your target system expects.',
     category: 'logic',
     defaultConfig: { mapping: {} },
@@ -44,7 +58,7 @@ export const ACTION_CATALOG: ActionCatalogEntry[] = [
   {
     actionType: 'drop_column',
     label: 'Remove Unused Fields',
-    icon: '🗑️',
+    icon: TrashIcon,
     description: 'Remove columns that aren\'t needed in the output.',
     category: 'logic',
     defaultConfig: { columns: [] },
@@ -52,7 +66,7 @@ export const ACTION_CATALOG: ActionCatalogEntry[] = [
   {
     actionType: 'filter_by_value',
     label: 'Filter Records',
-    icon: '🎯',
+    icon: TargetIcon,
     description: 'Keep only the records that match a specific value or pattern.',
     category: 'logic',
     defaultConfig: { column: '', pattern: '' },
@@ -60,7 +74,7 @@ export const ACTION_CATALOG: ActionCatalogEntry[] = [
   {
     actionType: 'cellphone_sanitizer',
     label: 'Clean Phone Numbers',
-    icon: '📱',
+    icon: PhoneIcon,
     description: 'Convert phone numbers to international format (e.g. +61 4xx xxx xxx).',
     category: 'logic',
     defaultConfig: { phone_column: 'phone', country_columns: ['country'], output_column: 'phone_intl' },
@@ -68,7 +82,7 @@ export const ACTION_CATALOG: ActionCatalogEntry[] = [
   {
     actionType: 'iso_country_sanitizer',
     label: 'Standardise Country Codes',
-    icon: '🌍',
+    icon: GlobeIcon,
     description: 'Convert country names or codes to standard ISO format (AU, US, GB).',
     category: 'logic',
     defaultConfig: { source_column: 'country', output_column: 'country_iso', output_format: 'alpha2' },
@@ -76,7 +90,7 @@ export const ACTION_CATALOG: ActionCatalogEntry[] = [
   {
     actionType: 'handle_diacritics',
     label: 'Fix Special Characters',
-    icon: '🔤',
+    icon: TypeIcon,
     description: 'Replace accented characters with their ASCII equivalents (é → e, ü → u).',
     category: 'logic',
     defaultConfig: { columns: [] },
@@ -84,7 +98,7 @@ export const ACTION_CATALOG: ActionCatalogEntry[] = [
   {
     actionType: 'regex_replace',
     label: 'Clean Up Text',
-    icon: '🧹',
+    icon: EraserIcon,
     description: 'Find and replace text patterns in a column (e.g. remove extra spaces).',
     category: 'logic',
     defaultConfig: { column: '', pattern: '', replacement: '' },
@@ -92,7 +106,7 @@ export const ACTION_CATALOG: ActionCatalogEntry[] = [
   {
     actionType: 'scd_type_2',
     label: 'Track Change History',
-    icon: '📅',
+    icon: CalendarIcon,
     description: 'Add effective dating columns to track when employee records change over time.',
     category: 'logic',
     defaultConfig: { entity_column: 'employee_id', date_column: 'start_date' },
@@ -101,7 +115,7 @@ export const ACTION_CATALOG: ActionCatalogEntry[] = [
   {
     actionType: 'api_dispatcher',
     label: 'Send to API',
-    icon: '🚀',
+    icon: RocketIcon,
     description: 'Send the processed data to an external API endpoint.',
     category: 'egress',
     defaultConfig: { auth_type: 'default' },

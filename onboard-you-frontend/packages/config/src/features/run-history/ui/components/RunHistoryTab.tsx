@@ -10,6 +10,7 @@ import {
   Input,
   Table,
 } from '@chakra-ui/react';
+import { AlertTriangleIcon, ArrowLeftIcon } from '@/shared/ui';
 
 import { useAppDispatch, useAppSelector } from '@/store';
 import { businessLabel } from '@/shared/domain/types';
@@ -158,7 +159,7 @@ export function RunHistoryTab({
   if (error) {
     return (
       <Flex direction="column" align="center" justify="center" py="16" gap="3" color="gray.500">
-        <Text fontSize="2xl">⚠️</Text>
+        <AlertTriangleIcon size="1.5em" />
         <Text>{error}</Text>
       </Flex>
     );
@@ -250,7 +251,7 @@ export function RunHistoryTab({
                 onClick={() => handlePageChange(currentPage - 1)}
                 data-testid="prev-page"
               >
-                ← {t('runHistory.prev', 'Prev')}
+                <ArrowLeftIcon size="0.85em" /> {t('runHistory.prev', 'Prev')}
               </Button>
               <Text fontSize="xs" color="gray.500">
                 {t('runHistory.page', 'Page {{current}} of {{last}}', {
@@ -265,7 +266,7 @@ export function RunHistoryTab({
                 onClick={() => handlePageChange(currentPage + 1)}
                 data-testid="next-page"
               >
-                {t('runHistory.next', 'Next')} →
+                {t('runHistory.next', 'Next')} <ArrowLeftIcon size="0.85em" style={{ transform: 'rotate(180deg)' }} />
               </Button>
             </Flex>
           )}

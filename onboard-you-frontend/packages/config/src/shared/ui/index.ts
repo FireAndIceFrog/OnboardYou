@@ -4,3 +4,4 @@ export { ErrorBoundary } from './ErrorBoundary';
 export { FieldError } from './FieldError/FieldError';
 export { FormField, type FormFieldProps } from './FormField/FormField';
 export { FormSelect, type FormSelectProps } from './FormSelect/FormSelect';
+export * from './Icons';

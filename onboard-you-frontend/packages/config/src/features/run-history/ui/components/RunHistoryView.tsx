@@ -8,6 +8,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Box, Flex, Text, Button } from '@chakra-ui/react';
+import { ArrowLeftIcon } from '@/shared/ui';
 
 import { useAppDispatch } from '@/store';
 import type { PipelineRun } from '@/generated/api';
@@ -88,7 +89,7 @@ export function RunHistoryView({ customerCompanyId }: { customerCompanyId: strin
           borderColor="gray.200"
         >
           <Button variant="ghost" size="sm" onClick={handleCloseRunDetails} data-testid="back-to-runs">
-            ← {t('runHistory.backToList', 'Back to runs')}
+            <ArrowLeftIcon size="0.85em" /> {t('runHistory.backToList', 'Back to runs')}
           </Button>
         </Flex>
 

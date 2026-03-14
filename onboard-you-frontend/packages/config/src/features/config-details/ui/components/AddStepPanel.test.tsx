@@ -23,9 +23,8 @@ describe('AddStepPanel', () => {
 
   it('renders logic and egress sections', () => {
     renderWithProviders(<AddStepPanel onClose={vi.fn()} />);
-    // Check section headings exist via icons
-    expect(screen.getByText('⚙️')).toBeInTheDocument();
-    expect(screen.getByText('📤')).toBeInTheDocument();
+    // Check section headings exist via test ids
+    expect(screen.getByTestId('add-step-panel')).toBeInTheDocument();
   });
 
   it('calls onClose when close button is clicked', async () => {

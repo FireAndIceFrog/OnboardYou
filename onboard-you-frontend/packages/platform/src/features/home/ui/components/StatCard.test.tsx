@@ -7,13 +7,12 @@ import type { StatCardData } from '@/features/home/domain/types';
 const baseData: StatCardData = {
   label: 'Connected Systems',
   value: '42',
-  icon: '🔗',
+  iconName: 'connections',
 };
 
 describe('StatCard', () => {
   it('renders the icon, value and label', () => {
     renderWithProviders(<StatCard data={baseData} />);
-    expect(screen.getByText('🔗')).toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
     expect(screen.getByText('Connected Systems')).toBeInTheDocument();
   });

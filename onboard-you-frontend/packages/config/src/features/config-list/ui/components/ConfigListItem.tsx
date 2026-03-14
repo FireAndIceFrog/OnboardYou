@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Box, Flex, Heading, Text, Badge } from '@chakra-ui/react';
+import { RefreshIcon } from '@/shared/ui';
 import type { PipelineConfig } from '@/shared/domain/types';
 import { humanFrequency, deriveStatus, STATUS_DISPLAY } from '@/shared/domain/types';
 
@@ -77,7 +78,7 @@ export function ConfigListItem({ config }: ConfigListItemProps) {
 
       <Flex justify="space-between" align="center">
         <Text fontSize="xs" color="gray.500" title={`Cron: ${config.cron}`}>
-          🔄 {frequency}
+          <RefreshIcon size="0.75em" style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />{frequency}
         </Text>
         <Flex align="center" gap="2">
           <Badge colorPalette={VARIANT_MAP[statusInfo.variant] ?? 'gray'} size="sm">

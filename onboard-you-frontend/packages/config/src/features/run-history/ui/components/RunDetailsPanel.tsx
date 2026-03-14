@@ -10,6 +10,7 @@ import {
   Input,
   Table,
 } from '@chakra-ui/react';
+import { CloseIcon } from '@/shared/ui';
 
 import { businessLabel } from '@/shared/domain/types';
 import type { PipelineRun, PipelineWarning } from '@/generated/api';
@@ -172,7 +173,7 @@ export function RunDetailsPanel({
           </Badge>
         </Flex>
         <Button variant="ghost" size="xs" onClick={onClose} data-testid="close-details">
-          ✕
+          <CloseIcon size="0.75em" />
         </Button>
       </Flex>
 
