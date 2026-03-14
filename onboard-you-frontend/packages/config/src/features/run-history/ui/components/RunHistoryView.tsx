@@ -75,24 +75,6 @@ export function RunHistoryView({ customerCompanyId }: { customerCompanyId: strin
   if (viewingRun) {
     return (
       <Box flex="1" position="relative" role="application" aria-label="Pipeline run snapshot" data-testid="run-history-view">
-        {/* Toolbar */}
-        <Flex
-          position="absolute"
-          top="0"
-          left="0"
-          right="0"
-          zIndex={5}
-          px="4"
-          py="2"
-          bg="whiteAlpha.900"
-          borderBottom="1px solid"
-          borderColor="gray.200"
-        >
-          <Button variant="ghost" size="sm" onClick={handleCloseRunDetails} data-testid="back-to-runs">
-            <ArrowLeftIcon size="0.85em" /> {t('runHistory.backToList', 'Back to runs')}
-          </Button>
-        </Flex>
-
         {historyFlow ? (
           <ReactFlow
             nodes={historyFlow.nodes}
