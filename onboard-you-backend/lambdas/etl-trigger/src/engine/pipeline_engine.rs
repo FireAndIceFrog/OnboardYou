@@ -12,8 +12,7 @@
 use lambda_runtime::Error;
 use std::sync::Arc;
 
-use onboard_you_models::{ETLDependancies, PipelineRun, RosterContext, StepValidation, ValidationResult};
-use polars::prelude::LazyFrame;
+use onboard_you_models::PipelineRun;
 
 use crate::dependancies::Dependancies;
 use crate::models::PipelineResult;
@@ -88,61 +87,28 @@ pub async fn run(
 
     // 4. Pre-flight validation: dry-run column propagation
     let action_factory = deps.action_factory.clone();
-    let validation_actions: Vec<_> = manifest
-        .actions
-        .iter()
-        .map(|ac| action_factory.create(ac))
-        .collect::<onboard_you_models::Result<_>>()
-        .map_err(|e| Error::from(format!("Failed to build actions for validation: {e}")))?;
+    let validation_result = match action_factory.validate_manifest(&manifest) {
+        Ok(v) => v,
+        Err(e) => {
+            let msg = format!(
+                "Pre-flight validation failed at step '{}' ({}): {}",
+                e.action_id, e.action_type, e.error
+            );
+            tracing::error!(%organization_id, %customer_company_id, %msg);
 
-    let mut validation_ctx =
-        RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
-    let mut validation_steps: Vec<StepValidation> = Vec::new();
+            let _ = deps.run_log_repo.fail_validation(&run_id, &msg).await;
 
-    for (action, ac) in validation_actions.iter().zip(manifest.actions.iter()) {
-        match action.calculate_columns(validation_ctx.clone()) {
-            Ok(ctx) => {
-                let schema = ctx.get_data().collect_schema().map_err(|e| {
-                    Error::from(format!("Validation schema error at '{}': {e}", ac.id))
-                })?;
-                let columns_after: Vec<String> =
-                    schema.iter_names().map(|n| n.to_string()).collect();
-                validation_steps.push(StepValidation {
-                    action_id: ac.id.clone(),
-                    action_type: ac.action_type.to_string(),
-                    columns_after,
-                });
-                validation_ctx = ctx;
-            }
-            Err(e) => {
-                let msg = format!(
-                    "Pre-flight validation failed at step '{}' ({}): {e}",
-                    ac.id, ac.action_type
-                );
-                tracing::error!(%organization_id, %customer_company_id, %msg);
-
-                let _ = deps.run_log_repo.fail_validation(&run_id, &msg).await;
-
-                return Ok(PipelineResult::failure(
-                    &run_id,
-                    organization_id,
-                    customer_company_id,
-                    &msg,
-                    vec![],
-                ));
-            }
+            return Ok(PipelineResult::failure(
+                &run_id,
+                organization_id,
+                customer_company_id,
+                &msg,
+                vec![],
+            ));
         }
-    }
+    };
 
     // Store validation result
-    let final_columns = validation_steps
-        .last()
-        .map(|s| s.columns_after.clone())
-        .unwrap_or_default();
-    let validation_result = ValidationResult {
-        steps: validation_steps.clone(),
-        final_columns,
-    };
     let _ = deps
         .run_log_repo
         .store_validation_result(&run_id, &validation_result)

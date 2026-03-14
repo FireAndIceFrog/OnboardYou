@@ -6,11 +6,10 @@
 
 use crate::{
     dependancies::Dependancies,
-    models::{ApiError, StepValidation, ValidationResult},
+    models::{ApiError, ValidationResult},
 };
 use onboard_you::{ActionFactoryTrait};
-use onboard_you_models::{ActionConfigPayload, ApiDispatcherConfig, DynamicEgressModel, ETLDependancies, Manifest, RosterContext};
-use polars::prelude::*;
+use onboard_you_models::{ActionConfigPayload, ApiDispatcherConfig, DynamicEgressModel, Manifest};
 
 /// Validate a pipeline manifest by propagating columns through every step.
 ///
@@ -22,63 +21,18 @@ pub async fn validate_pipeline(
 )  -> Result<ValidationResult, ApiError> {
     let manifest: Manifest = pipeline_json.clone();
 
-    if manifest.actions.is_empty() {
-        return Ok(ValidationResult {
-            steps: vec![],
-            final_columns: vec![],
-        });
-    }
     let action_factory = deps.etl_repo.create_action_factory();
-    // Build every action via the factory (validates config too)
-    let actions: Vec<_> = manifest
-        .actions
-        .iter()
-        .map(|ac| {
-            action_factory.create(ac).map_err(|e| {
-                ApiError::Validation(format!(
-                    "Step '{}' ({}) => {e}", ac.id, ac.action_type
-                ))
-            })
-        })
-        .collect::<Result<_, _>>()?;
-
-    // Start with an empty context (no columns yet)
-    let mut context = RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
-    let mut steps = Vec::with_capacity(actions.len());
-
-    for (action, ac) in actions.iter().zip(manifest.actions.iter()) {
-        context = action.calculate_columns(context).map_err(|e| {
-            let msg = e.to_string();
+    let validation_result = action_factory
+        .validate_manifest(&manifest)
+        .map_err(|e| {
+            let msg = e.error.to_string();
             let short = msg.split(';').next().unwrap_or(&msg);
             ApiError::Validation(format!(
                 "Step '{}' ({}): {short}",
-                ac.id, ac.action_type
+                e.action_id, e.action_type
             ))
         })?;
-
-        // Collect the schema from the lazy frame (cheap — no data)
-        let schema = context.get_data().collect_schema().map_err(|e| {
-            let msg = e.to_string();
-            let short = msg.split(';').next().unwrap_or(&msg);
-            ApiError::Validation(format!(
-                "Step '{}' ({}): {short}",
-                ac.id, ac.action_type
-            ))
-        })?;
-
-        let columns_after: Vec<String> = schema.iter_names().map(|n| n.to_string()).collect();
-
-        steps.push(StepValidation {
-            action_id: ac.id.clone(),
-            action_type: ac.action_type.to_string(),
-            columns_after,
-        });
-    }
-
-    let final_columns = steps
-        .last()
-        .map(|s| s.columns_after.clone())
-        .unwrap_or_default();
+    let final_columns = validation_result.final_columns.clone();
 
     if let Some(org_id) = organization_id {
         let last_action = manifest.actions.last().unwrap();
@@ -139,7 +93,7 @@ pub async fn validate_pipeline(
     }
 
     Ok(ValidationResult {
-        steps,
+        steps: validation_result.steps,
         final_columns,
     })
 }

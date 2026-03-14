@@ -177,6 +177,16 @@ mod tests {
             Ok(std::sync::Arc::new(NoopAction))
         }
 
+        fn validate_manifest(
+            &self,
+            _manifest: &onboard_you_models::Manifest,
+        ) -> std::result::Result<onboard_you_models::ValidationResult, onboard_you_models::ValidationStepError> {
+            Ok(onboard_you_models::ValidationResult {
+                steps: vec![],
+                final_columns: vec![],
+            })
+        }
+
         fn run(
             &self,
             _actions: Vec<std::sync::Arc<dyn OnboardingAction>>,

@@ -13,9 +13,12 @@ use crate::capabilities::logic::engine::{
     IsoCountrySanitizer, PIIMasking, RegexReplace, RenameColumn, SCDType2,
 };
 use onboard_you_models::{ActionConfig, ActionConfigPayload};
-use onboard_you_models::{ActionType, Error, OnboardingAction, Result};
-use onboard_you_models::RosterContext;
+use onboard_you_models::{ActionType, Error, Manifest, OnboardingAction, Result};
+use onboard_you_models::{
+    ETLDependancies, RosterContext, StepValidation, ValidationResult, ValidationStepError,
+};
 use async_trait::async_trait;
+use polars::prelude::LazyFrame;
 use std::sync::Arc;
 
 /// Factory for creating OnboardingAction instances from manifest action configs.
@@ -45,6 +48,10 @@ impl ActionFactory {
 #[async_trait]
 pub trait ActionFactoryTrait: Send + Sync {
     fn create(&self, action_config: &ActionConfig) -> Result<Arc<dyn OnboardingAction>>;
+    fn validate_manifest(
+        &self,
+        manifest: &Manifest,
+    ) -> std::result::Result<ValidationResult, ValidationStepError>;
     fn run(
         &self,
         actions: Vec<Arc<dyn OnboardingAction>>,
@@ -131,6 +138,69 @@ impl ActionFactoryTrait for ActionFactory {
         }
     }
 
+    /// Validate a manifest by chaining `calculate_columns` for each action.
+    fn validate_manifest(
+        &self,
+        manifest: &Manifest,
+    ) -> std::result::Result<ValidationResult, ValidationStepError> {
+        if manifest.actions.is_empty() {
+            return Ok(ValidationResult {
+                steps: vec![],
+                final_columns: vec![],
+            });
+        }
+
+        let actions: Vec<_> = manifest
+            .actions
+            .iter()
+            .map(|ac| {
+                self.create(ac).map_err(|e| ValidationStepError {
+                    action_id: ac.id.clone(),
+                    action_type: ac.action_type.to_string(),
+                    error: e,
+                })
+            })
+            .collect::<std::result::Result<_, _>>()?;
+
+        let mut context = RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
+        let mut steps = Vec::with_capacity(actions.len());
+
+        for (action, ac) in actions.iter().zip(manifest.actions.iter()) {
+            context = action.calculate_columns(context).map_err(|e| ValidationStepError {
+                action_id: ac.id.clone(),
+                action_type: ac.action_type.to_string(),
+                error: e,
+            })?;
+
+            let schema = context
+                .get_data()
+                .collect_schema()
+                .map_err(|e| ValidationStepError {
+                    action_id: ac.id.clone(),
+                    action_type: ac.action_type.to_string(),
+                    error: e.into(),
+                })?;
+
+            let columns_after: Vec<String> = schema.iter_names().map(|n| n.to_string()).collect();
+
+            steps.push(StepValidation {
+                action_id: ac.id.clone(),
+                action_type: ac.action_type.to_string(),
+                columns_after,
+            });
+        }
+
+        let final_columns = steps
+            .last()
+            .map(|s| s.columns_after.clone())
+            .unwrap_or_default();
+
+        Ok(ValidationResult {
+            steps,
+            final_columns,
+        })
+    }
+
     /// Execute a pipeline defined by a manifest.
     ///
     /// Each action receives the `RosterContext` produced by the previous step
@@ -164,7 +234,6 @@ mod tests {
     use onboard_you_models::ColumnCalculator;
     use onboard_you_models::manifest::{ActionConfig, ActionConfigPayload};
     use ActionType;
-    use polars::prelude::*;
 
     /// A trivial pass-through action for testing the runner.
     struct NoopAction;
@@ -349,6 +418,92 @@ mod tests {
             .create(&config)
             .expect("Default should create an unconfigured dispatcher");
         assert_eq!(action.id(), "api_dispatcher");
+    }
+
+    // -----------------------------------------------------------------------
+    // validate_manifest tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_validate_manifest_empty_actions() {
+        let manifest = onboard_you_models::Manifest {
+            version: "1.0".into(),
+            actions: vec![],
+        };
+
+        let result = ActionFactory::new()
+            .validate_manifest(&manifest)
+            .expect("empty manifest should validate");
+
+        assert!(result.steps.is_empty());
+        assert!(result.final_columns.is_empty());
+    }
+
+    #[test]
+    fn test_validate_manifest_csv_then_dispatcher_propagates_columns() {
+        let manifest = onboard_you_models::Manifest {
+            version: "1.0".into(),
+            actions: vec![
+                ActionConfig {
+                    id: "ingest".into(),
+                    action_type: ActionType::CsvHrisConnector,
+                    config: ActionConfigPayload::CsvHrisConnector(
+                        serde_json::from_value(
+                            serde_json::json!({
+                                "filename": "data.csv",
+                                "columns": ["employee_id", "email"]
+                            }),
+                        )
+                        .unwrap(),
+                    ),
+                },
+                ActionConfig {
+                    id: "dispatch".into(),
+                    action_type: ActionType::ApiDispatcher,
+                    config: ActionConfigPayload::ApiDispatcher(
+                        serde_json::from_value(serde_json::json!({ "auth_type": "default" }))
+                            .unwrap(),
+                    ),
+                },
+            ],
+        };
+
+        let result = ActionFactory::new()
+            .validate_manifest(&manifest)
+            .expect("manifest should validate");
+
+        assert_eq!(result.steps.len(), 2);
+        assert_eq!(result.steps[0].action_id, "ingest");
+        assert_eq!(result.steps[1].action_id, "dispatch");
+        assert_eq!(result.steps[0].columns_after, vec!["employee_id", "email"]);
+        assert_eq!(result.steps[1].columns_after, vec!["employee_id", "email"]);
+        assert_eq!(result.final_columns, vec!["employee_id", "email"]);
+    }
+
+    #[test]
+    fn test_validate_manifest_reports_action_for_payload_mismatch() {
+        let manifest = onboard_you_models::Manifest {
+            version: "1.0".into(),
+            actions: vec![ActionConfig {
+                id: "bad_step".into(),
+                action_type: ActionType::CsvHrisConnector,
+                // Intentional mismatch: csv action type with api dispatcher payload
+                config: ActionConfigPayload::ApiDispatcher(
+                    onboard_you_models::ApiDispatcherConfig::Default,
+                ),
+            }],
+        };
+
+        let err = ActionFactory::new()
+            .validate_manifest(&manifest)
+            .expect_err("mismatched payload should fail");
+
+        assert_eq!(err.action_id, "bad_step");
+        assert_eq!(err.action_type, "csv_hris_connector");
+        assert!(matches!(
+            err.error,
+            onboard_you_models::Error::ConfigurationError(_)
+        ));
     }
 
     // -----------------------------------------------------------------------
