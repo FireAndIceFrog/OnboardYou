@@ -17,7 +17,8 @@ beforeAll(async () => {
   await client.login();
 });
 
-const companyId = `trigger-run-smoke-${Date.now()}`;
+const prefix = `smoke-trigger-run-${Date.now()}`;
+const companyId = prefix;
 const csvFilename = 'employees.csv';
 
 const csvContent = [
@@ -100,6 +101,13 @@ describe('Trigger Run end-to-end', () => {
 
     expect(status).toBe(200);
     expect(body.customerCompanyId).toBe(companyId);
+    const { status: putStatus, body: putBody } = await client.post<PipelineConfig>(
+      `/config/${companyId}`,
+      payload,
+    );
+
+    expect(putStatus).toBe(200);
+    expect(putBody.customerCompanyId).toBe(companyId);
   });
 
   // 3. Upload CSV via presigned URL
@@ -136,8 +144,8 @@ describe('Trigger Run end-to-end', () => {
       expect(triggerStatus).toBe(202);
       expect(triggerBody.message).toContain(companyId);
 
-      // Wait 30 seconds for the ETL lambda to process
-      await new Promise((resolve) => setTimeout(resolve, 30_000));
+      // Wait 3 seconds for the ETL lambda to process
+      await new Promise((resolve) => setTimeout(resolve, 10_000));
 
       // Check run history — should have at least one run
       const { status: listStatus, body: listBody } = await client.get<ListResponsePipelineRun>(`/config/${companyId}/runs?page=1&count_per_page=5`);
@@ -163,6 +171,7 @@ describe('Trigger Run end-to-end', () => {
 
   // 5. Cleanup
   afterAll(async () => {
-    await client.delete(`/config/${companyId}`);
+    await client.deleteConfigsWithPrefix(prefix);
+    await client.deleteConfigsWithPrefix("Trigger");
   });
 });

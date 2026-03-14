@@ -6,7 +6,7 @@ beforeAll(async () => {
   await client.login();
 });
 
-const companyId = `validate-smoke-${Date.now()}`;
+const companyId = `smoke-validate-${Date.now()}`; // dry-run endpoint; no configs are persisted
 
 describe('POST /config/{id}/validate', () => {
   it('validates an empty pipeline', async () => {

@@ -91,4 +91,17 @@ export class ApiClient {
     });
     return { status: res.status };
   }
+
+  /**
+   * List all configs and delete any whose customerCompanyId starts with
+   * the given prefix. Used in afterAll hooks to clean up test data.
+   */
+  async deleteConfigsWithPrefix(prefix: string): Promise<void> {
+    const { body } = await this.get<{ data: Array<{ customerCompanyId: string; name: string }> }>('/config');
+    await Promise.all(
+      body.data
+        .filter((c) => c.customerCompanyId.startsWith(prefix) || c.name.startsWith(prefix))
+        .map((c) => this.delete(`/config/${c.customerCompanyId}`)),
+    );
+  }
 }

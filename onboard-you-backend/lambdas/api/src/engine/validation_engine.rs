@@ -35,7 +35,10 @@ pub async fn validate_pipeline(
     let final_columns = validation_result.final_columns.clone();
 
     if let Some(org_id) = organization_id {
-        let last_action = manifest.actions.last().unwrap();
+        let last_action = match manifest.actions.last() {
+            Some(action) => action,
+            None => return Err(ApiError::Validation("No actions in manifest".into())),
+        };
         let egress_config: Box<dyn DynamicEgressModel> = match last_action.config.clone() {
             ActionConfigPayload::ApiDispatcher(cfg) => {
                 let pre_settings = match cfg {

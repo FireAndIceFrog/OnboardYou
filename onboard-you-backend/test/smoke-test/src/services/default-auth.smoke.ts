@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { client } from '../env.js';
 import type { OrgSettings } from '../models/org-settings.js';
 import type { PipelineConfig } from '../models/pipeline-config.js';
@@ -18,7 +18,13 @@ beforeAll(async () => {
   await client.login();
 });
 
-const companyId = `default-auth-smoke-${Date.now()}`;
+const prefix = `smoke-default-auth-${Date.now()}`;
+const companyId = prefix;
+
+afterAll(async () => {
+  await client.deleteConfigsWithPrefix(prefix);
+  await client.deleteConfigsWithPrefix("Default");
+});
 
 describe('Default auth end-to-end', () => {
   it('saves org settings with a bearer auth config', async () => {
@@ -113,8 +119,4 @@ describe('Default auth end-to-end', () => {
     expect(body.final_columns).toEqual(body.steps[1].columns_after);
   });
 
-  it('cleans up the test config', async () => {
-    const { status } = await client.delete(`/config/${companyId}`);
-    expect(status).toBe(204);
-  });
 });

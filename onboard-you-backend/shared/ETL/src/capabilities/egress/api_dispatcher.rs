@@ -65,7 +65,7 @@ impl OnboardingAction for ApiDispatcher {
         "api_dispatcher"
     }
 
-    fn execute(&self, context: RosterContext) -> Result<RosterContext> {
+    fn execute(&self, mut context: RosterContext) -> Result<RosterContext> {
         let engine = self.engine.as_ref().ok_or_else(|| {
             Error::ConfigurationError(
                 "ApiDispatcher has no engine configured. \
@@ -80,6 +80,12 @@ impl OnboardingAction for ApiDispatcher {
             .clone()
             .collect()
             .map_err(|e| Error::EgressError(format!("Failed to collect LazyFrame: {e}")))?;
+
+        // Store the materialized DataFrame back so that any subsequent collect()
+        // call (e.g. in pipeline_repository for row counting) does not re-execute
+        // the lazy plan and re-fire deferred .map() closures — which would
+        // double-count every warning emitted by upstream actions.
+        context.set_data(df.clone().lazy());
 
         // 2. Serialize to JSON: { "data": [ {col: value, …}, … ] }
         let payload = dataframe_to_json_payload(&df)?;

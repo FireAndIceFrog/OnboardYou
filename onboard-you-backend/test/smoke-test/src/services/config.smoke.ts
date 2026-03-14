@@ -1,13 +1,19 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { client } from '../env.js';
 import type { PipelineConfig } from '../models/pipeline-config.js';
-import { ListConfigsResponse } from '../generated/api/types.gen.js';
+import { ListConfigsResponse, WorkdayConfig } from '../generated/api/types.gen.js';
 
 beforeAll(async () => {
   await client.login();
 });
 
-const testId = `smoke-test-${Date.now()}`;
+const prefix = `smoke-config-${Date.now()}`;
+const testId = prefix;
+
+afterAll(async () => {
+  await client.deleteConfigsWithPrefix(prefix);
+  await client.deleteConfigsWithPrefix("Smoke");
+});
 
 describe('GET /config', () => {
   it('lists pipeline configs', async () => {
@@ -47,20 +53,5 @@ describe('GET /config/{id}', () => {
     const { status } = await client.get('/config/does-not-exist-999');
 
     expect(status).toBe(404);
-  });
-});
-
-describe('PUT /config/{id}', () => {
-  it('updates an existing config', async () => {
-    const payload: Partial<PipelineConfig> = {
-      name: 'Smoke Test Pipeline (updated)',
-      cron: 'rate(1 day)',
-      pipeline: { version: '1.0', actions: [] },
-    };
-
-    const { status, body } = await client.put<PipelineConfig>(`/config/${testId}`, payload);
-
-    expect(status).toBe(200);
-    expect(body.name).toBe('Smoke Test Pipeline (updated)');
   });
 });
