@@ -28,6 +28,7 @@
 
 use onboard_you_models::{FilterByValueConfig, SafeRegex};
 use onboard_you_models::ColumnCalculator;
+use onboard_you_models::PipelineWarning;
 use onboard_you_models::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 
@@ -86,7 +87,7 @@ impl OnboardingAction for FilterByValue {
 
         // Collect to apply row-wise string matching.
         let df = context
-            .data
+            .get_data()
             .clone()
             .collect()
             .map_err(|e| Error::LogicError(format!("Failed to collect LazyFrame: {e}")))?;
@@ -124,18 +125,18 @@ impl OnboardingAction for FilterByValue {
         let kept = filtered.height();
         let dropped = total_rows - kept;
         if dropped > 0 {
-            context.warn(
-                self.id(),
-                format!(
-                    "{dropped} of {total_rows} row(s) did not match filter on column '{}'",
-                    self.config.column
-                ),
-                dropped,
-                None,
-            );
+                context.deps.logger.warn(PipelineWarning {
+                    action_id: self.id().to_string(),
+                    message: format!(
+                        "{dropped} of {total_rows} row(s) did not match filter on column '{}'",
+                        self.config.column
+                    ),
+                    count: dropped,
+                    detail: None,
+                });
         }
 
-        context.data = filtered.lazy();
+        context.set_data(filtered.lazy());
 
         Ok(context)
     }
@@ -147,6 +148,7 @@ impl OnboardingAction for FilterByValue {
 
 #[cfg(test)]
 mod tests {
+    use onboard_you_models::ETLDependancies;
     use super::*;
     use onboard_you_models::MAX_PATTERN_LEN;
     use polars::df;
@@ -187,9 +189,9 @@ mod tests {
         }))
         .unwrap();
         let action = FilterByValue::from_action_config(&cfg).unwrap();
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         let result = action.execute(ctx).unwrap();
-        let df = result.data.collect().unwrap();
+        let df = result.get_data().collect().unwrap();
 
         assert_eq!(df.height(), 2);
         let dept = df.column("department").unwrap().str().unwrap();
@@ -209,9 +211,9 @@ mod tests {
         }))
         .unwrap();
         let action = FilterByValue::from_action_config(&cfg).unwrap();
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         let result = action.execute(ctx).unwrap();
-        let df = result.data.collect().unwrap();
+        let df = result.get_data().collect().unwrap();
 
         // "London" contains "on" (matches twice), no other city contains "on"
         assert_eq!(df.height(), 2);
@@ -228,9 +230,9 @@ mod tests {
         }))
         .unwrap();
         let action = FilterByValue::from_action_config(&cfg).unwrap();
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         let result = action.execute(ctx).unwrap();
-        let df = result.data.collect().unwrap();
+        let df = result.get_data().collect().unwrap();
 
         assert_eq!(df.height(), 0);
     }
@@ -247,9 +249,9 @@ mod tests {
         }))
         .unwrap();
         let action = FilterByValue::from_action_config(&cfg).unwrap();
-        let ctx = RosterContext::new(df.lazy());
+        let ctx = RosterContext::with_deps(df.lazy(), ETLDependancies::default());
         let result = action.execute(ctx).unwrap();
-        let collected = result.data.collect().unwrap();
+        let collected = result.get_data().collect().unwrap();
         assert_eq!(collected.height(), 3);
     }
 
@@ -267,9 +269,9 @@ mod tests {
         }))
         .unwrap();
         let action = FilterByValue::from_action_config(&cfg).unwrap();
-        let ctx = RosterContext::new(df.lazy());
+        let ctx = RosterContext::with_deps(df.lazy(), ETLDependancies::default());
         let result = action.execute(ctx).unwrap();
-        let collected = result.data.collect().unwrap();
+        let collected = result.get_data().collect().unwrap();
 
         // Null row is dropped; the two non-null rows match "."
         assert_eq!(collected.height(), 2);
@@ -294,9 +296,9 @@ mod tests {
         }))
         .unwrap();
         let action = FilterByValue::from_action_config(&cfg).unwrap();
-        let ctx = RosterContext::new(df.lazy());
+        let ctx = RosterContext::with_deps(df.lazy(), ETLDependancies::default());
         let result = action.execute(ctx).unwrap();
-        let collected = result.data.collect().unwrap();
+        let collected = result.get_data().collect().unwrap();
 
         // Only "abc" matches ^.+$ (non-empty)
         assert_eq!(collected.height(), 1);
@@ -430,7 +432,7 @@ mod tests {
         }))
         .unwrap();
         let action = FilterByValue::from_action_config(&cfg).unwrap();
-        let ctx = RosterContext::new(df.lazy());
+        let ctx = RosterContext::with_deps(df.lazy(), ETLDependancies::default());
         let result = action.execute(ctx);
         assert!(result.is_err());
     }
@@ -447,17 +449,18 @@ mod tests {
         }))
         .unwrap();
         let action = FilterByValue::from_action_config(&cfg).unwrap();
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         let result = action.execute(ctx).unwrap();
-        let df = result.data.collect().unwrap();
+        let df = result.get_data().collect().unwrap();
 
         // 2 of 4 rows matched Engineering, so 2 were dropped
         assert_eq!(df.height(), 2);
-        assert_eq!(result.warnings.len(), 1);
-        assert_eq!(result.warnings[0].action_id, "filter_by_value");
-        assert_eq!(result.warnings[0].count, 2);
-        assert!(result.warnings[0].message.contains("2 of 4"));
-        assert!(result.warnings[0].message.contains("department"));
+        let warnings = result.deps.logger.drain_deferred_warnings();
+        assert_eq!(warnings.len(), 1);
+        assert_eq!(warnings[0].action_id, "filter_by_value");
+        assert_eq!(warnings[0].count, 2);
+        assert!(warnings[0].message.contains("2 of 4"));
+        assert!(warnings[0].message.contains("department"));
     }
 
     #[test]
@@ -472,10 +475,11 @@ mod tests {
         }))
         .unwrap();
         let action = FilterByValue::from_action_config(&cfg).unwrap();
-        let ctx = RosterContext::new(df.lazy());
+        let ctx = RosterContext::with_deps(df.lazy(), ETLDependancies::default());
         let result = action.execute(ctx).unwrap();
 
-        assert!(result.warnings.is_empty());
+        let warnings = result.deps.logger.drain_deferred_warnings();
+        assert!(warnings.is_empty());
     }
 
     #[test]
@@ -486,13 +490,14 @@ mod tests {
         }))
         .unwrap();
         let action = FilterByValue::from_action_config(&cfg).unwrap();
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         let result = action.execute(ctx).unwrap();
-        let df = result.data.collect().unwrap();
+        let df = result.get_data().collect().unwrap();
 
         assert_eq!(df.height(), 0);
-        assert_eq!(result.warnings.len(), 1);
-        assert_eq!(result.warnings[0].count, 4);
-        assert!(result.warnings[0].message.contains("4 of 4"));
+        let warnings = result.deps.logger.drain_deferred_warnings();
+        assert_eq!(warnings.len(), 1);
+        assert_eq!(warnings[0].count, 4);
+        assert!(warnings[0].message.contains("4 of 4"));
     }
 }

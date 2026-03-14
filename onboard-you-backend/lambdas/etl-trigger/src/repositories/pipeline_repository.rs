@@ -6,7 +6,7 @@ use lambda_runtime::Error;
 use polars::prelude::LazyFrame;
 use std::sync::Arc;
 
-use onboard_you_models::{Manifest, RosterContext};
+use onboard_you_models::{ETLDependancies, Manifest, RosterContext};
 
 use crate::{dependancies::Dependancies, models::PipelineResult};
 
@@ -53,20 +53,19 @@ impl IPipelineRepo for PipelineRepository {
             .map_err(|e| Error::from(format!("Failed to build actions: {e}")))?;
 
         // Execute the pipeline with step tracking
-        let context = RosterContext::new(LazyFrame::default());
+        let context = RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
 
         match action_factory.run(actions, context) {
-            Ok(mut result) => {
+            Ok(result) => {
                 // Collect the LazyFrame to count rows and trigger deferred closures
                 let rows = result
-                    .data
-                    .clone()
+                    .get_data()
                     .collect()
                     .map(|df: polars::prelude::DataFrame| df.height())
                     .ok();
 
                 // Drain any deferred warnings emitted by Polars .map() closures
-                result.drain_deferred_warnings();
+                let warnings = result.deps.logger.drain_deferred_warnings();
 
                 tracing::info!(
                     %organization_id, %customer_company_id,
@@ -79,7 +78,7 @@ impl IPipelineRepo for PipelineRepository {
                     .complete_run(
                         run_id,
                         rows.map(|r| r as i32),
-                        &result.warnings,
+                        &warnings,
                     )
                     .await;
 
@@ -88,7 +87,7 @@ impl IPipelineRepo for PipelineRepository {
                     organization_id,
                     customer_company_id,
                     rows,
-                    result.warnings,
+                    warnings,
                 ))
             }
             Err(step_err) => {

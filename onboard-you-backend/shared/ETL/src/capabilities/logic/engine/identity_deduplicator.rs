@@ -20,6 +20,7 @@
 
 use onboard_you_models::DedupConfig;
 use onboard_you_models::{ColumnCalculator};
+use onboard_you_models::PipelineWarning;
 use onboard_you_models::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 
@@ -63,12 +64,12 @@ impl Default for IdentityDeduplicator {
 
 impl ColumnCalculator for IdentityDeduplicator {
     fn calculate_columns(&self, mut context: RosterContext) -> Result<RosterContext> {
-        let lf = std::mem::replace(&mut context.data, LazyFrame::default());
+        let lf = context.get_data();
         // Dedup adds canonical_id (string) and is_duplicate (bool)
         let lf = lf
             .with_column(lit(NULL).cast(DataType::String).alias("canonical_id"))
             .with_column(lit(NULL).cast(DataType::Boolean).alias("is_duplicate"));
-        context.data = lf;
+        context.set_data(lf);
         context.set_field_source("canonical_id".into(), "LOGIC_ACTION".into());
         context.set_field_source("is_duplicate".into(), "LOGIC_ACTION".into());
         Ok(context)
@@ -88,7 +89,7 @@ impl OnboardingAction for IdentityDeduplicator {
         );
 
         // Collect eagerly — dedup logic requires grouped iteration
-        let lf = std::mem::replace(&mut context.data, LazyFrame::default());
+        let lf = context.get_data();
         let df = lf
             .collect()
             .map_err(|e| Error::LogicError(format!("Failed to collect for dedup: {}", e)))?;
@@ -108,16 +109,16 @@ impl OnboardingAction for IdentityDeduplicator {
                 configured = ?self.config.columns,
                 "IdentityDeduplicator: none of the configured columns found — skipping"
             );
-            context.warn(
-                self.id(),
-                format!(
+            context.deps.logger.warn(PipelineWarning {
+                action_id: self.id().to_string(),
+                message: format!(
                     "None of the configured dedup columns ({}) were found in the data — deduplication skipped",
                     self.config.columns.join(", ")
                 ),
-                0,
-                None,
-            );
-            context.data = df.lazy();
+                count: 0,
+                detail: None,
+            });
+            context.set_data(df.lazy());
             return Ok(context);
         }
 
@@ -188,7 +189,7 @@ impl OnboardingAction for IdentityDeduplicator {
             context.mark_field_modified(col_name.to_string(), "identity_deduplicator".into());
         }
 
-        context.data = df.lazy();
+        context.set_data(df.lazy());
         Ok(context)
     }
 }
@@ -199,6 +200,7 @@ impl OnboardingAction for IdentityDeduplicator {
 
 #[cfg(test)]
 mod tests {
+    use onboard_you_models::ETLDependancies;
     use super::*;
 
     fn test_df_with_email_dupes() -> DataFrame {
@@ -233,10 +235,10 @@ mod tests {
             columns: vec!["email".into()],
             ..Default::default()
         };
-        let ctx = RosterContext::new(test_df_with_email_dupes().lazy());
+        let ctx = RosterContext::with_deps(test_df_with_email_dupes().lazy(), ETLDependancies::default());
         let action = IdentityDeduplicator::new(config);
         let result = action.execute(ctx).expect("execute");
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
 
         let is_dup: Vec<Option<bool>> = df
             .column("is_duplicate")
@@ -258,10 +260,10 @@ mod tests {
             columns: vec!["email".into()],
             ..Default::default()
         };
-        let ctx = RosterContext::new(test_df_with_email_dupes().lazy());
+        let ctx = RosterContext::with_deps(test_df_with_email_dupes().lazy(), ETLDependancies::default());
         let action = IdentityDeduplicator::new(config);
         let result = action.execute(ctx).expect("execute");
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
 
         let canonical: Vec<Option<&str>> = df
             .column("canonical_id")
@@ -284,10 +286,10 @@ mod tests {
             columns: vec!["national_id".into(), "email".into()],
             ..Default::default()
         };
-        let ctx = RosterContext::new(test_df_with_national_id().lazy());
+        let ctx = RosterContext::with_deps(test_df_with_national_id().lazy(), ETLDependancies::default());
         let action = IdentityDeduplicator::new(config);
         let result = action.execute(ctx).expect("execute");
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
 
         let is_dup: Vec<Option<bool>> = df
             .column("is_duplicate")
@@ -315,10 +317,10 @@ mod tests {
             "salary"      => &[50_000i64],
         }
         .unwrap();
-        let ctx = RosterContext::new(df.lazy());
+        let ctx = RosterContext::with_deps(df.lazy(), ETLDependancies::default());
         let action = IdentityDeduplicator::new(config);
         let result = action.execute(ctx).expect("execute");
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
 
         assert!(df.column("canonical_id").is_err());
         assert!(df.column("is_duplicate").is_err());
@@ -330,13 +332,13 @@ mod tests {
             columns: vec!["email".into()],
             ..Default::default()
         };
-        let ctx = RosterContext::new(test_df_with_email_dupes().lazy());
+        let ctx = RosterContext::with_deps(test_df_with_email_dupes().lazy(), ETLDependancies::default());
         let action = IdentityDeduplicator::new(config);
         let result = action.execute(ctx).expect("execute");
 
         for col_name in ["canonical_id", "is_duplicate"] {
             let meta = result
-                .field_metadata
+                .field_metadata()
                 .get(col_name)
                 .unwrap_or_else(|| panic!("metadata for '{}'", col_name));
             assert_eq!(meta.source, "LOGIC_ACTION");
@@ -374,10 +376,10 @@ mod tests {
             columns: vec!["email".into()],
             employee_id_column: "emp_code".into(),
         };
-        let ctx = RosterContext::new(df.lazy());
+        let ctx = RosterContext::with_deps(df.lazy(), ETLDependancies::default());
         let action = IdentityDeduplicator::new(config);
         let result = action.execute(ctx).expect("execute");
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
 
         let canonical: Vec<Option<&str>> = df
             .column("canonical_id")
@@ -402,14 +404,15 @@ mod tests {
             columns: vec!["nonexistent_col".into()],
             ..Default::default()
         };
-        let ctx = RosterContext::new(df.lazy());
+        let ctx = RosterContext::with_deps(df.lazy(), ETLDependancies::default());
         let action = IdentityDeduplicator::new(config);
         let result = action.execute(ctx).expect("should succeed with warning");
 
-        assert_eq!(result.warnings.len(), 1);
-        assert_eq!(result.warnings[0].action_id, "identity_deduplicator");
-        assert!(result.warnings[0].message.contains("deduplication skipped"));
-        assert!(result.warnings[0].message.contains("nonexistent_col"));
+        let warnings = result.deps.logger.drain_deferred_warnings();
+        assert_eq!(warnings.len(), 1);
+        assert_eq!(warnings[0].action_id, "identity_deduplicator");
+        assert!(warnings[0].message.contains("deduplication skipped"));
+        assert!(warnings[0].message.contains("nonexistent_col"));
     }
 
     #[test]
@@ -418,10 +421,11 @@ mod tests {
             columns: vec!["email".into()],
             ..Default::default()
         };
-        let ctx = RosterContext::new(test_df_with_email_dupes().lazy());
+        let ctx = RosterContext::with_deps(test_df_with_email_dupes().lazy(), ETLDependancies::default());
         let action = IdentityDeduplicator::new(config);
         let result = action.execute(ctx).expect("execute");
 
-        assert!(result.warnings.is_empty());
+        let warnings = result.deps.logger.drain_deferred_warnings();
+        assert!(warnings.is_empty());
     }
 }

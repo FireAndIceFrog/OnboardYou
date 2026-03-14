@@ -216,7 +216,7 @@ impl HrisConnector for SageHrConnector {
 }
 
 impl ColumnCalculator for SageHrConnector {
-    fn calculate_columns(&self, _context: RosterContext) -> Result<RosterContext> {
+    fn calculate_columns(&self, context: RosterContext) -> Result<RosterContext> {
         let columns: Vec<Column> = SAGE_HR_COLUMNS
             .iter()
             .map(|name| Column::new((*name).into(), Vec::<&str>::new()))
@@ -225,7 +225,7 @@ impl ColumnCalculator for SageHrConnector {
             Error::IngestionError(format!("Failed to build empty Sage HR schema: {}", e))
         })?;
 
-        let mut ctx = RosterContext::new(empty_df.lazy());
+        let mut ctx = RosterContext::with_deps(empty_df.lazy(), context.deps.clone());
         for name in SAGE_HR_COLUMNS {
             ctx.set_field_source(name.to_string(), "SAGE_HR".into());
         }
@@ -238,7 +238,7 @@ impl OnboardingAction for SageHrConnector {
         "sage_hr_connector"
     }
 
-    fn execute(&self, _context: RosterContext) -> Result<RosterContext> {
+    fn execute(&self, context: RosterContext) -> Result<RosterContext> {
         tracing::info!(
             subdomain = %self.config.subdomain,
             "SageHrConnector: executing ingestion"
@@ -250,7 +250,7 @@ impl OnboardingAction for SageHrConnector {
             Error::IngestionError(format!("Failed to collect Sage HR schema: {}", e))
         })?;
 
-        let mut ctx = RosterContext::new(lf);
+        let mut ctx = RosterContext::with_deps(lf, context.deps.clone());
         for field_name in schema.iter_names() {
             ctx.set_field_source(field_name.to_string(), "SAGE_HR".into());
         }
@@ -267,6 +267,7 @@ impl OnboardingAction for SageHrConnector {
 
 #[cfg(test)]
 mod tests {
+    use onboard_you_models::ETLDependancies;
     use super::*;
     use crate::orchestration::clients::rest_client::RestClient;
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -563,10 +564,10 @@ mod tests {
     #[test]
     fn sage_hr_column_calculation() {
         let connector = SageHrConnector::new(default_config());
-        let ctx = RosterContext::new(LazyFrame::default());
+        let ctx = RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
 
-        let mut result = connector.calculate_columns(ctx).expect("should calculate columns");
-        let schema = result.data.collect_schema().expect("should collect schema");
+        let result = connector.calculate_columns(ctx).expect("should calculate columns");
+        let schema = result.get_data().collect_schema().expect("should collect schema");
 
         let columns: Vec<String> = schema.iter_names().map(|n| n.to_string()).collect();
         insta::assert_snapshot!("column_calculation", columns.join(", "));

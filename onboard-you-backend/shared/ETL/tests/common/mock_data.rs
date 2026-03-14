@@ -4,6 +4,8 @@
 //! generator (`generate_hris_csv`) for creating arbitrarily large CSVs
 //! for load-testing and benchmarking.
 
+#![allow(dead_code)]
+
 use std::io::Write;
 use std::path::PathBuf;
 

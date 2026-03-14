@@ -143,21 +143,13 @@ impl ActionFactoryTrait for ActionFactory {
     ) -> std::result::Result<RosterContext, StepError> {
         for action in &actions {
             tracing::info!(action_id = action.id(), "PipelineRunner: executing action");
-
-            // Snapshot warnings before execute — if execute() fails the
-            // context is consumed and we'd lose accumulated warnings.
-            let collector = context.warning_collector.clone();
-            let warnings_snapshot = context.warnings.clone();
+            let logger = context.deps.logger.clone();
 
             context = action.execute(context).map_err(|e| {
-                let mut warnings = warnings_snapshot;
-                if let Ok(mut guard) = collector.lock() {
-                    warnings.append(&mut *guard);
-                }
                 StepError {
                     action_id: action.id().to_string(),
                     error: e,
-                    warnings,
+                    warnings: logger.drain_deferred_warnings(),
                 }
             })?;
         }
@@ -167,6 +159,7 @@ impl ActionFactoryTrait for ActionFactory {
 
 #[cfg(test)]
 mod tests {
+    use onboard_you_models::ETLDependancies;
     use super::*;
     use onboard_you_models::ColumnCalculator;
     use onboard_you_models::manifest::{ActionConfig, ActionConfigPayload};
@@ -191,17 +184,17 @@ mod tests {
 
     #[test]
     fn test_pipeline_runner_no_actions() {
-        let ctx = RosterContext::new(LazyFrame::default());
+        let ctx = RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
         let result = ActionFactory::new().run(vec![], ctx).expect("run");
-        assert!(result.field_metadata.is_empty());
+        assert!(result.field_metadata().is_empty());
     }
 
     #[test]
     fn test_pipeline_runner_single_action() {
-        let ctx = RosterContext::new(LazyFrame::default());
+        let ctx = RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
         let actions: Vec<Arc<dyn OnboardingAction>> = vec![Arc::new(NoopAction)];
         let result = ActionFactory::new().run(actions, ctx).expect("run");
-        assert!(result.field_metadata.is_empty());
+        assert!(result.field_metadata().is_empty());
     }
 
     #[test]
@@ -373,8 +366,13 @@ mod tests {
         fn id(&self) -> &str {
             "warn_action"
         }
-        fn execute(&self, mut ctx: RosterContext) -> Result<RosterContext> {
-            ctx.warn(self.id(), "test warning".into(), 1, None);
+        fn execute(&self, ctx: RosterContext) -> Result<RosterContext> {
+            ctx.deps.logger.warn(onboard_you_models::PipelineWarning {
+                action_id: self.id().to_string(),
+                message: "test warning".into(),
+                count: 1,
+                detail: None,
+            });
             Ok(ctx)
         }
     }
@@ -397,7 +395,7 @@ mod tests {
 
     #[test]
     fn test_step_error_preserves_warnings_from_earlier_steps() {
-        let ctx = RosterContext::new(LazyFrame::default());
+        let ctx = RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
         let actions: Vec<Arc<dyn OnboardingAction>> = vec![
             Arc::new(WarnThenSucceed),
             Arc::new(AlwaysFail),
@@ -414,7 +412,7 @@ mod tests {
 
     #[test]
     fn test_step_error_empty_warnings_when_first_action_fails() {
-        let ctx = RosterContext::new(LazyFrame::default());
+        let ctx = RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
         let actions: Vec<Arc<dyn OnboardingAction>> = vec![Arc::new(AlwaysFail)];
         let err = ActionFactory::new()
             .run(actions, ctx)
@@ -426,7 +424,7 @@ mod tests {
 
     #[test]
     fn test_successful_pipeline_preserves_warnings() {
-        let ctx = RosterContext::new(LazyFrame::default());
+        let ctx = RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
         let actions: Vec<Arc<dyn OnboardingAction>> = vec![
             Arc::new(WarnThenSucceed),
             Arc::new(NoopAction),
@@ -435,7 +433,8 @@ mod tests {
             .run(actions, ctx)
             .expect("should succeed");
 
-        assert_eq!(result.warnings.len(), 1);
-        assert_eq!(result.warnings[0].message, "test warning");
+        let warnings = result.deps.logger.drain_deferred_warnings();
+        assert_eq!(warnings.len(), 1);
+        assert_eq!(warnings[0].message, "test warning");
     }
 }

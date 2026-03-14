@@ -5,7 +5,7 @@
 //! tracking without executing the full pipeline.
 
 use crate::models::errors::Result;
-use crate::models::roster::RosterContext;
+use crate::models::pipeline_models::RosterContext;
 
 /// Trait for computing the output column set of a pipeline step.
 ///

@@ -174,7 +174,7 @@ impl HrisConnector for CsvHrisConnector {
 }
 
 impl ColumnCalculator for CsvHrisConnector {
-    fn calculate_columns(&self, _context: RosterContext) -> Result<RosterContext> {
+    fn calculate_columns(&self, context: RosterContext) -> Result<RosterContext> {
         // Build an empty DataFrame from the declared column names.
         // No S3 access — purely config-driven schema propagation.
         let columns: Vec<Column> = self
@@ -187,7 +187,7 @@ impl ColumnCalculator for CsvHrisConnector {
         let empty_df = DataFrame::new(0, columns)
             .map_err(|e| Error::IngestionError(format!("Failed to build CSV schema: {e}")))?;
 
-        let mut ctx = RosterContext::new(empty_df.lazy());
+        let mut ctx = RosterContext::with_deps(empty_df.lazy(), context.deps.clone());
         for col_name in &self.config.columns {
             ctx.set_field_source(col_name.clone(), "HRIS_CONNECTOR".into());
         }
@@ -201,7 +201,7 @@ impl OnboardingAction for CsvHrisConnector {
         "csv_hris_connector"
     }
 
-    fn execute(&self, _context: RosterContext) -> Result<RosterContext> {
+    fn execute(&self, context: RosterContext) -> Result<RosterContext> {
         tracing::info!(
             filename = %self.config.filename.clone().unwrap_or_default(),
             s3_key = ?self.config.resolved_s3_key,
@@ -218,7 +218,7 @@ impl OnboardingAction for CsvHrisConnector {
             .map_err(|e| Error::IngestionError(format!("Failed to collect schema: {e}")))?;
 
         // 3. Build the RosterContext
-        let mut ctx = RosterContext::new(lf);
+        let mut ctx = RosterContext::with_deps(lf, context.deps.clone());
 
         for field_name in schema.iter_names() {
             ctx.set_field_source(field_name.to_string(), "HRIS_CONNECTOR".into());
@@ -240,6 +240,7 @@ impl OnboardingAction for CsvHrisConnector {
 
 #[cfg(test)]
 mod tests {
+    use onboard_you_models::ETLDependancies;
     use super::*;
 
     fn test_config() -> CsvHrisConnectorConfig {
@@ -333,12 +334,12 @@ mod tests {
     #[test]
     fn test_calculate_columns_uses_declared_columns() {
         let connector = CsvHrisConnector::new(test_config());
-        let initial = RosterContext::new(LazyFrame::default());
-        let mut ctx = connector
+        let initial = RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
+        let ctx = connector
             .calculate_columns(initial)
             .expect("calculate_columns should succeed");
 
-        let schema = ctx.data.collect_schema().expect("schema");
+        let schema = ctx.get_data().collect_schema().expect("schema");
         let col_names: Vec<String> = schema.iter_names().map(|n| n.to_string()).collect();
         assert_eq!(
             col_names,
@@ -354,8 +355,8 @@ mod tests {
         );
 
         // Every column should have HRIS_CONNECTOR metadata
-        assert_eq!(ctx.field_metadata.len(), 7);
-        for (_, meta) in &ctx.field_metadata {
+        assert_eq!(ctx.field_metadata().len(), 7);
+        for (_, meta) in ctx.field_metadata() {
             assert_eq!(meta.source, "HRIS_CONNECTOR");
         }
     }

@@ -12,7 +12,7 @@ use onboard_you::capabilities::ingestion::engine::{
 use ::onboard_you_models::{WorkdayConfig, WorkdayResponseGroup};
 use onboard_you::*;
 use onboard_you::ActionFactory;
-use onboard_you_models::{ActionConfig, ActionConfigPayload, ActionType, RosterContext};
+use onboard_you_models::{ETLDependancies, ActionConfig, ActionConfigPayload, ActionType, RosterContext};
 use polars::prelude::*;
 
 // ── Sample Workday XML for integration tests ─────────────────────────────
@@ -205,7 +205,7 @@ fn test_e2e_workday_pipeline_with_scd_type_2() {
     let df = workers_to_dataframe(&records).unwrap();
 
     // Build a RosterContext as the Workday connector would
-    let mut ctx = RosterContext::new(df.lazy());
+    let mut ctx = RosterContext::with_deps(df.lazy(), ETLDependancies::default());
     for col in [
         "worker_id",
         "employee_id",
@@ -247,7 +247,7 @@ fn test_e2e_workday_pipeline_with_scd_type_2() {
     let result = scd_action
         .execute(ctx)
         .expect("scd should execute on Workday data");
-    let result_df = result.data.collect().expect("collect");
+    let result_df = result.get_data().collect().expect("collect");
 
     // SCD Type 2 should add effective_from, effective_to, is_current columns
     assert!(result_df.column("effective_from").is_ok());
@@ -260,7 +260,7 @@ fn test_e2e_workday_pipeline_with_deduplication() {
     let records = parse_get_workers_response(WORKDAY_RESPONSE_XML).unwrap();
     let df = workers_to_dataframe(&records).unwrap();
 
-    let ctx = RosterContext::new(df.lazy());
+    let ctx = RosterContext::with_deps(df.lazy(), ETLDependancies::default());
 
     let dedup_config = ActionConfig {
         id: "dedup".into(),
@@ -275,7 +275,7 @@ fn test_e2e_workday_pipeline_with_deduplication() {
     let result = dedup_action
         .execute(ctx)
         .expect("dedup should succeed on Workday data");
-    let result_df = result.data.collect().expect("collect");
+    let result_df = result.get_data().collect().expect("collect");
 
     // Both records have unique emails, so neither should be a duplicate
     assert_eq!(result_df.height(), 2);

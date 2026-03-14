@@ -1185,11 +1185,10 @@ impl IsoCountrySanitizer {
 
 impl ColumnCalculator for IsoCountrySanitizer {
     fn calculate_columns(&self, mut context: RosterContext) -> Result<RosterContext> {
-        let lf = std::mem::replace(&mut context.data, LazyFrame::default());
+        let lf = context.get_data();
         // Add the output column (schema-only — content does not matter for
         // column calculation).
-        context.data =
-            lf.with_column(col(&self.config.source_column).alias(&self.config.output_column));
+        context.set_data(lf.with_column(col(&self.config.source_column).alias(&self.config.output_column)));
         context.set_field_source(
             self.config.output_column.clone(),
             "iso_country_sanitizer".into(),
@@ -1212,10 +1211,10 @@ impl OnboardingAction for IsoCountrySanitizer {
         );
 
         let fmt = self.config.output_format;
-        let lf = std::mem::replace(&mut context.data, LazyFrame::default());
-        let collector = context.warning_collector.clone();
+        let lf = context.get_data();
+        let logger = context.deps.logger.clone();
 
-        context.data = lf.with_column(
+        context.set_data(lf.with_column(
             col(&self.config.source_column)
                 .map(
                     move |column| {
@@ -1270,17 +1269,15 @@ impl OnboardingAction for IsoCountrySanitizer {
                                 "IsoCountrySanitizer: summary of unrecognised country values"
                             );
 
-                            if let Ok(mut guard) = collector.lock() {
-                                guard.push(onboard_you_models::PipelineWarning {
-                                    action_id: "iso_country_sanitizer".into(),
-                                    message: format!(
-                                        "{} country value(s) could not be resolved to ISO codes",
-                                        total
-                                    ),
-                                    count: total,
-                                    detail: Some(top_values.join(", ")),
-                                });
-                            }
+                            logger.warn(onboard_you_models::PipelineWarning {
+                                action_id: "iso_country_sanitizer".into(),
+                                message: format!(
+                                    "{} country value(s) could not be resolved to ISO codes",
+                                    total
+                                ),
+                                count: total,
+                                detail: Some(top_values.join(", ")),
+                            });
                         }
 
                         Ok(result.into_column())
@@ -1288,7 +1285,7 @@ impl OnboardingAction for IsoCountrySanitizer {
                     |_: &Schema, _: &Field| Ok(Field::new("".into(), DataType::String)),
                 )
                 .alias(&self.config.output_column),
-        );
+            ));
 
         context.set_field_source(
             self.config.output_column.clone(),
@@ -1309,6 +1306,7 @@ impl OnboardingAction for IsoCountrySanitizer {
 
 #[cfg(test)]
 mod tests {
+    use onboard_you_models::ETLDependancies;
     use super::*;
 
     fn sample_df() -> DataFrame {
@@ -1339,9 +1337,9 @@ mod tests {
         }))
         .unwrap();
         let action = IsoCountrySanitizer::from_action_config(&cfg).expect("valid config");
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         let result = action.execute(ctx).expect("execute");
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
 
         let out = df.column("country_code").unwrap().str().unwrap();
         assert_eq!(out.get(0).unwrap(), "US"); // alpha-2 passthrough
@@ -1360,9 +1358,9 @@ mod tests {
         }))
         .unwrap();
         let action = IsoCountrySanitizer::from_action_config(&cfg).expect("valid config");
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         let result = action.execute(ctx).expect("execute");
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
 
         let out = df.column("country_iso3").unwrap().str().unwrap();
         assert_eq!(out.get(0).unwrap(), "USA"); // alpha-2 → alpha-3
@@ -1381,9 +1379,9 @@ mod tests {
         }))
         .unwrap();
         let action = IsoCountrySanitizer::from_action_config(&cfg).expect("valid config");
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         let result = action.execute(ctx).expect("execute");
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
 
         let out = df.column("country_raw").unwrap().str().unwrap();
         assert_eq!(out.get(0).unwrap(), "US");
@@ -1404,9 +1402,9 @@ mod tests {
         }))
         .unwrap();
         let action = IsoCountrySanitizer::from_action_config(&cfg).expect("valid config");
-        let ctx = RosterContext::new(df.lazy());
+        let ctx = RosterContext::with_deps(df.lazy(), ETLDependancies::default());
         let result = action.execute(ctx).expect("execute");
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
 
         let out = df.column("iso").unwrap().str().unwrap();
         assert_eq!(out.get(0).unwrap(), "GB");
@@ -1459,10 +1457,10 @@ mod tests {
         }))
         .unwrap();
         let action = IsoCountrySanitizer::from_action_config(&cfg).expect("valid config");
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         // With lazy execution the error is deferred until the LazyFrame is collected.
         let result = action.execute(ctx).expect("lazy execute succeeds");
-        assert!(result.data.collect().is_err());
+        assert!(result.get_data().collect().is_err());
     }
 
     #[test]
@@ -1474,10 +1472,10 @@ mod tests {
         }))
         .unwrap();
         let action = IsoCountrySanitizer::from_action_config(&cfg).expect("valid config");
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         let result = action.execute(ctx).expect("execute");
         let meta = result
-            .field_metadata
+            .field_metadata()
             .get("country_code")
             .expect("metadata should exist");
         assert_eq!(meta.source, "iso_country_sanitizer");

@@ -11,6 +11,7 @@
 use crate::capabilities::egress::engine::api_engine::ApiEngine;
 use onboard_you_models::ApiDispatcherConfig;
 use onboard_you_models::ColumnCalculator;
+use onboard_you_models::PipelineWarning;
 use onboard_you_models::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 use tracing::{info, warn};
@@ -64,7 +65,7 @@ impl OnboardingAction for ApiDispatcher {
         "api_dispatcher"
     }
 
-    fn execute(&self, mut context: RosterContext) -> Result<RosterContext> {
+    fn execute(&self, context: RosterContext) -> Result<RosterContext> {
         let engine = self.engine.as_ref().ok_or_else(|| {
             Error::ConfigurationError(
                 "ApiDispatcher has no engine configured. \
@@ -75,7 +76,7 @@ impl OnboardingAction for ApiDispatcher {
 
         // 1. Collect the LazyFrame into a DataFrame
         let df = context
-            .data
+            .get_data()
             .clone()
             .collect()
             .map_err(|e| Error::EgressError(format!("Failed to collect LazyFrame: {e}")))?;
@@ -103,16 +104,16 @@ impl OnboardingAction for ApiDispatcher {
                     } else {
                         response.body.clone()
                     };
-                    context.warn(
-                        self.id(),
-                        format!(
+                    context.deps.logger.warn(PipelineWarning {
+                        action_id: self.id().to_string(),
+                        message: format!(
                             "Destination API returned HTTP {} for {} record(s)",
                             response.status_code,
                             df.height()
                         ),
-                        df.height(),
-                        Some(body_preview),
-                    );
+                        count: df.height(),
+                        detail: Some(body_preview.clone()),
+                    });
                 } else {
                     info!(
                         status_code = response.status_code,
@@ -123,12 +124,12 @@ impl OnboardingAction for ApiDispatcher {
             }
             Err(e) => {
                 warn!(error = %e, "ApiEngine dispatch failed");
-                context.warn(
-                    self.id(),
-                    format!("Dispatch failed: {e}"),
-                    df.height(),
-                    None,
-                );
+                context.deps.logger.warn(PipelineWarning {
+                    action_id: self.id().to_string(),
+                    message: format!("Dispatch failed: {e}"),
+                    count: df.height(),
+                    detail: None,
+                });
             }
         }
 
@@ -205,6 +206,7 @@ fn anyvalue_to_json(av: AnyValue<'_>) -> serde_json::Value {
 
 #[cfg(test)]
 mod tests {
+    use onboard_you_models::ETLDependancies;
     use super::*;
     use polars::prelude::IntoLazy;
 
@@ -217,7 +219,10 @@ mod tests {
     #[test]
     fn test_api_dispatcher_no_engine_errors() {
         let action = ApiDispatcher::new();
-        let context = RosterContext::new(polars::prelude::df!("a" => [1]).unwrap().lazy());
+        let context = RosterContext::with_deps(
+            polars::prelude::df!("a" => [1]).unwrap().lazy(),
+            ETLDependancies::default(),
+        );
         let result = action.execute(context);
         assert!(result.is_err());
     }
@@ -239,7 +244,10 @@ mod tests {
     #[test]
     fn test_column_calculator_passthrough() {
         let action = ApiDispatcher::new();
-        let context = RosterContext::new(polars::prelude::df!("a" => [1]).unwrap().lazy());
+        let context = RosterContext::with_deps(
+            polars::prelude::df!("a" => [1]).unwrap().lazy(),
+            ETLDependancies::default(),
+        );
         let result = action.calculate_columns(context);
         assert!(result.is_ok());
     }
@@ -386,16 +394,18 @@ mod tests {
         };
         let engine = ApiEngine::with_repo(Box::new(repo));
         let dispatcher = ApiDispatcher::with_engine(engine);
-        let ctx = RosterContext::new(
+        let ctx = RosterContext::with_deps(
             polars::prelude::df!("id" => ["E001", "E002"]).unwrap().lazy(),
+            ETLDependancies::default(),
         );
 
         let result = dispatcher.execute(ctx).expect("should not return Err");
-        assert_eq!(result.warnings.len(), 1);
-        assert_eq!(result.warnings[0].action_id, "api_dispatcher");
-        assert!(result.warnings[0].message.contains("HTTP 404"));
-        assert_eq!(result.warnings[0].count, 2);
-        assert_eq!(result.warnings[0].detail.as_deref(), Some("Not Found"));
+        let warnings = result.deps.logger.drain_deferred_warnings();
+        assert_eq!(warnings.len(), 1);
+        assert_eq!(warnings[0].action_id, "api_dispatcher");
+        assert!(warnings[0].message.contains("HTTP 404"));
+        assert_eq!(warnings[0].count, 2);
+        assert_eq!(warnings[0].detail.as_deref(), Some("Not Found"));
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -406,13 +416,15 @@ mod tests {
         };
         let engine = ApiEngine::with_repo(Box::new(repo));
         let dispatcher = ApiDispatcher::with_engine(engine);
-        let ctx = RosterContext::new(
+        let ctx = RosterContext::with_deps(
             polars::prelude::df!("id" => ["E001"]).unwrap().lazy(),
+            ETLDependancies::default(),
         );
 
         let result = dispatcher.execute(ctx).expect("should not return Err");
-        assert_eq!(result.warnings.len(), 1);
-        assert!(result.warnings[0].message.contains("HTTP 500"));
+        let warnings = result.deps.logger.drain_deferred_warnings();
+        assert_eq!(warnings.len(), 1);
+        assert!(warnings[0].message.contains("HTTP 500"));
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -423,25 +435,29 @@ mod tests {
         };
         let engine = ApiEngine::with_repo(Box::new(repo));
         let dispatcher = ApiDispatcher::with_engine(engine);
-        let ctx = RosterContext::new(
+        let ctx = RosterContext::with_deps(
             polars::prelude::df!("id" => ["E001"]).unwrap().lazy(),
+            ETLDependancies::default(),
         );
 
         let result = dispatcher.execute(ctx).expect("should not return Err");
-        assert!(result.warnings.is_empty());
+        let warnings = result.deps.logger.drain_deferred_warnings();
+        assert!(warnings.is_empty());
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_dispatch_network_error_produces_warning() {
         let engine = ApiEngine::with_repo(Box::new(FailingRepo));
         let dispatcher = ApiDispatcher::with_engine(engine);
-        let ctx = RosterContext::new(
+        let ctx = RosterContext::with_deps(
             polars::prelude::df!("id" => ["E001"]).unwrap().lazy(),
+            ETLDependancies::default(),
         );
 
         let result = dispatcher.execute(ctx).expect("should not return Err");
-        assert_eq!(result.warnings.len(), 1);
-        assert!(result.warnings[0].message.contains("Dispatch failed"));
-        assert!(result.warnings[0].message.contains("connection refused"));
+        let warnings = result.deps.logger.drain_deferred_warnings();
+        assert_eq!(warnings.len(), 1);
+        assert!(warnings[0].message.contains("Dispatch failed"));
+        assert!(warnings[0].message.contains("connection refused"));
     }
 }

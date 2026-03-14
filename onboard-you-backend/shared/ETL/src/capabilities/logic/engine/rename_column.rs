@@ -13,7 +13,6 @@
 use onboard_you_models::RenameConfig;
 use onboard_you_models::ColumnCalculator;
 use onboard_you_models::{OnboardingAction, Result, RosterContext};
-use polars::prelude::*;
 
 // ---------------------------------------------------------------------------
 // Engine
@@ -43,12 +42,12 @@ impl RenameColumn {
 
 impl ColumnCalculator for RenameColumn {
     fn calculate_columns(&self, mut context: RosterContext) -> Result<RosterContext> {
-        let lf = std::mem::replace(&mut context.data, LazyFrame::default());
+        let lf = context.get_data();
 
         let old: Vec<&str> = self.config.mapping.keys().map(|k| k.as_str()).collect();
         let new: Vec<&str> = self.config.mapping.values().map(|v| v.as_str()).collect();
 
-        context.data = lf.rename(old, new, true);
+        context.set_data(lf.rename(old, new, true));
 
         for to in self.config.mapping.values() {
             context.set_field_source(to.clone(), "LOGIC_ACTION".into());
@@ -65,7 +64,7 @@ impl OnboardingAction for RenameColumn {
     fn execute(&self, mut context: RosterContext) -> Result<RosterContext> {
         tracing::info!(mapping = ?self.config.mapping, "RenameColumn: applying mappings");
 
-        let lf = std::mem::replace(&mut context.data, LazyFrame::default());
+        let lf = context.get_data();
 
         let old: Vec<&str> = self.config.mapping.keys().map(|k| k.as_str()).collect();
         let new: Vec<&str> = self.config.mapping.values().map(|v| v.as_str()).collect();
@@ -77,7 +76,7 @@ impl OnboardingAction for RenameColumn {
             context.mark_field_modified(to.clone(), "rename_column".into());
         }
 
-        context.data = lf;
+        context.set_data(lf);
         Ok(context)
     }
 }
@@ -88,7 +87,9 @@ impl OnboardingAction for RenameColumn {
 
 #[cfg(test)]
 mod tests {
+    use onboard_you_models::ETLDependancies;
     use super::*;
+    use polars::prelude::*;
     use std::collections::HashMap;
 
     fn sample_df() -> DataFrame {
@@ -116,9 +117,9 @@ mod tests {
         });
         let cfg: RenameConfig = serde_json::from_value(json.clone()).expect("deserialise");
         let action = RenameColumn::from_action_config(&cfg).expect("valid config");
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         let result = action.execute(ctx).expect("execute");
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
 
         assert!(df.column("given_name").is_ok());
         assert!(df.column("surname").is_ok());
@@ -148,11 +149,11 @@ mod tests {
         });
         let cfg: RenameConfig = serde_json::from_value(json.clone()).expect("deserialise");
         let action = RenameColumn::from_action_config(&cfg).expect("valid config");
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         let result = action.execute(ctx).expect("execute");
 
         let meta = result
-            .field_metadata
+            .field_metadata()
             .get("given_name")
             .expect("metadata for 'given_name'");
         assert_eq!(meta.source, "LOGIC_ACTION");

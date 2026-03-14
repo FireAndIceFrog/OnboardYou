@@ -3,7 +3,7 @@
 mod common;
 
 use onboard_you::*;
-use onboard_you_models::{ActionConfig, ActionConfigPayload, ActionType, RosterContext};
+use onboard_you_models::{ETLDependancies, ActionConfig, ActionConfigPayload, ActionType, RosterContext};
 use polars::prelude::*;
 
 #[test]
@@ -31,9 +31,9 @@ fn test_identity_resolution_basic() {
         .expect("create deduplicator");
     assert_eq!(action.id(), "identity_deduplicator");
 
-    let ctx = RosterContext::new(df.lazy());
+    let ctx = RosterContext::with_deps(df.lazy(), ETLDependancies::default());
     let result = action.execute(ctx).expect("execute");
-    let df = result.data.collect().expect("collect");
+    let df = result.get_data().collect().expect("collect");
 
     // 001 and 002 share email → 002 is duplicate
     let is_dup: Vec<Option<bool>> = df

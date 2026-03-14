@@ -9,7 +9,7 @@ use crate::{
     models::{ApiError, StepValidation, ValidationResult},
 };
 use onboard_you::{ActionFactoryTrait};
-use onboard_you_models::{ActionConfigPayload, ApiDispatcherConfig, DynamicEgressModel, Manifest, RosterContext};
+use onboard_you_models::{ActionConfigPayload, ApiDispatcherConfig, DynamicEgressModel, ETLDependancies, Manifest, RosterContext};
 use polars::prelude::*;
 
 /// Validate a pipeline manifest by propagating columns through every step.
@@ -43,7 +43,7 @@ pub async fn validate_pipeline(
         .collect::<Result<_, _>>()?;
 
     // Start with an empty context (no columns yet)
-    let mut context = RosterContext::new(LazyFrame::default());
+    let mut context = RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
     let mut steps = Vec::with_capacity(actions.len());
 
     for (action, ac) in actions.iter().zip(manifest.actions.iter()) {
@@ -57,7 +57,7 @@ pub async fn validate_pipeline(
         })?;
 
         // Collect the schema from the lazy frame (cheap — no data)
-        let schema = context.data.collect_schema().map_err(|e| {
+        let schema = context.get_data().collect_schema().map_err(|e| {
             let msg = e.to_string();
             let short = msg.split(';').next().unwrap_or(&msg);
             ApiError::Validation(format!(

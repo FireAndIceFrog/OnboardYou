@@ -87,7 +87,7 @@ impl OnboardingAction for RegexReplace {
 
         // Collect to apply row-wise string transformation.
         let df = context
-            .data
+            .get_data()
             .clone()
             .collect()
             .map_err(|e| Error::LogicError(format!("Failed to collect LazyFrame: {e}")))?;
@@ -127,7 +127,7 @@ impl OnboardingAction for RegexReplace {
 
         context.set_field_source(self.config.column.clone(), "LOGIC_ACTION".into());
         context.mark_field_modified(self.config.column.clone(), "regex_replace".into());
-        context.data = result_df.lazy();
+        context.set_data(result_df.lazy());
 
         Ok(context)
     }
@@ -139,6 +139,7 @@ impl OnboardingAction for RegexReplace {
 
 #[cfg(test)]
 mod tests {
+    use onboard_you_models::ETLDependancies;
     use super::*;
     use onboard_you_models::{MAX_PATTERN_LEN, MAX_REPLACEMENT_LEN};
 
@@ -176,9 +177,9 @@ mod tests {
         }))
         .unwrap();
         let action = RegexReplace::from_action_config(&cfg).unwrap();
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         let result = action.execute(ctx).unwrap();
-        let df = result.data.collect().unwrap();
+        let df = result.get_data().collect().unwrap();
         let col = df.column("phone").unwrap().str().unwrap();
 
         assert_eq!(col.get(0).unwrap(), "07911 123456");
@@ -198,9 +199,9 @@ mod tests {
         }))
         .unwrap();
         let action = RegexReplace::from_action_config(&cfg).unwrap();
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         let result = action.execute(ctx).unwrap();
-        let df = result.data.collect().unwrap();
+        let df = result.get_data().collect().unwrap();
         let col = df.column("postcode").unwrap().str().unwrap();
 
         assert_eq!(col.get(0).unwrap(), "SW1A");
@@ -221,9 +222,9 @@ mod tests {
         }))
         .unwrap();
         let action = RegexReplace::from_action_config(&cfg).unwrap();
-        let ctx = RosterContext::new(df.lazy());
+        let ctx = RosterContext::with_deps(df.lazy(), ETLDependancies::default());
         let result = action.execute(ctx).unwrap();
-        let collected = result.data.collect().unwrap();
+        let collected = result.get_data().collect().unwrap();
         let col = collected.column("val").unwrap().str().unwrap();
         // Only the first 'a' is replaced
         assert_eq!(col.get(0).unwrap(), "Xaa");
@@ -238,9 +239,9 @@ mod tests {
         }))
         .unwrap();
         let action = RegexReplace::from_action_config(&cfg).unwrap();
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         let result = action.execute(ctx).unwrap();
-        let df = result.data.collect().unwrap();
+        let df = result.get_data().collect().unwrap();
         let col = df.column("phone").unwrap().str().unwrap();
         assert_eq!(col.get(0).unwrap(), "+44 7911 123456");
     }
@@ -254,11 +255,11 @@ mod tests {
         }))
         .unwrap();
         let action = RegexReplace::from_action_config(&cfg).unwrap();
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         let result = action.execute(ctx).unwrap();
 
         let meta = result
-            .field_metadata
+            .field_metadata()
             .get("phone")
             .expect("metadata for 'phone'");
         assert_eq!(meta.source, "LOGIC_ACTION");
@@ -419,9 +420,9 @@ mod tests {
         }))
         .unwrap();
         let action = RegexReplace::from_action_config(&cfg).unwrap();
-        let ctx = RosterContext::new(df.lazy());
+        let ctx = RosterContext::with_deps(df.lazy(), ETLDependancies::default());
         let result = action.execute(ctx).unwrap();
-        let collected = result.data.collect().unwrap();
+        let collected = result.get_data().collect().unwrap();
         let col = collected.column("val").unwrap().str().unwrap();
         // $1 is escaped to $$ so it appears literally
         assert_eq!(col.get(0).unwrap(), "$1_expanded world");
@@ -450,7 +451,7 @@ mod tests {
         }))
         .unwrap();
         let action = RegexReplace::from_action_config(&cfg).unwrap();
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         let result = action.execute(ctx);
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
@@ -472,9 +473,9 @@ mod tests {
         }))
         .unwrap();
         let action = RegexReplace::from_action_config(&cfg).unwrap();
-        let ctx = RosterContext::new(df.lazy());
+        let ctx = RosterContext::with_deps(df.lazy(), ETLDependancies::default());
         let result = action.execute(ctx).unwrap();
-        let collected = result.data.collect().unwrap();
+        let collected = result.get_data().collect().unwrap();
         let col = collected.column("val").unwrap().str().unwrap();
         assert_eq!(col.get(0).unwrap(), "aXc");
         assert!(col.get(1).is_none());
@@ -494,9 +495,9 @@ mod tests {
         }))
         .unwrap();
         let action = RegexReplace::from_action_config(&cfg).unwrap();
-        let ctx = RosterContext::new(df.lazy());
+        let ctx = RosterContext::with_deps(df.lazy(), ETLDependancies::default());
         let result = action.execute(ctx).unwrap();
-        let collected = result.data.collect().unwrap();
+        let collected = result.get_data().collect().unwrap();
         let col = collected.column("val").unwrap().str().unwrap();
         assert_eq!(col.get(0).unwrap(), "");
         assert_eq!(col.get(1).unwrap(), "Xbc");

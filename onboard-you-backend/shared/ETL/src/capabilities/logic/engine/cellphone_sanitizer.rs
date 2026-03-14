@@ -340,9 +340,10 @@ impl CellphoneSanitizer {
 
 impl ColumnCalculator for CellphoneSanitizer {
     fn calculate_columns(&self, mut context: RosterContext) -> Result<RosterContext> {
-        let lf = std::mem::replace(&mut context.data, LazyFrame::default());
-        context.data =
-            lf.with_column(col(&self.config.phone_column).alias(&self.config.output_column));
+        let lf = context.get_data();
+        context.set_data(
+            lf.with_column(col(&self.config.phone_column).alias(&self.config.output_column))
+        );
         context.set_field_source(
             self.config.output_column.clone(),
             "cellphone_sanitizer".into(),
@@ -364,7 +365,7 @@ impl OnboardingAction for CellphoneSanitizer {
             "CellphoneSanitizer: internationalising phone numbers"
         );
 
-        let lf = std::mem::replace(&mut context.data, LazyFrame::default());
+        let lf = context.get_data();
 
         // Bundle phone + country columns into a struct so we can access
         // multiple columns inside a single `.map()` closure while staying lazy.
@@ -374,9 +375,9 @@ impl OnboardingAction for CellphoneSanitizer {
 
         let phone_col_name = self.config.phone_column.clone();
         let country_col_names = self.config.country_columns.clone();
-        let collector = context.warning_collector.clone();
+        let logger = context.deps.logger.clone();
 
-        context.data = lf.with_column(
+        let transformed = lf.with_column(
             as_struct(all_cols)
                 .map(
                     move |s| {
@@ -429,18 +430,16 @@ impl OnboardingAction for CellphoneSanitizer {
                                 count = no_country_count,
                                 "CellphoneSanitizer: phone numbers without resolvable country code"
                             );
-                            if let Ok(mut guard) = collector.lock() {
-                                guard.push(onboard_you_models::PipelineWarning {
-                                    action_id: "cellphone_sanitizer".into(),
-                                    message: format!(
-                                        "{} phone number(s) had no resolvable country code — \
-                                         returned without international prefix",
-                                        no_country_count
-                                    ),
-                                    count: no_country_count,
-                                    detail: None,
-                                });
-                            }
+                            logger.warn(onboard_you_models::PipelineWarning {
+                                action_id: "cellphone_sanitizer".into(),
+                                message: format!(
+                                    "{} phone number(s) had no resolvable country code — \
+                                     returned without international prefix",
+                                    no_country_count
+                                ),
+                                count: no_country_count,
+                                detail: None,
+                            });
                         }
 
                         Ok(result.into_column())
@@ -449,6 +448,7 @@ impl OnboardingAction for CellphoneSanitizer {
                 )
                 .alias(&self.config.output_column),
         );
+        context.set_data(transformed);
 
         context.set_field_source(
             self.config.output_column.clone(),
@@ -469,6 +469,7 @@ impl OnboardingAction for CellphoneSanitizer {
 
 #[cfg(test)]
 mod tests {
+    use onboard_you_models::ETLDependancies;
     use super::*;
 
     // ---- helper -----------------------------------------------------------
@@ -581,9 +582,9 @@ mod tests {
         }))
         .unwrap();
         let action = CellphoneSanitizer::from_action_config(&cfg).expect("valid config");
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         let result = action.execute(ctx).expect("execute");
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
 
         let out = df.column("phone_intl").unwrap().str().unwrap();
 
@@ -610,9 +611,9 @@ mod tests {
         }))
         .unwrap();
         let action = CellphoneSanitizer::from_action_config(&cfg).expect("valid config");
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         let result = action.execute(ctx).expect("execute");
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
 
         let out = df.column("mobile_phone").unwrap().str().unwrap();
         assert_eq!(out.get(0).unwrap(), "+64 2102201202");
@@ -635,9 +636,9 @@ mod tests {
         }))
         .unwrap();
         let action = CellphoneSanitizer::from_action_config(&cfg).expect("valid config");
-        let ctx = RosterContext::new(df.lazy());
+        let ctx = RosterContext::with_deps(df.lazy(), ETLDependancies::default());
         let result = action.execute(ctx).expect("execute");
-        let collected = result.data.collect().expect("collect");
+        let collected = result.get_data().collect().expect("collect");
 
         let out = collected.column("phone_intl").unwrap().str().unwrap();
         assert_eq!(out.get(0).unwrap(), "+64 215551234");
@@ -658,9 +659,9 @@ mod tests {
         }))
         .unwrap();
         let action = CellphoneSanitizer::from_action_config(&cfg).expect("valid config");
-        let ctx = RosterContext::new(df.lazy());
+        let ctx = RosterContext::with_deps(df.lazy(), ETLDependancies::default());
         let result = action.execute(ctx).expect("execute");
-        let collected = result.data.collect().expect("collect");
+        let collected = result.get_data().collect().expect("collect");
 
         let out = collected.column("phone_intl").unwrap().str().unwrap();
         assert!(out.get(0).is_none());
@@ -710,10 +711,10 @@ mod tests {
         }))
         .unwrap();
         let action = CellphoneSanitizer::from_action_config(&cfg).expect("valid config");
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         let result = action.execute(ctx).expect("execute");
         let meta = result
-            .field_metadata
+            .field_metadata()
             .get("phone_intl")
             .expect("metadata should exist");
         assert_eq!(meta.source, "cellphone_sanitizer");
@@ -749,9 +750,9 @@ mod tests {
         }))
         .unwrap();
         let action = CellphoneSanitizer::from_action_config(&cfg).expect("valid config");
-        let ctx = RosterContext::new(df.lazy());
+        let ctx = RosterContext::with_deps(df.lazy(), ETLDependancies::default());
         let result = action.execute(ctx).expect("execute");
-        let collected = result.data.collect().expect("collect");
+        let collected = result.get_data().collect().expect("collect");
 
         let out = collected.column("phone_intl").unwrap().str().unwrap();
         assert_eq!(out.get(0).unwrap(), "+64 215551234");

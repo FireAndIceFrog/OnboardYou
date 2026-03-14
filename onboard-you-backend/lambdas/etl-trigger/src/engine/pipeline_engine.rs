@@ -12,7 +12,7 @@
 use lambda_runtime::Error;
 use std::sync::Arc;
 
-use onboard_you_models::{PipelineRun, RosterContext, StepValidation, ValidationResult};
+use onboard_you_models::{ETLDependancies, PipelineRun, RosterContext, StepValidation, ValidationResult};
 use polars::prelude::LazyFrame;
 
 use crate::dependancies::Dependancies;
@@ -95,13 +95,14 @@ pub async fn run(
         .collect::<onboard_you_models::Result<_>>()
         .map_err(|e| Error::from(format!("Failed to build actions for validation: {e}")))?;
 
-    let mut validation_ctx = RosterContext::new(LazyFrame::default());
+    let mut validation_ctx =
+        RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
     let mut validation_steps: Vec<StepValidation> = Vec::new();
 
     for (action, ac) in validation_actions.iter().zip(manifest.actions.iter()) {
         match action.calculate_columns(validation_ctx.clone()) {
-            Ok(mut ctx) => {
-                let schema = ctx.data.collect_schema().map_err(|e| {
+            Ok(ctx) => {
+                let schema = ctx.get_data().collect_schema().map_err(|e| {
                     Error::from(format!("Validation schema error at '{}': {e}", ac.id))
                 })?;
                 let columns_after: Vec<String> =

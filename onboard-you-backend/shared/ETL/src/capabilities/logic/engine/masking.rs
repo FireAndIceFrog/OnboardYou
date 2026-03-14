@@ -24,6 +24,7 @@
 
 use onboard_you_models::{MaskStrategy, PIIMaskingConfig};
 use onboard_you_models::{ColumnCalculator};
+use onboard_you_models::PipelineWarning;
 use onboard_you_models::{Error, OnboardingAction, Result, RosterContext};
 use polars::prelude::*;
 
@@ -73,7 +74,7 @@ impl OnboardingAction for PIIMasking {
         );
 
         // Collect eagerly for reliable column operations
-        let lf = std::mem::replace(&mut context.data, LazyFrame::default());
+        let lf = context.get_data();
         let mut df = lf
             .collect()
             .map_err(|e| Error::LogicError(format!("Failed to collect for masking: {}", e)))?;
@@ -84,12 +85,12 @@ impl OnboardingAction for PIIMasking {
                     column = %col_mask.name,
                     "PIIMasking: column not found in data — skipping"
                 );
-                context.warn(
-                    self.id(),
-                    format!("Column '{}' not found in data — masking skipped", col_mask.name),
-                    0,
-                    None,
-                );
+                context.deps.logger.warn(PipelineWarning {
+                    action_id: self.id().to_string(),
+                    message: format!("Column '{}' not found in data — masking skipped", col_mask.name),
+                    count: 0,
+                    detail: None,
+                });
                 continue;
             }
 
@@ -145,7 +146,7 @@ impl OnboardingAction for PIIMasking {
             context.mark_field_modified(col_mask.name.clone(), "pii_masking".into());
         }
 
-        context.data = df.lazy();
+        context.set_data(df.lazy());
         Ok(context)
     }
 }
@@ -156,6 +157,7 @@ impl OnboardingAction for PIIMasking {
 
 #[cfg(test)]
 mod tests {
+    use onboard_you_models::ETLDependancies;
     use super::*;
     use onboard_you_models::ColumnMask;
 
@@ -177,10 +179,10 @@ mod tests {
 
     #[test]
     fn test_ssn_masked() {
-        let ctx = RosterContext::new(test_df().lazy());
+        let ctx = RosterContext::with_deps(test_df().lazy(), ETLDependancies::default());
         let action = PIIMasking::default();
         let result = action.execute(ctx).expect("execute");
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
 
         let ssn_col = df.column("ssn").unwrap();
         let ssns: Vec<Option<&str>> = ssn_col.str().unwrap().into_iter().collect();
@@ -192,10 +194,10 @@ mod tests {
 
     #[test]
     fn test_salary_zeroed() {
-        let ctx = RosterContext::new(test_df().lazy());
+        let ctx = RosterContext::with_deps(test_df().lazy(), ETLDependancies::default());
         let action = PIIMasking::default();
         let result = action.execute(ctx).expect("execute");
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
 
         let salary_col = df.column("salary").unwrap();
         let salaries: Vec<Option<i64>> = salary_col.i64().unwrap().into_iter().collect();
@@ -214,10 +216,10 @@ mod tests {
                 },
             }],
         };
-        let ctx = RosterContext::new(test_df().lazy());
+        let ctx = RosterContext::with_deps(test_df().lazy(), ETLDependancies::default());
         let action = PIIMasking::new(config);
         let result = action.execute(ctx).expect("execute");
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
 
         // SSN should be masked
         let ssns: Vec<Option<&str>> = df
@@ -248,10 +250,10 @@ mod tests {
                 strategy: MaskStrategy::Zero,
             }],
         };
-        let ctx = RosterContext::new(test_df().lazy());
+        let ctx = RosterContext::with_deps(test_df().lazy(), ETLDependancies::default());
         let action = PIIMasking::new(config);
         let result = action.execute(ctx).expect("execute");
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
 
         // SSN untouched
         let ssns: Vec<Option<&str>> = df
@@ -282,25 +284,25 @@ mod tests {
             "salary"      => &[50_000i64],
         }
         .unwrap();
-        let ctx = RosterContext::new(df.lazy());
+        let ctx = RosterContext::with_deps(df.lazy(), ETLDependancies::default());
         let action = PIIMasking::default();
         let result = action.execute(ctx).expect("execute");
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
         assert_eq!(df.height(), 1);
     }
 
     #[test]
     fn test_field_metadata() {
-        let ctx = RosterContext::new(test_df().lazy());
+        let ctx = RosterContext::with_deps(test_df().lazy(), ETLDependancies::default());
         let action = PIIMasking::default();
         let result = action.execute(ctx).expect("execute");
 
-        let ssn_meta = result.field_metadata.get("ssn").expect("ssn metadata");
+        let ssn_meta = result.field_metadata().get("ssn").expect("ssn metadata");
         assert_eq!(ssn_meta.source, "LOGIC_ACTION");
         assert_eq!(ssn_meta.modified_by.as_deref(), Some("pii_masking"));
 
         let sal_meta = result
-            .field_metadata
+            .field_metadata()
             .get("salary")
             .expect("salary metadata");
         assert_eq!(sal_meta.source, "LOGIC_ACTION");
@@ -348,10 +350,10 @@ mod tests {
                 },
             }],
         };
-        let ctx = RosterContext::new(df.lazy());
+        let ctx = RosterContext::with_deps(df.lazy(), ETLDependancies::default());
         let action = PIIMasking::new(config);
         let result = action.execute(ctx).expect("execute");
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
 
         let phones: Vec<Option<&str>> = df
             .column("phone")
@@ -376,10 +378,10 @@ mod tests {
                 strategy: MaskStrategy::Zero,
             }],
         };
-        let ctx = RosterContext::new(df.lazy());
+        let ctx = RosterContext::with_deps(df.lazy(), ETLDependancies::default());
         let action = PIIMasking::new(config);
         let result = action.execute(ctx).expect("execute");
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
 
         let bonuses: Vec<Option<i64>> = df
             .column("bonus")
@@ -399,14 +401,15 @@ mod tests {
                 strategy: MaskStrategy::Zero,
             }],
         };
-        let ctx = RosterContext::new(test_df().lazy());
+        let ctx = RosterContext::with_deps(test_df().lazy(), ETLDependancies::default());
         let action = PIIMasking::new(config);
         let result = action.execute(ctx).expect("should succeed with warning");
 
-        assert_eq!(result.warnings.len(), 1);
-        assert_eq!(result.warnings[0].action_id, "pii_masking");
-        assert!(result.warnings[0].message.contains("nonexistent"));
-        assert!(result.warnings[0].message.contains("not found"));
+        let warnings = result.deps.logger.drain_deferred_warnings();
+        assert_eq!(warnings.len(), 1);
+        assert_eq!(warnings[0].action_id, "pii_masking");
+        assert!(warnings[0].message.contains("nonexistent"));
+        assert!(warnings[0].message.contains("not found"));
     }
 
     #[test]
@@ -417,11 +420,12 @@ mod tests {
                 strategy: MaskStrategy::Zero,
             }],
         };
-        let ctx = RosterContext::new(test_df().lazy());
+        let ctx = RosterContext::with_deps(test_df().lazy(), ETLDependancies::default());
         let action = PIIMasking::new(config);
         let result = action.execute(ctx).expect("execute");
 
-        assert!(result.warnings.is_empty());
+        let warnings = result.deps.logger.drain_deferred_warnings();
+        assert!(warnings.is_empty());
     }
 
     #[test]
@@ -438,11 +442,12 @@ mod tests {
                 },
             ],
         };
-        let ctx = RosterContext::new(test_df().lazy());
+        let ctx = RosterContext::with_deps(test_df().lazy(), ETLDependancies::default());
         let action = PIIMasking::new(config);
         let result = action.execute(ctx).expect("should succeed");
 
-        assert_eq!(result.warnings.len(), 1);
-        assert!(result.warnings[0].message.contains("ghost_col"));
+        let warnings = result.deps.logger.drain_deferred_warnings();
+        assert_eq!(warnings.len(), 1);
+        assert!(warnings[0].message.contains("ghost_col"));
     }
 }

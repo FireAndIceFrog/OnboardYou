@@ -480,7 +480,7 @@ impl HrisConnector for WorkdayHrisConnector {
 }
 
 impl ColumnCalculator for WorkdayHrisConnector {
-    fn calculate_columns(&self, _context: RosterContext) -> Result<RosterContext> {
+    fn calculate_columns(&self, context: RosterContext) -> Result<RosterContext> {
         // Build an empty DataFrame with the known Workday columns (all Utf8)
         let columns: Vec<Column> = WORKDAY_COLUMNS
             .iter()
@@ -490,7 +490,7 @@ impl ColumnCalculator for WorkdayHrisConnector {
             Error::IngestionError(format!("Failed to build empty Workday schema: {}", e))
         })?;
 
-        let mut ctx = RosterContext::new(empty_df.lazy());
+        let mut ctx = RosterContext::with_deps(empty_df.lazy(), context.deps.clone());
         for name in WORKDAY_COLUMNS {
             ctx.set_field_source(name.to_string(), "WORKDAY_HRIS".into());
         }
@@ -503,7 +503,7 @@ impl OnboardingAction for WorkdayHrisConnector {
         "workday_hris_connector"
     }
 
-    fn execute(&self, _context: RosterContext) -> Result<RosterContext> {
+    fn execute(&self, context: RosterContext) -> Result<RosterContext> {
         tracing::info!(
             tenant = %self.config.tenant_id,
             "WorkdayHrisConnector: executing ingestion"
@@ -518,7 +518,7 @@ impl OnboardingAction for WorkdayHrisConnector {
         })?;
 
         // 3. Build the RosterContext with WORKDAY_HRIS provenance
-        let mut ctx = RosterContext::new(lf);
+        let mut ctx = RosterContext::with_deps(lf, context.deps.clone());
         for field_name in schema.iter_names() {
             ctx.set_field_source(field_name.to_string(), "WORKDAY_HRIS".into());
         }
@@ -539,6 +539,7 @@ impl OnboardingAction for WorkdayHrisConnector {
 
 #[cfg(test)]
 mod tests {
+    use onboard_you_models::ETLDependancies;
     use onboard_you_models::WorkdayResponseGroup;
 
     use super::*;
@@ -902,17 +903,17 @@ mod tests {
         let client = Box::new(MockSoapClient::new(SAMPLE_WORKDAY_XML));
         let connector = WorkdayHrisConnector::with_client(config, client);
 
-        let initial = RosterContext::new(LazyFrame::default());
+        let initial = RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
         let ctx = connector.execute(initial).expect("execute should succeed");
 
         // Verify DataFrame
-        let df = ctx.data.collect().expect("collect");
+        let df = ctx.get_data().collect().expect("collect");
         assert_eq!(df.height(), 3);
         assert_eq!(df.width(), 18);
 
         // Verify field-ownership metadata
-        assert_eq!(ctx.field_metadata.len(), 18);
-        for (_field, meta) in &ctx.field_metadata {
+        assert_eq!(ctx.field_metadata().len(), 18);
+        for (_field, meta) in ctx.field_metadata() {
             assert_eq!(meta.source, "WORKDAY_HRIS");
             assert!(meta.modified_by.is_none());
         }
@@ -928,9 +929,9 @@ mod tests {
         let client = Box::new(MockSoapClient::new(xml));
         let connector = WorkdayHrisConnector::with_client(config, client);
 
-        let initial = RosterContext::new(LazyFrame::default());
+        let initial = RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
         let ctx = connector.execute(initial).expect("execute should succeed");
-        let df = ctx.data.collect().expect("collect");
+        let df = ctx.get_data().clone().collect().expect("collect");
         assert_eq!(df.height(), 0);
         assert_eq!(df.width(), 18);
     }
@@ -941,7 +942,7 @@ mod tests {
         let client = Box::new(ErrorSoapClient);
         let connector = WorkdayHrisConnector::with_client(config, client);
 
-        let initial = RosterContext::new(LazyFrame::default());
+        let initial = RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
         let result = connector.execute(initial);
         assert!(result.is_err());
     }
@@ -977,7 +978,7 @@ mod tests {
         let client = Box::new(MockSoapClient::new(SAMPLE_WORKDAY_XML));
         let connector = WorkdayHrisConnector::with_client(config, client);
 
-        let initial = RosterContext::new(LazyFrame::default());
+        let initial = RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
         let ctx = connector.execute(initial).unwrap();
 
         let expected_fields = [
@@ -1002,7 +1003,7 @@ mod tests {
         ];
         for field in &expected_fields {
             assert!(
-                ctx.field_metadata.contains_key(*field),
+                ctx.field_metadata().contains_key(*field),
                 "metadata missing field '{}'",
                 field
             );
@@ -1134,9 +1135,9 @@ mod tests {
         let client = Box::new(PaginatingMockClient);
         let connector = WorkdayHrisConnector::with_client(config, client);
 
-        let initial = RosterContext::new(LazyFrame::default());
+        let initial = RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
         let ctx = connector.execute(initial).expect("paginated execute");
-        let df = ctx.data.collect().expect("collect");
+        let df = ctx.get_data().collect().expect("collect");
 
         // 2 workers from page 1 + 1 worker from page 2 = 3
         assert_eq!(df.height(), 3);
