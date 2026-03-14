@@ -8,9 +8,9 @@ import { type Mock, vi } from 'vitest';
 import i18n from '@/i18n';
 import { system } from '@/theme';
 import type { RootState } from '@/store';
-import chatReducer from '@/features/chat/state/chatSlice';
 import configDetailsReducer from '@/features/config-details/state/configDetailsSlice';
 import configListReducer from '@/features/config-list/state/configListSlice';
+import runHistoryReducer from '@/features/run-history/state/runHistorySlice';
 
 /* ── Mock thunk extra (mirrors the real ThunkExtra shape) ── */
 export const mockShowNotification: Mock = vi.fn();
@@ -24,9 +24,9 @@ const mockThunkExtra = {
 export function createTestStore(preloadedState?: Partial<RootState>): EnhancedStore {
   return configureStore({
     reducer: {
-      chat: chatReducer,
       configDetails: configDetailsReducer,
       configList: configListReducer,
+      runHistory: runHistoryReducer,
     },
     preloadedState: preloadedState as RootState | undefined,
     middleware: (getDefaultMiddleware) =>

@@ -1,8 +1,10 @@
 import type { ComponentType } from 'react';
 import type { ActionType } from '@/generated/api';
+import { CsvConnectorPanel } from './CsvConnectorPanel';
 import { PiiMaskingPanel } from './PiiMaskingPanel';
 import { WorkdayResponseGroupPanel } from './WorkdayResponseGroupPanel';
 import { SageHrHistoryPanel } from './SageHrHistoryPanel';
+import { ApiDispatcherPanel } from './ApiDispatcherPanel';
 
 /**
  * Props that every custom action panel receives.
@@ -26,9 +28,11 @@ export interface ActionEditorProps {
  * 3. Add one line to `ACTION_PANEL_REGISTRY` below
  */
 const ACTION_PANEL_REGISTRY: Partial<Record<ActionType, ComponentType<ActionEditorProps>>> = {
+  csv_hris_connector: CsvConnectorPanel,
   pii_masking: PiiMaskingPanel,
   workday_hris_connector: WorkdayResponseGroupPanel,
   sage_hr_connector: SageHrHistoryPanel,
+  api_dispatcher: ApiDispatcherPanel,
 };
 
 /**

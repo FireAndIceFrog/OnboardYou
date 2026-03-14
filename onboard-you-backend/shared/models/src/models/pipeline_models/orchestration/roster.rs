@@ -5,6 +5,8 @@
 use polars::prelude::*;
 use std::collections::HashMap;
 
+use crate::{ETLDependancies};
+
 /// Metadata tracking field ownership and source of truth
 #[derive(Clone, Debug)]
 pub struct FieldMetadata {
@@ -20,19 +22,41 @@ pub struct FieldMetadata {
 #[derive(Clone)]
 pub struct RosterContext {
     /// The actual data: lazy evaluation for efficiency
-    pub data: LazyFrame,
+    data: LazyFrame,
 
     /// Metadata: Which field was mastered/modified by which capability
-    pub field_metadata: HashMap<String, FieldMetadata>,
+    field_metadata: HashMap<String, FieldMetadata>,
+
+    pub deps: ETLDependancies,
 }
 
 impl RosterContext {
-    /// Create a new RosterContext from a LazyFrame
+    /// Create a new RosterContext from a LazyFrame.
+    ///
+    /// Test-only convenience constructor that injects default dependencies.
+    #[cfg(test)]
     pub fn new(data: LazyFrame) -> Self {
+        Self::with_deps(data, ETLDependancies::default())
+    }
+
+    /// Create a new RosterContext with explicitly provided dependencies.
+    pub fn with_deps(data: LazyFrame, deps: ETLDependancies) -> Self {
         Self {
             data,
             field_metadata: HashMap::new(),
+            deps,
         }
+    }
+    pub fn get_data(&self) -> LazyFrame {
+        self.data.clone()
+    }
+
+    pub fn set_data(&mut self, data: LazyFrame) {
+        self.data = data;
+    }
+
+    pub fn field_metadata(&self) -> &HashMap<String, FieldMetadata> {
+        &self.field_metadata
     }
 
     /// Record field ownership metadata

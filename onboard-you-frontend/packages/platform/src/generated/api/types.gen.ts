@@ -250,7 +250,7 @@ export type CsvHrisConnectorConfig = {
      * The full S3 key `{org_id}/{company_id}/{filename}` is resolved at
      * runtime by the ETL trigger before pipeline execution.
      */
-    filename: string;
+    filename?: string | null;
 };
 
 /**
@@ -372,6 +372,130 @@ export type IsoCountrySanitizerConfig = {
      * Column to read the raw country value from.
      */
     source_column: string;
+};
+
+/**
+ * Paginated list response wrapper.
+ */
+export type ListResponsePipelineConfig = {
+    /**
+     * Number of items per page.
+     */
+    countPerPage: number;
+    /**
+     * Current page number (1-based).
+     */
+    currentPage: number;
+    /**
+     * Items on this page.
+     */
+    data: Array<{
+        /**
+         * EventBridge-compatible schedule expression (cron or rate)
+         */
+        cron: string;
+        /**
+         * Unique identifier for the customer company (sort key)
+         */
+        customerCompanyId: string;
+        /**
+         * Optional image/icon for the pipeline
+         */
+        image?: string | null;
+        /**
+         * ISO 8601 timestamp of last edit — set by the server
+         */
+        lastEdited?: string;
+        /**
+         * Name of the pipeline
+         */
+        name: string;
+        /**
+         * Unique identifier for the organization (partition key)
+         */
+        organizationId: string;
+        /**
+         * The full ETL pipeline manifest (passed through to the ETL Lambda)
+         */
+        pipeline: Manifest;
+    }>;
+    /**
+     * Last page number (1-based).
+     */
+    lastPage: number;
+};
+
+/**
+ * Paginated list response wrapper.
+ */
+export type ListResponsePipelineRun = {
+    /**
+     * Number of items per page.
+     */
+    countPerPage: number;
+    /**
+     * Current page number (1-based).
+     */
+    currentPage: number;
+    /**
+     * Items on this page.
+     */
+    data: Array<{
+        /**
+         * Action ID currently being executed (updated during the run).
+         */
+        currentAction?: string | null;
+        /**
+         * Customer company the pipeline ran for.
+         */
+        customerCompanyId: string;
+        /**
+         * Which action caused the failure.
+         */
+        errorActionId?: string | null;
+        /**
+         * Error message if the run failed.
+         */
+        errorMessage?: string | null;
+        /**
+         * Row index where the error occurred (if determinable).
+         */
+        errorRow?: number | null;
+        /**
+         * When the run finished (ISO 8601), if it has.
+         */
+        finishedAt?: string | null;
+        /**
+         * UUID identifying this specific run.
+         */
+        id: string;
+        manifestSnapshot?: null | Manifest;
+        /**
+         * Organization that owns the pipeline.
+         */
+        organizationId: string;
+        /**
+         * Number of rows successfully processed.
+         */
+        rowsProcessed?: number | null;
+        /**
+         * When the run started (ISO 8601).
+         */
+        startedAt: string;
+        /**
+         * Current status of the run.
+         */
+        status: string;
+        validationResult?: null | ValidationResult;
+        /**
+         * Warnings accumulated during the run.
+         */
+        warnings: Array<PipelineWarning>;
+    }>;
+    /**
+     * Last page number (1-based).
+     */
+    lastPage: number;
 };
 
 /**
@@ -549,7 +673,7 @@ export type OAuthRepoConfig = {
 };
 
 /**
- * Per-organization settings stored in DynamoDB.
+ * Per-organization settings stored in the database.
  *
  * `default_auth` holds the full auth configuration that maps to a
  * concrete `ApiDispatcherConfig` variant (Bearer, OAuth, OAuth2).
@@ -607,7 +731,7 @@ export type PiiMaskingConfig = {
 };
 
 /**
- * The pipeline config as stored in DynamoDB and exchanged via the API.
+ * The pipeline config as stored in the database and exchanged via the API.
  *
  * ```json
  * {
@@ -649,6 +773,87 @@ export type PipelineConfig = {
      * The full ETL pipeline manifest (passed through to the ETL Lambda)
      */
     pipeline: Manifest;
+};
+
+/**
+ * A pipeline run record as stored in the `pipeline_runs` table.
+ */
+export type PipelineRun = {
+    /**
+     * Action ID currently being executed (updated during the run).
+     */
+    currentAction?: string | null;
+    /**
+     * Customer company the pipeline ran for.
+     */
+    customerCompanyId: string;
+    /**
+     * Which action caused the failure.
+     */
+    errorActionId?: string | null;
+    /**
+     * Error message if the run failed.
+     */
+    errorMessage?: string | null;
+    /**
+     * Row index where the error occurred (if determinable).
+     */
+    errorRow?: number | null;
+    /**
+     * When the run finished (ISO 8601), if it has.
+     */
+    finishedAt?: string | null;
+    /**
+     * UUID identifying this specific run.
+     */
+    id: string;
+    manifestSnapshot?: null | Manifest;
+    /**
+     * Organization that owns the pipeline.
+     */
+    organizationId: string;
+    /**
+     * Number of rows successfully processed.
+     */
+    rowsProcessed?: number | null;
+    /**
+     * When the run started (ISO 8601).
+     */
+    startedAt: string;
+    /**
+     * Current status of the run.
+     */
+    status: string;
+    validationResult?: null | ValidationResult;
+    /**
+     * Warnings accumulated during the run.
+     */
+    warnings: Array<PipelineWarning>;
+};
+
+/**
+ * A single warning emitted by an action during pipeline execution.
+ *
+ * Warnings are non-fatal — the pipeline continues but the client
+ * should be informed so they can fix their source data.
+ */
+export type PipelineWarning = {
+    /**
+     * Which action emitted the warning (e.g. `"cellphone_sanitizer"`).
+     */
+    action_id: string;
+    /**
+     * How many rows were affected.
+     */
+    count: number;
+    /**
+     * Optional extra detail (e.g. the un-parseable values).
+     */
+    detail?: string | null;
+    /**
+     * Human-readable message.
+     */
+    message: string;
 };
 
 /**
@@ -893,6 +1098,16 @@ export type StepValidation = {
 };
 
 /**
+ * Response returned when a run is triggered.
+ */
+export type TriggerRunResponse = {
+    /**
+     * Confirmation message
+     */
+    message: string;
+};
+
+/**
  * Overall validation result for the entire pipeline.
  */
 export type ValidationResult = {
@@ -996,7 +1211,16 @@ export type LoginResponse2 = LoginResponses[keyof LoginResponses];
 export type ListConfigsData = {
     body?: never;
     path?: never;
-    query?: never;
+    query?: {
+        /**
+         * Page number (1-based)
+         */
+        page?: number;
+        /**
+         * Items per page (default 20, max 100)
+         */
+        count_per_page?: number;
+    };
     url: '/config';
 };
 
@@ -1015,9 +1239,9 @@ export type ListConfigsError = ListConfigsErrors[keyof ListConfigsErrors];
 
 export type ListConfigsResponses = {
     /**
-     * List of pipeline configurations
+     * Paginated list of pipeline configurations
      */
-    200: Array<PipelineConfig>;
+    200: ListResponsePipelineConfig;
 };
 
 export type ListConfigsResponse = ListConfigsResponses[keyof ListConfigsResponses];
@@ -1261,6 +1485,107 @@ export type CsvPresignedUploadResponses = {
 };
 
 export type CsvPresignedUploadResponse = CsvPresignedUploadResponses[keyof CsvPresignedUploadResponses];
+
+export type ListRunsData = {
+    body?: never;
+    path: {
+        /**
+         * Customer company ID
+         */
+        customer_company_id: string;
+    };
+    query?: {
+        /**
+         * Page number (1-based)
+         */
+        page?: number;
+        /**
+         * Items per page (default 20, max 100)
+         */
+        count_per_page?: number;
+    };
+    url: '/config/{customer_company_id}/runs';
+};
+
+export type ListRunsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: unknown;
+};
+
+export type ListRunsResponses = {
+    /**
+     * Paginated list of pipeline runs
+     */
+    200: ListResponsePipelineRun;
+};
+
+export type ListRunsResponse = ListRunsResponses[keyof ListRunsResponses];
+
+export type TriggerRunData = {
+    body?: never;
+    path: {
+        /**
+         * Customer company ID
+         */
+        customer_company_id: string;
+    };
+    query?: never;
+    url: '/config/{customer_company_id}/runs/trigger';
+};
+
+export type TriggerRunErrors = {
+    /**
+     * Unauthorized
+     */
+    401: unknown;
+};
+
+export type TriggerRunResponses = {
+    /**
+     * Run triggered
+     */
+    202: TriggerRunResponse;
+};
+
+export type TriggerRunResponse2 = TriggerRunResponses[keyof TriggerRunResponses];
+
+export type GetRunData = {
+    body?: never;
+    path: {
+        /**
+         * Customer company ID
+         */
+        customer_company_id: string;
+        /**
+         * Pipeline run ID
+         */
+        run_id: string;
+    };
+    query?: never;
+    url: '/config/{customer_company_id}/runs/{run_id}';
+};
+
+export type GetRunErrors = {
+    /**
+     * Unauthorized
+     */
+    401: unknown;
+    /**
+     * Run not found
+     */
+    404: unknown;
+};
+
+export type GetRunResponses = {
+    /**
+     * Pipeline run details
+     */
+    200: PipelineRun;
+};
+
+export type GetRunResponse = GetRunResponses[keyof GetRunResponses];
 
 export type ValidateConfigData = {
     /**

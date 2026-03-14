@@ -19,7 +19,7 @@ pub enum Error {
     #[error("Logic error: {0}")]
     LogicError(String),
 
-    #[error("Egress error: {0}")]
+    #[error("{0}")]
     EgressError(String),
 
     #[error("Configuration error: {0}")]

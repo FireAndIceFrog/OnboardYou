@@ -114,14 +114,14 @@ impl ColumnCalculator for HandleDiacritics {
         // When output_suffix is set, new columns are added alongside originals.
         // When None, columns are replaced in-place so the schema is unchanged.
         if let Some(suffix) = &self.config.output_suffix {
-            let lf = std::mem::replace(&mut context.data, LazyFrame::default());
+            let lf = context.get_data();
             let mut lf = lf;
             for col_name in &self.config.columns {
                 let out_name = format!("{col_name}{suffix}");
                 lf = lf.with_column(col(col_name.as_str()).alias(out_name.as_str()));
                 context.set_field_source(out_name, "handle_diacritics".into());
             }
-            context.data = lf;
+            context.set_data(lf);
         }
         Ok(context)
     }
@@ -143,7 +143,7 @@ impl OnboardingAction for HandleDiacritics {
         }
 
         let df = context
-            .data
+            .get_data()
             .clone()
             .collect()
             .map_err(|e| Error::LogicError(format!("Failed to collect LazyFrame: {e}")))?;
@@ -185,7 +185,7 @@ impl OnboardingAction for HandleDiacritics {
             context.set_field_source(out_name.clone(), "handle_diacritics".into());
         }
 
-        context.data = result_df.lazy();
+        context.set_data(result_df.lazy());
         Ok(context)
     }
 }
@@ -196,6 +196,7 @@ impl OnboardingAction for HandleDiacritics {
 
 #[cfg(test)]
 mod tests {
+    use onboard_you_models::ETLDependancies;
     use super::*;
 
     fn sample_df() -> DataFrame {
@@ -233,9 +234,9 @@ mod tests {
         }))
         .unwrap();
         let action = HandleDiacritics::from_action_config(&cfg).unwrap();
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         let result = action.execute(ctx).expect("execute");
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
 
         let first = df.column("first_name").unwrap().str().unwrap();
         assert_eq!(first.get(0).unwrap(), "Jose");
@@ -253,9 +254,9 @@ mod tests {
         }))
         .unwrap();
         let action = HandleDiacritics::from_action_config(&cfg).unwrap();
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         let result = action.execute(ctx).expect("execute");
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
 
         // Original should still exist
         assert!(df.column("first_name").is_ok());
@@ -270,9 +271,9 @@ mod tests {
             &serde_json::from_value(serde_json::json!({})).unwrap(),
         )
         .unwrap();
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         let result = action.execute(ctx).expect("execute");
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
         // Should pass through unchanged
         let first = df.column("first_name").unwrap().str().unwrap();
         assert_eq!(first.get(0).unwrap(), "José");
@@ -283,9 +284,9 @@ mod tests {
         let cfg: HandleDiacriticsConfig =
             serde_json::from_value(serde_json::json!({ "columns": ["first_name"] })).unwrap();
         let action = HandleDiacritics::from_action_config(&cfg).unwrap();
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         let result = action.execute(ctx).expect("execute");
-        let meta = result.field_metadata.get("first_name").expect("metadata");
+        let meta = result.field_metadata().get("first_name").expect("metadata");
         assert_eq!(meta.source, "handle_diacritics");
     }
 
@@ -294,7 +295,7 @@ mod tests {
         let cfg: HandleDiacriticsConfig =
             serde_json::from_value(serde_json::json!({ "columns": ["nonexistent"] })).unwrap();
         let action = HandleDiacritics::from_action_config(&cfg).unwrap();
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         assert!(action.execute(ctx).is_err());
     }
 }

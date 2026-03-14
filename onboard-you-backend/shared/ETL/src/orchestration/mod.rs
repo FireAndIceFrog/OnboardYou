@@ -8,4 +8,4 @@ pub mod clients;
 pub mod factory;
 
 pub use clients::*;
-pub use factory::*;
+pub use factory::{ActionFactory, ActionFactoryTrait, StepError};

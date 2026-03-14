@@ -1,11 +1,12 @@
-//! Config repository — reads PipelineConfig from DynamoDB using serde_dynamo.
+//! Pipeline repository — builds and executes the ETL pipeline, persisting
+//! run history to the `pipeline_runs` table.
 
 use async_trait::async_trait;
 use lambda_runtime::Error;
 use polars::prelude::LazyFrame;
 use std::sync::Arc;
 
-use onboard_you_models::{Manifest, RosterContext};
+use onboard_you_models::{ETLDependancies, Manifest, RosterContext};
 
 use crate::{dependancies::Dependancies, models::PipelineResult};
 
@@ -18,10 +19,11 @@ pub trait IPipelineRepo: Send + Sync {
         manifest: Manifest,
         organization_id: &str,
         customer_company_id: &str,
+        run_id: &str,
     ) -> Result<PipelineResult, Error>;
 }
 
-/// Dynamo-backed implementation of `IPipelineRepo`.
+/// PostgreSQL-backed implementation of `IPipelineRepo`.
 pub struct PipelineRepository {}
 
 impl PipelineRepository {
@@ -38,9 +40,11 @@ impl IPipelineRepo for PipelineRepository {
         manifest: Manifest,
         organization_id: &str,
         customer_company_id: &str,
+        run_id: &str,
     ) -> Result<PipelineResult, Error> {
         let action_factory = deps.action_factory.clone();
-        // 4. Build actions from manifest via Factory
+
+        // Build actions from manifest via Factory
         let actions: Vec<_> = manifest
             .actions
             .iter()
@@ -48,30 +52,72 @@ impl IPipelineRepo for PipelineRepository {
             .collect::<onboard_you_models::Result<_>>()
             .map_err(|e| Error::from(format!("Failed to build actions: {e}")))?;
 
-        // 5. Execute the pipeline
-        let context = RosterContext::new(LazyFrame::default());
+        // Execute the pipeline with step tracking
+        let context = RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
 
         match action_factory.run(actions, context) {
             Ok(result) => {
+                // Collect the LazyFrame to count rows and trigger deferred closures
                 let rows = result
-                    .data
-                    .clone()
+                    .get_data()
                     .collect()
                     .map(|df: polars::prelude::DataFrame| df.height())
                     .ok();
-                tracing::info!(%organization_id, %customer_company_id, rows_processed = ?rows, "Pipeline completed");
+
+                // Drain any deferred warnings emitted by Polars .map() closures
+                let warnings = result.deps.logger.drain_deferred_warnings();
+
+                tracing::info!(
+                    %organization_id, %customer_company_id,
+                    rows_processed = ?rows, "Pipeline completed"
+                );
+
+                // Persist success
+                let _ = deps
+                    .run_log_repo
+                    .complete_run(
+                        run_id,
+                        rows.map(|r| r as i32),
+                        &warnings,
+                    )
+                    .await;
+
                 Ok(PipelineResult::success(
+                    run_id,
                     organization_id,
                     customer_company_id,
                     rows,
+                    warnings,
                 ))
             }
-            Err(e) => {
-                tracing::error!(%organization_id, %customer_company_id, error = %e, "Pipeline failed");
+            Err(step_err) => {
+                tracing::error!(
+                    %organization_id, %customer_company_id,
+                    action_id = %step_err.action_id,
+                    error = %step_err.error,
+                    "Pipeline failed"
+                );
+
+                let warnings = step_err.warnings.clone();
+
+                // Persist failure
+                let _ = deps
+                    .run_log_repo
+                    .fail_run(
+                        run_id,
+                        &step_err.error.to_string(),
+                        Some(&step_err.action_id),
+                        None,
+                        &warnings,
+                    )
+                    .await;
+
                 Ok(PipelineResult::failure(
+                    run_id,
                     organization_id,
                     customer_company_id,
-                    e,
+                    step_err,
+                    warnings,
                 ))
             }
         }
@@ -81,10 +127,12 @@ impl IPipelineRepo for PipelineRepository {
 #[cfg(test)]
 mod tests {
     use crate::dependancies::{Dependancies, Env};
+    use crate::repositories::run_log_repository::IRunLogRepo;
 
     use super::*;
     use onboard_you_models::{
-        ActionConfig, ActionConfigPayload, ActionType, OnboardingAction, RosterContext,
+        ActionConfig, ActionConfigPayload, ActionType, OnboardingAction, PipelineRun, PipelineWarning,
+        RosterContext, ValidationResult,
     };
     use std::sync::{
         atomic::{AtomicUsize, Ordering},
@@ -129,14 +177,35 @@ mod tests {
             Ok(std::sync::Arc::new(NoopAction))
         }
 
+        fn validate_manifest(
+            &self,
+            _manifest: &onboard_you_models::Manifest,
+        ) -> std::result::Result<onboard_you_models::ValidationResult, onboard_you_models::ValidationStepError> {
+            Ok(onboard_you_models::ValidationResult {
+                steps: vec![],
+                final_columns: vec![],
+            })
+        }
+
         fn run(
             &self,
             _actions: Vec<std::sync::Arc<dyn OnboardingAction>>,
             context: RosterContext,
-        ) -> onboard_you_models::Result<RosterContext> {
+        ) -> std::result::Result<RosterContext, onboard_you::StepError> {
             self.run_count.fetch_add(1, Ordering::SeqCst);
             Ok(context)
         }
+    }
+
+    struct NoopRunLogRepo;
+
+    #[async_trait::async_trait]
+    impl IRunLogRepo for NoopRunLogRepo {
+        async fn create_run(&self, _: &PipelineRun) -> Result<(), lambda_runtime::Error> { Ok(()) }
+        async fn complete_run(&self, _: &str, _: Option<i32>, _: &[PipelineWarning]) -> Result<(), lambda_runtime::Error> { Ok(()) }
+        async fn fail_run(&self, _: &str, _: &str, _: Option<&str>, _: Option<i32>, _: &[PipelineWarning]) -> Result<(), lambda_runtime::Error> { Ok(()) }
+        async fn fail_validation(&self, _: &str, _: &str) -> Result<(), lambda_runtime::Error> { Ok(()) }
+        async fn store_validation_result(&self, _: &str, _: &ValidationResult) -> Result<(), lambda_runtime::Error> { Ok(()) }
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -144,6 +213,7 @@ mod tests {
         let factory = Arc::new(FakeFactory::new());
         let mut deps = Dependancies::new(Arc::new(Env::default())).await;
         deps.action_factory = factory.clone();
+        deps.run_log_repo = Arc::new(NoopRunLogRepo);
 
         let manifest = onboard_you_models::Manifest {
             version: "1.0".into(),
@@ -158,7 +228,7 @@ mod tests {
 
         let repo = PipelineRepository::new();
         let res = repo
-            .run_pipeline(&deps, manifest, "org", "cust")
+            .run_pipeline(&deps, manifest, "org", "cust", "run-test-1")
             .await
             .expect("run pipeline");
         assert_eq!(res.status, "success");

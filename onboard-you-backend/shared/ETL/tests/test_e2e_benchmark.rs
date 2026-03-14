@@ -14,7 +14,7 @@ mod common;
 
 use common::mock_data::{full_pipeline_manifest, generate_hris_csv};
 use onboard_you::{ActionFactory, ActionFactoryTrait };
-use onboard_you_models::{Manifest, RosterContext};
+use onboard_you_models::{ETLDependancies, Manifest, RosterContext};
 use polars::prelude::*;
 use std::time::Instant;
 
@@ -75,7 +75,7 @@ fn run_full_pipeline(n: usize) -> RunMetrics {
         .expect("parse generated CSV into DataFrame");
 
     // 2. Build a RosterContext seeded with the generated data
-    let initial_context = RosterContext::new(df.lazy());
+    let initial_context = RosterContext::with_deps(df.lazy(), ETLDependancies::default());
 
     // 3. Parse the manifest — the connector config must be valid JSON even
     //    though we never call its execute().
@@ -150,7 +150,7 @@ fn run_full_pipeline(n: usize) -> RunMetrics {
     let total_ms = total_start.elapsed().as_secs_f64() * 1000.0;
 
     // 5. Collect the final LazyFrame to measure output shape
-    let df = context.data.collect().expect("collect final dataframe");
+    let df = context.get_data().collect().expect("collect final dataframe");
     let output_rows = df.height();
     let output_cols = df.width();
     let rss_after = get_rss_bytes();
@@ -212,6 +212,7 @@ fn print_metrics(m: &RunMetrics) {
 }
 
 /// Print a merged summary table with one column per run size, including memory.
+#[cfg_attr(not(feature = "benchmark"), allow(dead_code))]
 fn print_merged_summary(runs: &[RunMetrics]) {
     if runs.is_empty() {
         return;

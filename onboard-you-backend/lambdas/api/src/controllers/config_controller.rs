@@ -1,15 +1,24 @@
 //! HTTP handlers for pipeline configuration endpoints.
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
 };
 
-use crate::models::{ApiError, Claims, ConfigRequest, ErrorResponse};
+use crate::models::{ApiError, Claims, ConfigRequest, ErrorResponse, ListResponse};
 use crate::{dependancies::Dependancies, engine, models::ValidationResult};
 use onboard_you_models::PipelineConfig;
+
+/// Query parameters for listing configs.
+#[derive(Debug, serde::Deserialize)]
+pub struct ListConfigsQuery {
+    /// Page number (1-based, default 1).
+    pub page: Option<i64>,
+    /// Items per page (default 20, max 100).
+    pub count_per_page: Option<i64>,
+}
 
 /// GET /config
 ///
@@ -19,8 +28,12 @@ use onboard_you_models::PipelineConfig;
     get,
     path = "/config",
     tag = "Configuration",
+    params(
+        ("page" = Option<i64>, Query, description = "Page number (1-based)"),
+        ("count_per_page" = Option<i64>, Query, description = "Items per page (default 20, max 100)"),
+    ),
     responses(
-        (status = 200, description = "List of pipeline configurations", body = Vec<PipelineConfig>),
+        (status = 200, description = "Paginated list of pipeline configurations", body = ListResponse<PipelineConfig>),
         (status = 401, description = "Unauthorized — missing or invalid token", body = ErrorResponse),
         (status = 500, description = "Internal server error", body = ErrorResponse),
     )
@@ -28,9 +41,12 @@ use onboard_you_models::PipelineConfig;
 pub async fn list_configs(
     State(state): State<Dependancies>,
     claims: Claims,
+    Query(params): Query<ListConfigsQuery>,
 ) -> Result<impl IntoResponse, ApiError> {
+    let per_page = params.count_per_page.unwrap_or(20).min(100).max(1);
+    let page = params.page.unwrap_or(1).max(1);
     let configs = engine::config_engine::list(&state, &claims.organization_id).await?;
-    Ok(Json(configs))
+    Ok(Json(ListResponse::from_vec(configs, page, per_page)))
 }
 
 /// GET /config/{customerCompanyId}

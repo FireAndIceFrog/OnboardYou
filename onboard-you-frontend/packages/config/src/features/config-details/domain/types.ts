@@ -14,13 +14,14 @@ export interface ConfigDetailsState {
   isDeleting: boolean;
   isValidating: boolean;
   error: string | null;
-  chatOpen: boolean;
   addStepPanelOpen: boolean;
   /** Index at which the next added step will be inserted (null = append) */
   insertIndex: number | null;
   validationResult: ValidationResult | null;
   /** Per-action validation errors: actionId → error message */
   validationErrors: Record<string, string>;
+  /** Column schema from org settings (field name → type), shown for default auth */
+  settingsSchema: Record<string, string> | null;
 }
 
 /* ── Connection wizard types ─────────────────────────────── */

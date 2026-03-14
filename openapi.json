@@ -80,16 +80,35 @@
         "summary": "GET /config",
         "description": "List all pipeline configurations owned by the caller's organization.\nThe organization is resolved from the caller's JWT claims.",
         "operationId": "list_configs",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number (1-based)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "count_per_page",
+            "in": "query",
+            "description": "Items per page (default 20, max 100)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "List of pipeline configurations",
+            "description": "Paginated list of pipeline configurations",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PipelineConfig"
-                  }
+                  "$ref": "#/components/schemas/ListResponse_PipelineConfig"
                 }
               }
             }
@@ -510,6 +529,158 @@
             }
           }
         }
+      }
+    },
+    "/config/{customer_company_id}/runs": {
+      "get": {
+        "tags": [
+          "Runs"
+        ],
+        "summary": "List recent pipeline runs for a customer company.",
+        "operationId": "list_runs",
+        "parameters": [
+          {
+            "name": "customer_company_id",
+            "in": "path",
+            "description": "Customer company ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number (1-based)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "count_per_page",
+            "in": "query",
+            "description": "Items per page (default 20, max 100)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of pipeline runs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListResponse_PipelineRun"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/config/{customer_company_id}/runs/trigger": {
+      "post": {
+        "tags": [
+          "Runs"
+        ],
+        "summary": "Trigger a pipeline run immediately via SQS.",
+        "operationId": "trigger_run",
+        "parameters": [
+          {
+            "name": "customer_company_id",
+            "in": "path",
+            "description": "Customer company ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Run triggered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TriggerRunResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/config/{customer_company_id}/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "Runs"
+        ],
+        "summary": "Get a single pipeline run by ID.",
+        "operationId": "get_run",
+        "parameters": [
+          {
+            "name": "customer_company_id",
+            "in": "path",
+            "description": "Customer company ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "run_id",
+            "in": "path",
+            "description": "Pipeline run ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pipeline run details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineRun"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Run not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
       }
     },
     "/config/{customer_company_id}/validate": {
@@ -1041,7 +1212,6 @@
         "type": "object",
         "description": "Configuration extracted from the manifest `ActionConfig.config` JSON.\n\n# JSON config (user-facing)\n\n```json\n{\n  \"filename\": \"employees.csv\",\n  \"columns\": [\"employee_id\", \"first_name\", \"last_name\", \"email\"]\n}\n```\n\n| Field      | Type     | Required | Description                                        |\n|------------|----------|----------|----------------------------------------------------|\n| `filename` | string   | **yes**  | CSV file name — the S3 key prefix is added at runtime |\n| `columns`  | [string] | **yes**  | Declared column names from the CSV header           |",
         "required": [
-          "filename",
           "columns"
         ],
         "properties": {
@@ -1053,7 +1223,10 @@
             "description": "Declared column names — set when the CSV is first uploaded.\n\nUsed by `calculate_columns` for schema propagation and by the\nvalidation engine to verify downstream column references."
           },
           "filename": {
-            "type": "string",
+            "type": [
+              "string",
+              "null"
+            ],
             "description": "CSV file name only (e.g. `\"employees.csv\"`).\n\nThe full S3 key `{org_id}/{company_id}/{filename}` is resolved at\nruntime by the ETL trigger before pipeline execution."
           }
         }
@@ -1167,6 +1340,219 @@
           "source_column": {
             "type": "string",
             "description": "Column to read the raw country value from."
+          }
+        }
+      },
+      "ListResponse_PipelineConfig": {
+        "type": "object",
+        "description": "Paginated list response wrapper.",
+        "required": [
+          "countPerPage",
+          "currentPage",
+          "lastPage",
+          "data"
+        ],
+        "properties": {
+          "countPerPage": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Number of items per page."
+          },
+          "currentPage": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Current page number (1-based)."
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "The pipeline config as stored in the database and exchanged via the API.\n\n```json\n{\n  \"name\": \"Acme Onboarding Pipeline\",\n  \"cron\": \"rate(1 hour)\",\n  \"organizationId\": \"acme-corp\",\n  \"customerCompanyId\": \"customer-123\",\n  \"lastEdited\": \"2026-02-09T12:00:00Z\",\n  \"pipeline\": { \"version\": \"1.0\", \"actions\": [...] }\n}\n```",
+              "required": [
+                "name",
+                "cron",
+                "organizationId",
+                "customerCompanyId",
+                "pipeline"
+              ],
+              "properties": {
+                "cron": {
+                  "type": "string",
+                  "description": "EventBridge-compatible schedule expression (cron or rate)"
+                },
+                "customerCompanyId": {
+                  "type": "string",
+                  "description": "Unique identifier for the customer company (sort key)"
+                },
+                "image": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Optional image/icon for the pipeline"
+                },
+                "lastEdited": {
+                  "type": "string",
+                  "description": "ISO 8601 timestamp of last edit — set by the server"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Name of the pipeline"
+                },
+                "organizationId": {
+                  "type": "string",
+                  "description": "Unique identifier for the organization (partition key)"
+                },
+                "pipeline": {
+                  "$ref": "#/components/schemas/Manifest",
+                  "description": "The full ETL pipeline manifest (passed through to the ETL Lambda)"
+                }
+              }
+            },
+            "description": "Items on this page."
+          },
+          "lastPage": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Last page number (1-based)."
+          }
+        }
+      },
+      "ListResponse_PipelineRun": {
+        "type": "object",
+        "description": "Paginated list response wrapper.",
+        "required": [
+          "countPerPage",
+          "currentPage",
+          "lastPage",
+          "data"
+        ],
+        "properties": {
+          "countPerPage": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Number of items per page."
+          },
+          "currentPage": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Current page number (1-based)."
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A pipeline run record as stored in the `pipeline_runs` table.",
+              "required": [
+                "id",
+                "organizationId",
+                "customerCompanyId",
+                "status",
+                "startedAt",
+                "warnings"
+              ],
+              "properties": {
+                "currentAction": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Action ID currently being executed (updated during the run)."
+                },
+                "customerCompanyId": {
+                  "type": "string",
+                  "description": "Customer company the pipeline ran for."
+                },
+                "errorActionId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Which action caused the failure."
+                },
+                "errorMessage": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Error message if the run failed."
+                },
+                "errorRow": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int32",
+                  "description": "Row index where the error occurred (if determinable)."
+                },
+                "finishedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "When the run finished (ISO 8601), if it has."
+                },
+                "id": {
+                  "type": "string",
+                  "description": "UUID identifying this specific run."
+                },
+                "manifestSnapshot": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Manifest",
+                      "description": "Snapshot of the manifest at the time of the run."
+                    }
+                  ]
+                },
+                "organizationId": {
+                  "type": "string",
+                  "description": "Organization that owns the pipeline."
+                },
+                "rowsProcessed": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int32",
+                  "description": "Number of rows successfully processed."
+                },
+                "startedAt": {
+                  "type": "string",
+                  "description": "When the run started (ISO 8601)."
+                },
+                "status": {
+                  "type": "string",
+                  "description": "Current status of the run."
+                },
+                "validationResult": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ValidationResult",
+                      "description": "Validation result from the pre-run dry-run (steps + columns)."
+                    }
+                  ]
+                },
+                "warnings": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PipelineWarning"
+                  },
+                  "description": "Warnings accumulated during the run."
+                }
+              }
+            },
+            "description": "Items on this page."
+          },
+          "lastPage": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Last page number (1-based)."
           }
         }
       },
@@ -1402,7 +1788,7 @@
       },
       "OrgSettings": {
         "type": "object",
-        "description": "Per-organization settings stored in DynamoDB.\n\n`default_auth` holds the full auth configuration that maps to a\nconcrete `ApiDispatcherConfig` variant (Bearer, OAuth, OAuth2).\n\n**Bearer example:**\n```json\n{\n  \"organizationId\": \"acme-corp\",\n  \"defaultAuth\": {\n    \"auth_type\": \"bearer\",\n    \"destination_url\": \"https://api.example.com/employees\",\n    \"token\": \"sk-live-abc123\"\n  }\n}\n```\n\n**OAuth2 example:**\n```json\n{\n  \"organizationId\": \"acme-corp\",\n  \"defaultAuth\": {\n    \"auth_type\": \"oauth2\",\n    \"destination_url\": \"https://api.example.com/v2/employees\",\n    \"client_id\": \"app-12345\",\n    \"client_secret\": \"secret-value\",\n    \"token_url\": \"https://auth.example.com/oauth/token\",\n    \"scopes\": [\"employees.write\"],\n    \"grant_type\": \"client_credentials\"\n  }\n}\n```",
+        "description": "Per-organization settings stored in the database.\n\n`default_auth` holds the full auth configuration that maps to a\nconcrete `ApiDispatcherConfig` variant (Bearer, OAuth, OAuth2).\n\n**Bearer example:**\n```json\n{\n  \"organizationId\": \"acme-corp\",\n  \"defaultAuth\": {\n    \"auth_type\": \"bearer\",\n    \"destination_url\": \"https://api.example.com/employees\",\n    \"token\": \"sk-live-abc123\"\n  }\n}\n```\n\n**OAuth2 example:**\n```json\n{\n  \"organizationId\": \"acme-corp\",\n  \"defaultAuth\": {\n    \"auth_type\": \"oauth2\",\n    \"destination_url\": \"https://api.example.com/v2/employees\",\n    \"client_id\": \"app-12345\",\n    \"client_secret\": \"secret-value\",\n    \"token_url\": \"https://auth.example.com/oauth/token\",\n    \"scopes\": [\"employees.write\"],\n    \"grant_type\": \"client_credentials\"\n  }\n}\n```",
         "required": [
           "organizationId",
           "defaultAuth"
@@ -1435,7 +1821,7 @@
       },
       "PipelineConfig": {
         "type": "object",
-        "description": "The pipeline config as stored in DynamoDB and exchanged via the API.\n\n```json\n{\n  \"name\": \"Acme Onboarding Pipeline\",\n  \"cron\": \"rate(1 hour)\",\n  \"organizationId\": \"acme-corp\",\n  \"customerCompanyId\": \"customer-123\",\n  \"lastEdited\": \"2026-02-09T12:00:00Z\",\n  \"pipeline\": { \"version\": \"1.0\", \"actions\": [...] }\n}\n```",
+        "description": "The pipeline config as stored in the database and exchanged via the API.\n\n```json\n{\n  \"name\": \"Acme Onboarding Pipeline\",\n  \"cron\": \"rate(1 hour)\",\n  \"organizationId\": \"acme-corp\",\n  \"customerCompanyId\": \"customer-123\",\n  \"lastEdited\": \"2026-02-09T12:00:00Z\",\n  \"pipeline\": { \"version\": \"1.0\", \"actions\": [...] }\n}\n```",
         "required": [
           "name",
           "cron",
@@ -1474,6 +1860,144 @@
           "pipeline": {
             "$ref": "#/components/schemas/Manifest",
             "description": "The full ETL pipeline manifest (passed through to the ETL Lambda)"
+          }
+        }
+      },
+      "PipelineRun": {
+        "type": "object",
+        "description": "A pipeline run record as stored in the `pipeline_runs` table.",
+        "required": [
+          "id",
+          "organizationId",
+          "customerCompanyId",
+          "status",
+          "startedAt",
+          "warnings"
+        ],
+        "properties": {
+          "currentAction": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Action ID currently being executed (updated during the run)."
+          },
+          "customerCompanyId": {
+            "type": "string",
+            "description": "Customer company the pipeline ran for."
+          },
+          "errorActionId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Which action caused the failure."
+          },
+          "errorMessage": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Error message if the run failed."
+          },
+          "errorRow": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Row index where the error occurred (if determinable)."
+          },
+          "finishedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "When the run finished (ISO 8601), if it has."
+          },
+          "id": {
+            "type": "string",
+            "description": "UUID identifying this specific run."
+          },
+          "manifestSnapshot": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Manifest",
+                "description": "Snapshot of the manifest at the time of the run."
+              }
+            ]
+          },
+          "organizationId": {
+            "type": "string",
+            "description": "Organization that owns the pipeline."
+          },
+          "rowsProcessed": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Number of rows successfully processed."
+          },
+          "startedAt": {
+            "type": "string",
+            "description": "When the run started (ISO 8601)."
+          },
+          "status": {
+            "type": "string",
+            "description": "Current status of the run."
+          },
+          "validationResult": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ValidationResult",
+                "description": "Validation result from the pre-run dry-run (steps + columns)."
+              }
+            ]
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PipelineWarning"
+            },
+            "description": "Warnings accumulated during the run."
+          }
+        }
+      },
+      "PipelineWarning": {
+        "type": "object",
+        "description": "A single warning emitted by an action during pipeline execution.\n\nWarnings are non-fatal — the pipeline continues but the client\nshould be informed so they can fix their source data.",
+        "required": [
+          "action_id",
+          "message",
+          "count"
+        ],
+        "properties": {
+          "action_id": {
+            "type": "string",
+            "description": "Which action emitted the warning (e.g. `\"cellphone_sanitizer\"`)."
+          },
+          "count": {
+            "type": "integer",
+            "description": "How many rows were affected.",
+            "minimum": 0
+          },
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional extra detail (e.g. the un-parseable values)."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable message."
           }
         }
       },
@@ -1965,6 +2489,19 @@
           }
         }
       },
+      "TriggerRunResponse": {
+        "type": "object",
+        "description": "Response returned when a run is triggered.",
+        "required": [
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Confirmation message"
+          }
+        }
+      },
       "ValidationResult": {
         "type": "object",
         "description": "Overall validation result for the entire pipeline.",
@@ -2073,6 +2610,10 @@
     {
       "name": "CSV Upload",
       "description": "CSV file upload and column discovery"
+    },
+    {
+      "name": "Runs",
+      "description": "Pipeline run history and diagnostics"
     },
     {
       "name": "Settings",

@@ -74,6 +74,14 @@ impl ApiEngine {
         self
     }
 
+    /// Construct from an arbitrary repository (for testing / custom integrations).
+    pub fn with_repo(repo: Box<dyn EgressRepository>) -> Self {
+        Self {
+            repo,
+            retry_policy: RetryPolicy::default(),
+        }
+    }
+
     /// Dispatch data to the configured destination.
     ///
     /// **This is the sync boundary.** Internally spawns async work via tokio.
@@ -84,7 +92,7 @@ impl ApiEngine {
             Error::EgressError("ApiEngine::dispatch requires a running tokio runtime".into())
         })?;
 
-        handle.block_on(self.dispatch_with_retry(payload))
+        tokio::task::block_in_place(|| handle.block_on(self.dispatch_with_retry(payload)))
     }
 
     /// Internal async dispatch with retry loop.

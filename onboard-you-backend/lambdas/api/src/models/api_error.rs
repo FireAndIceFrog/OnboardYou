@@ -17,6 +17,7 @@ pub enum ApiError {
     NotFound(String),
     Validation(String),
     Repository(String),
+    Conflict(String),
 }
 
 impl IntoResponse for ApiError {
@@ -29,6 +30,7 @@ impl IntoResponse for ApiError {
             ),
             ApiError::Validation(msg) => (StatusCode::BAD_REQUEST, msg.clone()),
             ApiError::Repository(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg.clone()),
+            ApiError::Conflict(msg) => (StatusCode::CONFLICT, msg.clone()),
         };
 
         tracing::error!(error = %message, status = %status);

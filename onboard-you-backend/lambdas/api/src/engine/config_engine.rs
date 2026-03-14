@@ -40,7 +40,9 @@ pub async fn upsert(
     config.customer_company_id = customer_company_id.to_string();
     config.last_edited = chrono::Utc::now().to_rfc3339();
 
-    validate(&config)?;
+    if config.cron.is_empty() {
+        return Err(ApiError::Validation("cron field is required".into()));
+    }
 
     deps.config_repo.put(&config).await?;
     deps.schedule_repo.upsert_schedule(&config).await?;
@@ -84,14 +86,6 @@ pub async fn delete(
         customer_company_id = %customer_company_id,
         "Config and schedule deleted"
     );
-
-    Ok(())
-}
-
-fn validate(config: &PipelineConfig) -> Result<(), ApiError> {
-    if config.cron.is_empty() {
-        return Err(ApiError::Validation("cron field is required".into()));
-    }
 
     Ok(())
 }

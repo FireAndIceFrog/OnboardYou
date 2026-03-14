@@ -1,43 +1,9 @@
 {
-  "chat": {
-    "title": "Onboarding Assistant",
-    "noSystemSelected": "No system selected",
-    "clearChat": "Clear chat",
-    "closeChat": "Close chat",
-    "welcome": {
-      "title": "How can I help?",
-      "text": "Tell me what you'd like to do with your data — I'll update the flow for you automatically."
-    },
-    "suggestions": {
-      "cleanAddress": "Clean up my address data",
-      "formatPhone": "Format all phone numbers to international",
-      "removeDuplicates": "Remove duplicate employee records",
-      "maskPii": "Mask sensitive personal information",
-      "standardiseCountry": "Standardise country codes",
-      "whatCanYouDo": "What can you help me with?"
-    },
-    "input": {
-      "placeholder": "Tell me what to do with your data...",
-      "send": "Send message"
-    },
-    "responses": {
-      "ssnNotFound": "I couldn't find a \"Social Security\" column in your data. Should I skip this step, or would you like to map a different column to it?",
-      "actionAdded": "Done! I've added a new **\"{{label}}\"** step to your flow. You should see it appear on the flowchart now.\n\nWould you like to adjust its settings, or add another step?",
-      "explain": "Your connection **{{name}}** has **{{count}}** step(s):\n\n{{steps}}\n\nWould you like me to explain any specific step in more detail?",
-      "schedule": "**{{name}}** syncs on schedule: `{{cron}}`.\n\nLast edited: {{lastEdited}}. Would you like to change the sync frequency?",
-      "help": "I can help you:\n\n- **Clean up data** — addresses, phone numbers, special characters\n- **Remove duplicates** from your employee records\n- **Mask sensitive data** like SSNs and emails\n- **Standardise fields** — country codes, column names\n- **Explain** each step in your flow\n\nJust tell me what you need in plain English!",
-      "error": "I noticed something might not be right. Let me check…\n\nYour flow currently has **{{count}}** step(s). Could you describe what went wrong? For example:\n- \"I'm seeing the wrong column names\"\n- \"Some records are missing\"\n\nI'll do my best to help!",
-      "default": "I see your connection **{{name}}** has {{count}} step(s). Tell me what you'd like to change — for example:\n\n• \"Clean up my address data\"\n• \"Remove duplicate records\"\n• \"Format phone numbers to international\"\n\nI'll update the flow for you automatically!",
-      "lastEditedUnknown": "unknown"
-    }
-  },
   "configDetails": {
     "loading": "Loading configuration…",
     "noConfigId": "No configuration ID provided.",
     "backToConfigurations": "← Back to Configurations",
     "back": "← Back",
-    "openChat": "Open Chat",
-    "closeChat": "Close Chat",
     "save": "Save",
     "saving": "Saving…",
     "saveSuccess": "Configuration saved successfully",
@@ -127,6 +93,16 @@
       }
     },
     "panels": {
+      "csv": {
+        "currentFile": "Current file",
+        "dropHint": "Drop a CSV file here",
+        "orClick": "or use the button below to browse",
+        "chooseFile": "Choose CSV file",
+        "replaceFile": "Replace CSV file",
+        "uploading": "Uploading…",
+        "uploadSuccess": "CSV uploaded and columns updated",
+        "uploadFailed": "Upload failed"
+      },
       "responseGroup": {
         "title": "Response Groups",
         "hint": "Data sections to include in the Workday response"
@@ -194,7 +170,8 @@
       "mappingTo": "New Name",
       "piiColumns": "Sensitive Columns",
       "piiHint": "Choose which columns to mask and how",
-      "addColumn": "Add column"
+      "addColumn": "Add column",
+      "columns": "Columns"
     }
   }
 }

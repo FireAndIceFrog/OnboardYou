@@ -40,7 +40,7 @@ impl DropColumn {
 
 impl ColumnCalculator for DropColumn {
     fn calculate_columns(&self, mut context: RosterContext) -> Result<RosterContext> {
-        let lf = std::mem::replace(&mut context.data, LazyFrame::default());
+        let lf = context.get_data();
         let selector = Selector::ByName {
             names: self
                 .config
@@ -51,7 +51,7 @@ impl ColumnCalculator for DropColumn {
                 .into(),
             strict: true,
         };
-        context.data = lf.drop(selector);
+        context.set_data(lf.drop(selector));
         Ok(context)
     }
 }
@@ -64,7 +64,7 @@ impl OnboardingAction for DropColumn {
     fn execute(&self, mut context: RosterContext) -> Result<RosterContext> {
         tracing::info!(columns = ?self.config.columns, "DropColumn: dropping columns");
 
-        let lf = std::mem::replace(&mut context.data, LazyFrame::default());
+        let lf = context.get_data();
         let selector = Selector::ByName {
             names: self
                 .config
@@ -82,7 +82,7 @@ impl OnboardingAction for DropColumn {
             context.mark_field_modified(col.clone(), "drop_column".into());
         }
 
-        context.data = lf;
+        context.set_data(lf);
         Ok(context)
     }
 }
@@ -93,6 +93,7 @@ impl OnboardingAction for DropColumn {
 
 #[cfg(test)]
 mod tests {
+    use onboard_you_models::ETLDependancies;
     use super::*;
 
     fn sample_df() -> DataFrame {
@@ -118,9 +119,9 @@ mod tests {
         });
         let cfg: DropConfig = serde_json::from_value(json.clone()).expect("deserialise");
         let action = DropColumn::from_action_config(&cfg).expect("valid config");
-        let ctx = RosterContext::new(sample_df().lazy());
+        let ctx = RosterContext::with_deps(sample_df().lazy(), ETLDependancies::default());
         let result = action.execute(ctx).expect("execute");
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
 
         assert!(df.column("first_name").is_err());
         assert!(df.column("last_name").is_err());

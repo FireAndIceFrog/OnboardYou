@@ -64,7 +64,7 @@ impl Default for SCDType2 {
 
 impl ColumnCalculator for SCDType2 {
     fn calculate_columns(&self, mut context: RosterContext) -> Result<RosterContext> {
-        let lf = std::mem::replace(&mut context.data, LazyFrame::default());
+        let lf = context.get_data();
 
         // Rename date_column → effective_from
         let lf = lf.rename([self.config.date_column.as_str()], ["effective_from"], true);
@@ -74,7 +74,7 @@ impl ColumnCalculator for SCDType2 {
             .with_column(lit(NULL).cast(DataType::String).alias("effective_to"))
             .with_column(lit(NULL).cast(DataType::Boolean).alias("is_current"));
 
-        context.data = lf;
+        context.set_data(lf);
         for col_name in ["effective_from", "effective_to", "is_current"] {
             context.set_field_source(col_name.to_string(), "LOGIC_ACTION".into());
         }
@@ -94,7 +94,7 @@ impl OnboardingAction for SCDType2 {
             "SCDType2: computing effective dates"
         );
 
-        let lf = std::mem::replace(&mut context.data, LazyFrame::default());
+        let lf = context.get_data();
 
         // 1. Sort by entity_column then date_column
         let lf = lf.sort(
@@ -123,7 +123,7 @@ impl OnboardingAction for SCDType2 {
             context.mark_field_modified(col_name.to_string(), "scd_type_2".into());
         }
 
-        context.data = lf;
+        context.set_data(lf);
         Ok(context)
     }
 }
@@ -134,6 +134,7 @@ impl OnboardingAction for SCDType2 {
 
 #[cfg(test)]
 mod tests {
+    use onboard_you_models::ETLDependancies;
     use super::*;
 
     /// Build a small DataFrame with two employees, each having two records.
@@ -155,11 +156,11 @@ mod tests {
 
     #[test]
     fn test_scd_type_2_adds_columns() {
-        let ctx = RosterContext::new(test_df().lazy());
+        let ctx = RosterContext::with_deps(test_df().lazy(), ETLDependancies::default());
         let action = SCDType2::default();
         let result = action.execute(ctx).expect("execute");
 
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
         assert!(
             df.column("effective_from").is_ok(),
             "should have effective_from"
@@ -178,11 +179,11 @@ mod tests {
 
     #[test]
     fn test_scd_type_2_is_current_flag() {
-        let ctx = RosterContext::new(test_df().lazy());
+        let ctx = RosterContext::with_deps(test_df().lazy(), ETLDependancies::default());
         let action = SCDType2::default();
         let result = action.execute(ctx).expect("execute");
 
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
 
         let is_current = df.column("is_current").unwrap();
         let bools: Vec<Option<bool>> = is_current.bool().unwrap().into_iter().collect();
@@ -195,11 +196,11 @@ mod tests {
 
     #[test]
     fn test_scd_type_2_effective_to_values() {
-        let ctx = RosterContext::new(test_df().lazy());
+        let ctx = RosterContext::with_deps(test_df().lazy(), ETLDependancies::default());
         let action = SCDType2::default();
         let result = action.execute(ctx).expect("execute");
 
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
         let eff_to = df.column("effective_to").unwrap();
 
         let vals: Vec<Option<&str>> = eff_to.str().unwrap().into_iter().collect();
@@ -211,13 +212,13 @@ mod tests {
 
     #[test]
     fn test_scd_type_2_field_metadata() {
-        let ctx = RosterContext::new(test_df().lazy());
+        let ctx = RosterContext::with_deps(test_df().lazy(), ETLDependancies::default());
         let action = SCDType2::default();
         let result = action.execute(ctx).expect("execute");
 
         for col_name in ["effective_from", "effective_to", "is_current"] {
             let meta = result
-                .field_metadata
+                .field_metadata()
                 .get(col_name)
                 .unwrap_or_else(|| panic!("metadata for '{}'", col_name));
             assert_eq!(meta.source, "LOGIC_ACTION");
@@ -235,10 +236,10 @@ mod tests {
         }
         .unwrap();
 
-        let ctx = RosterContext::new(df.lazy());
+        let ctx = RosterContext::with_deps(df.lazy(), ETLDependancies::default());
         let action = SCDType2::default();
         let result = action.execute(ctx).expect("execute");
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
 
         let is_current: Vec<Option<bool>> = df
             .column("is_current")
@@ -282,10 +283,10 @@ mod tests {
             entity_column: "worker_id".into(),
             date_column: "hire_date".into(),
         };
-        let ctx = RosterContext::new(df.lazy());
+        let ctx = RosterContext::with_deps(df.lazy(), ETLDependancies::default());
         let action = SCDType2::new(config);
         let result = action.execute(ctx).expect("execute");
-        let df = result.data.collect().expect("collect");
+        let df = result.get_data().collect().expect("collect");
 
         // hire_date should be renamed to effective_from
         assert!(df.column("effective_from").is_ok());

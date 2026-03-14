@@ -1,7 +1,7 @@
 import { useCallback, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box, Flex, Text, Heading, chakra } from '@chakra-ui/react';
-import { useAppDispatch, useAppSelector } from '@/store';
+import { useAppDispatch, useAppSelector, store } from '@/store';
 import type { RootState } from '@/store';
 import type { ActionConfigPayload, ActionType } from '@/generated/api';
 import { businessLabel } from '@/shared/domain/types';
@@ -81,15 +81,20 @@ export function ActionEditPanel() {
 
   const handleFieldChange = useCallback(
     (key: string, value: unknown) => {
-      if (!actionId || !config) return;
+      if (!actionId) return;
+      // Read the current config from the store to avoid stale closure issues
+      // when multiple onChange calls happen in the same tick.
+      const state = store.getState();
+      const action = state.configDetails.config?.pipeline.actions.find((a) => a.id === actionId);
+      const freshConfig = action?.config;
       const configObj =
-        typeof config === 'object' && config !== null
-          ? (config as Record<string, unknown>)
+        typeof freshConfig === 'object' && freshConfig !== null
+          ? (freshConfig as Record<string, unknown>)
           : {};
       const updated = setField(configObj, key, value);
       dispatch(updateFlowActionConfig({ actionId, config: updated as ActionConfigPayload }));
     },
-    [actionId, config, dispatch],
+    [actionId, dispatch],
   );
 
   const handleRemove = useCallback(() => {
@@ -209,10 +214,10 @@ export function ActionEditPanel() {
           />
         ) : fieldSchemas.length > 0 && configObj ? (
           fieldSchemas.map((schema) => (
-            <Box key={schema.key}>
-              <Text fontSize="sm" fontWeight="600" mb="1">
+            <Box as="section" key={schema.key}>
+              <Heading as="h3" fontSize="sm" fontWeight="600" mb="1">
                 {schema.label}
-              </Text>
+              </Heading>
               {schema.hint && (
                 <Text fontSize="xs" color="gray.500" mb="2">
                   {schema.hint}
@@ -228,10 +233,10 @@ export function ActionEditPanel() {
           ))
         ) : configObj ? (
           Object.entries(configObj).map(([key, value]) => (
-            <Box key={key}>
-              <Text fontSize="sm" fontWeight="600" mb="1">
+            <Box as="section" key={key}>
+              <Heading as="h3" fontSize="sm" fontWeight="600" mb="1">
                 {key}
-              </Text>
+              </Heading>
               <Text fontSize="sm" color="gray.600" whiteSpace="pre-wrap">
                 {typeof value === 'string' || typeof value === 'number'
                   ? String(value)
@@ -240,10 +245,10 @@ export function ActionEditPanel() {
             </Box>
           ))
         ) : (
-          <Box>
-            <Text fontSize="sm" fontWeight="600" mb="1">
+          <Box as="section">
+            <Heading as="h3" fontSize="sm" fontWeight="600" mb="1">
               {t('flow.edit.configuration', 'Configuration')}
-            </Text>
+            </Heading>
             <Text fontSize="sm" color="gray.600">
               {String(config ?? '—')}
             </Text>

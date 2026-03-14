@@ -45,49 +45,63 @@ fn extract_tag_value(xml: &str, tag: &str) -> String {
     String::new()
 }
 
-/// Production HTTP client that sends SOAP requests via `reqwest` (blocking).
+/// Production HTTP client that sends SOAP requests via `reqwest`.
 ///
-/// Uses `rustls-tls` so the binary ships without a system OpenSSL dependency.
+/// Uses `block_in_place` + `Handle::current()` so the sync `SoapClient`
+/// trait can be called from within the Lambda async runtime without
+/// spawning a nested runtime (which panics).
 #[derive(Debug, Clone)]
 pub struct ReqwestSoapClient;
 
 impl SoapClient for ReqwestSoapClient {
     fn post_soap(&self, endpoint: &str, envelope: &str) -> Result<String> {
-        let client = reqwest::blocking::Client::builder()
-            .danger_accept_invalid_certs(false)
-            .timeout(std::time::Duration::from_secs(60))
-            .build()
-            .map_err(|e| Error::IngestionError(format!("HTTP client error: {}", e)))?;
+        let handle = tokio::runtime::Handle::current();
+        let endpoint = endpoint.to_owned();
+        let envelope = envelope.to_owned();
 
-        let response = client
-            .post(endpoint)
-            .header("Content-Type", "text/xml; charset=utf-8")
-            .header("SOAPAction", "")
-            .body(envelope.to_owned())
-            .send()
-            .map_err(|e| {
-                Error::IngestionError(format!("SOAP request to '{}' failed: {}", endpoint, e))
-            })?;
+        tokio::task::block_in_place(|| {
+            handle.block_on(async {
+                let client = reqwest::Client::builder()
+                    .danger_accept_invalid_certs(false)
+                    .timeout(std::time::Duration::from_secs(60))
+                    .build()
+                    .map_err(|e| Error::IngestionError(format!("HTTP client error: {}", e)))?;
 
-        let status = response.status();
-        let body = response.text().map_err(|e| {
-            Error::IngestionError(format!("Failed to read SOAP response body: {}", e))
-        })?;
+                let response = client
+                    .post(&endpoint)
+                    .header("Content-Type", "text/xml; charset=utf-8")
+                    .header("SOAPAction", "")
+                    .body(envelope)
+                    .send()
+                    .await
+                    .map_err(|e| {
+                        Error::IngestionError(format!(
+                            "SOAP request to '{}' failed: {}",
+                            endpoint, e
+                        ))
+                    })?;
 
-        if !status.is_success() {
-            let fault_msg = extract_tag_value(&body, "faultstring");
-            let detail = if fault_msg.is_empty() {
-                body.chars().take(500).collect::<String>()
-            } else {
-                fault_msg
-            };
-            return Err(Error::IngestionError(format!(
-                "SOAP service returned HTTP {}: {}",
-                status, detail
-            )));
-        }
+                let status = response.status();
+                let body = response.text().await.map_err(|e| {
+                    Error::IngestionError(format!("Failed to read SOAP response body: {}", e))
+                })?;
 
-        Ok(body)
+                if !status.is_success() {
+                    let fault_msg = extract_tag_value(&body, "faultstring");
+                    let detail = if fault_msg.is_empty() {
+                        body.chars().take(500).collect::<String>()
+                    } else {
+                        fault_msg
+                    };
+                    return Err(Error::IngestionError(format!(
+                        "SOAP service returned HTTP {}: {}",
+                        status, detail
+                    )));
+                }
+
+                Ok(body)
+            })
+        })
     }
 }
 

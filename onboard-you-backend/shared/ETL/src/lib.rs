@@ -19,4 +19,4 @@
 
 pub mod capabilities;
 pub mod orchestration;
-pub use orchestration::{ActionFactory, ActionFactoryTrait};
+pub use orchestration::{ActionFactory, ActionFactoryTrait, StepError};

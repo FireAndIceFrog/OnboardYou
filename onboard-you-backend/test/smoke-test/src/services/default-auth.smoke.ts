@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { client } from '../env.js';
 import type { OrgSettings } from '../models/org-settings.js';
 import type { PipelineConfig } from '../models/pipeline-config.js';
@@ -18,7 +18,13 @@ beforeAll(async () => {
   await client.login();
 });
 
-const companyId = `default-auth-smoke-${Date.now()}`;
+const prefix = `smoke-default-auth-${Date.now()}`;
+const companyId = prefix;
+
+afterAll(async () => {
+  await client.deleteConfigsWithPrefix(prefix);
+  await client.deleteConfigsWithPrefix("Default");
+});
 
 describe('Default auth end-to-end', () => {
   it('saves org settings with a bearer auth config', async () => {
@@ -27,6 +33,14 @@ describe('Default auth end-to-end', () => {
         auth_type: 'bearer',
         destination_url: 'https://httpbin.org/post',
         token: 'smoke-test-token',
+        schema: {
+          employee_id: 'string',
+          cellphone: 'string',
+          first_name: 'string',
+          country: 'string',
+          country_code: 'string',
+          international_phone: 'string',
+        },
       },
     });
 
@@ -46,7 +60,7 @@ describe('Default auth end-to-end', () => {
             action_type: 'csv_hris_connector',
             config: {
               filename: 'employees.csv',
-              columns: ['employee_id', 'first_name', 'email'],
+              columns: ['employee_id', 'cellphone', 'first_name', 'country'],
             },
           },
           {
@@ -81,7 +95,7 @@ describe('Default auth end-to-end', () => {
               action_type: 'csv_hris_connector',
               config: {
                 filename: 'employees.csv',
-                columns: ['employee_id', 'first_name', 'email'],
+                columns: ['employee_id', 'cellphone', 'first_name', 'country'],
               },
             },
             {
@@ -100,13 +114,9 @@ describe('Default auth end-to-end', () => {
     // api_dispatcher is a pass-through — columns unchanged
     expect(body.steps[1].action_id).toBe('egress');
     expect(body.steps[1].columns_after).toEqual(
-      expect.arrayContaining(['employee_id', 'first_name', 'email']),
+      expect.arrayContaining(['employee_id', 'cellphone', 'first_name', 'country']),
     );
     expect(body.final_columns).toEqual(body.steps[1].columns_after);
   });
 
-  it('cleans up the test config', async () => {
-    const { status } = await client.delete(`/config/${companyId}`);
-    expect(status).toBe(204);
-  });
 });

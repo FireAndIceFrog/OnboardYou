@@ -20,11 +20,6 @@ export type ActionConfig = {
      */
     config: ActionConfigPayload;
     /**
-     * When `true`, the ETL engine skips this action at runtime.
-     * Used by the plan summary UI to toggle features on/off.
-     */
-    disabled?: boolean;
-    /**
      * Unique identifier for this pipeline step
      */
     id: string;
@@ -38,7 +33,7 @@ export type ActionConfig = {
  * JSON serialisation (no wrapper key), while `ToSchema` generates a
  * `oneOf` schema listing every config variant for OpenAPI.
  */
-export type ActionConfigPayload = CsvHrisConnectorConfig | WorkdayConfig | ScdType2Config | PiiMaskingConfig | DedupConfig | RegexReplaceConfig | IsoCountrySanitizerConfig | CellphoneSanitizerConfig | HandleDiacriticsConfig | RenameConfig | DropConfig | FilterByValueConfig | ApiDispatcherConfig;
+export type ActionConfigPayload = CsvHrisConnectorConfig | WorkdayConfig | SageHrConfig | ScdType2Config | PiiMaskingConfig | DedupConfig | RegexReplaceConfig | IsoCountrySanitizerConfig | CellphoneSanitizerConfig | HandleDiacriticsConfig | RenameConfig | DropConfig | FilterByValueConfig | ApiDispatcherConfig;
 
 /**
  * All known action types in the pipeline.
@@ -51,6 +46,7 @@ export type ActionConfigPayload = CsvHrisConnectorConfig | WorkdayConfig | ScdTy
  * |---------------------------|------------------------|
  * | `"csv_hris_connector"`    | `CsvHrisConnector`     |
  * | `"workday_hris_connector"`| `WorkdayHrisConnector` |
+ * | `"sage_hr_connector"`     | `SageHrConnector`      |
  * | `"scd_type_2"`            | `ScdType2`             |
  * | `"pii_masking"`           | `PiiMasking`           |
  * | `"identity_deduplicator"` | `IdentityDeduplicator` |
@@ -63,7 +59,7 @@ export type ActionConfigPayload = CsvHrisConnectorConfig | WorkdayConfig | ScdTy
  * | `"filter_by_value"`       | `FilterByValue`        |
  * | `"api_dispatcher"`        | `ApiDispatcher`        |
  */
-export type ActionType = 'csv_hris_connector' | 'workday_hris_connector' | 'scd_type_2' | 'pii_masking' | 'identity_deduplicator' | 'regex_replace' | 'iso_country_sanitizer' | 'cellphone_sanitizer' | 'handle_diacritics' | 'rename_column' | 'drop_column' | 'filter_by_value' | 'api_dispatcher';
+export type ActionType = 'csv_hris_connector' | 'workday_hris_connector' | 'sage_hr_connector' | 'scd_type_2' | 'pii_masking' | 'identity_deduplicator' | 'regex_replace' | 'iso_country_sanitizer' | 'cellphone_sanitizer' | 'handle_diacritics' | 'rename_column' | 'drop_column' | 'filter_by_value' | 'api_dispatcher';
 
 /**
  * Fully-typed API dispatcher configuration.
@@ -156,20 +152,6 @@ export type CellphoneSanitizerConfig = {
      * Column holding the raw phone number.
      */
     phone_column: string;
-};
-
-/**
- * A single column mapping from the pipeline to the egress destination.
- */
-export type ColumnMapping = {
-    /**
-     * Column name in the pipeline (from `final_columns`)
-     */
-    source_column: string;
-    /**
-     * Destination field name in the egress schema
-     */
-    target_field: string;
 };
 
 /**
@@ -268,7 +250,7 @@ export type CsvHrisConnectorConfig = {
      * The full S3 key `{org_id}/{company_id}/{filename}` is resolved at
      * runtime by the ETL trigger before pipeline execution.
      */
-    filename: string;
+    filename?: string | null;
 };
 
 /**
@@ -356,27 +338,6 @@ export type FilterByValueConfig = {
 };
 
 /**
- * Request body for `POST /config/{id}/generate-plan`.
- *
- * Currently empty — source system is derived from the pipeline's ingress
- * connector. Kept as a struct so future fields can be added without a
- * breaking API change.
- */
-export type GeneratePlanRequest = {
-    [key: string]: unknown;
-};
-
-/**
- * Response body for `POST /config/{id}/generate-plan` (202 Accepted).
- */
-export type GeneratePlanResponse = {
-    /**
-     * Current generation status
-     */
-    status: string;
-};
-
-/**
  * Configuration for the handle-diacritics action.
  *
  * | Field           | Type      | Default   | Description                                          |
@@ -411,6 +372,130 @@ export type IsoCountrySanitizerConfig = {
      * Column to read the raw country value from.
      */
     source_column: string;
+};
+
+/**
+ * Paginated list response wrapper.
+ */
+export type ListResponsePipelineConfig = {
+    /**
+     * Number of items per page.
+     */
+    countPerPage: number;
+    /**
+     * Current page number (1-based).
+     */
+    currentPage: number;
+    /**
+     * Items on this page.
+     */
+    data: Array<{
+        /**
+         * EventBridge-compatible schedule expression (cron or rate)
+         */
+        cron: string;
+        /**
+         * Unique identifier for the customer company (sort key)
+         */
+        customerCompanyId: string;
+        /**
+         * Optional image/icon for the pipeline
+         */
+        image?: string | null;
+        /**
+         * ISO 8601 timestamp of last edit — set by the server
+         */
+        lastEdited?: string;
+        /**
+         * Name of the pipeline
+         */
+        name: string;
+        /**
+         * Unique identifier for the organization (partition key)
+         */
+        organizationId: string;
+        /**
+         * The full ETL pipeline manifest (passed through to the ETL Lambda)
+         */
+        pipeline: Manifest;
+    }>;
+    /**
+     * Last page number (1-based).
+     */
+    lastPage: number;
+};
+
+/**
+ * Paginated list response wrapper.
+ */
+export type ListResponsePipelineRun = {
+    /**
+     * Number of items per page.
+     */
+    countPerPage: number;
+    /**
+     * Current page number (1-based).
+     */
+    currentPage: number;
+    /**
+     * Items on this page.
+     */
+    data: Array<{
+        /**
+         * Action ID currently being executed (updated during the run).
+         */
+        currentAction?: string | null;
+        /**
+         * Customer company the pipeline ran for.
+         */
+        customerCompanyId: string;
+        /**
+         * Which action caused the failure.
+         */
+        errorActionId?: string | null;
+        /**
+         * Error message if the run failed.
+         */
+        errorMessage?: string | null;
+        /**
+         * Row index where the error occurred (if determinable).
+         */
+        errorRow?: number | null;
+        /**
+         * When the run finished (ISO 8601), if it has.
+         */
+        finishedAt?: string | null;
+        /**
+         * UUID identifying this specific run.
+         */
+        id: string;
+        manifestSnapshot?: null | Manifest;
+        /**
+         * Organization that owns the pipeline.
+         */
+        organizationId: string;
+        /**
+         * Number of rows successfully processed.
+         */
+        rowsProcessed?: number | null;
+        /**
+         * When the run started (ISO 8601).
+         */
+        startedAt: string;
+        /**
+         * Current status of the run.
+         */
+        status: string;
+        validationResult?: null | ValidationResult;
+        /**
+         * Warnings accumulated during the run.
+         */
+        warnings: Array<PipelineWarning>;
+    }>;
+    /**
+     * Last page number (1-based).
+     */
+    lastPage: number;
 };
 
 /**
@@ -588,7 +673,7 @@ export type OAuthRepoConfig = {
 };
 
 /**
- * Per-organization settings stored in DynamoDB.
+ * Per-organization settings stored in the database.
  *
  * `default_auth` holds the full auth configuration that maps to a
  * concrete `ApiDispatcherConfig` variant (Bearer, OAuth, OAuth2).
@@ -646,7 +731,7 @@ export type PiiMaskingConfig = {
 };
 
 /**
- * The pipeline config as stored in DynamoDB and exchanged via the API.
+ * The pipeline config as stored in the database and exchanged via the API.
  *
  * ```json
  * {
@@ -688,97 +773,87 @@ export type PipelineConfig = {
      * The full ETL pipeline manifest (passed through to the ETL Lambda)
      */
     pipeline: Manifest;
-    planSummary?: null | PlanSummary;
 };
 
 /**
- * A single feature card in the plan summary UI.
- *
- * Each feature references one or more manifest actions via `action_ids`.
- * Toggling a feature flips the `disabled` flag on those actions.
+ * A pipeline run record as stored in the `pipeline_runs` table.
  */
-export type PlanFeature = {
+export type PipelineRun = {
     /**
-     * References to the manifest action IDs this feature maps to
+     * Action ID currently being executed (updated during the run).
      */
-    actionIds: Array<string>;
+    currentAction?: string | null;
     /**
-     * Description of what this feature does
+     * Customer company the pipeline ran for.
      */
-    description: string;
+    customerCompanyId: string;
     /**
-     * Icon name for the UI (e.g. "calendar", "users", "shield")
+     * Which action caused the failure.
      */
-    icon: string;
+    errorActionId?: string | null;
     /**
-     * Unique identifier for this feature (e.g. "sync_start_dates")
+     * Error message if the run failed.
+     */
+    errorMessage?: string | null;
+    /**
+     * Row index where the error occurred (if determinable).
+     */
+    errorRow?: number | null;
+    /**
+     * When the run finished (ISO 8601), if it has.
+     */
+    finishedAt?: string | null;
+    /**
+     * UUID identifying this specific run.
      */
     id: string;
+    manifestSnapshot?: null | Manifest;
     /**
-     * Human-readable label (e.g. "Sync Start Dates")
+     * Organization that owns the pipeline.
      */
-    label: string;
+    organizationId: string;
+    /**
+     * Number of rows successfully processed.
+     */
+    rowsProcessed?: number | null;
+    /**
+     * When the run started (ISO 8601).
+     */
+    startedAt: string;
+    /**
+     * Current status of the run.
+     */
+    status: string;
+    validationResult?: null | ValidationResult;
+    /**
+     * Warnings accumulated during the run.
+     */
+    warnings: Array<PipelineWarning>;
 };
 
 /**
- * Synthetic before/after preview showing how data transforms.
- */
-export type PlanPreview = {
-    /**
-     * Sample record after pipeline transforms
-     */
-    after: {
-        [key: string]: string;
-    };
-    /**
-     * Sample record as it appears in the source system
-     */
-    before: {
-        [key: string]: string;
-    };
-    /**
-     * Label for the source side (e.g. "In Workday")
-     */
-    sourceLabel: string;
-    /**
-     * Label for the target side (e.g. "In Your App")
-     */
-    targetLabel: string;
-    /**
-     * Warnings for destination fields that could not be mapped from the source.
-     * Each warning uses the sentinel value `__NEEDS_MAPPING__` in `after`
-     * and surfaces a human-readable message for user intervention.
-     */
-    warnings?: Array<PreviewWarning>;
-};
-
-/**
- * AI-generated plan summary cached on `PipelineConfig`.
+ * A single warning emitted by an action during pipeline execution.
  *
- * Provides a human-readable description of the pipeline plus
- * toggleable features that map back to manifest actions.
+ * Warnings are non-fatal — the pipeline continues but the client
+ * should be informed so they can fix their source data.
  */
-export type PlanSummary = {
+export type PipelineWarning = {
     /**
-     * Multi-sentence description of the pipeline
+     * Which action emitted the warning (e.g. `"cellphone_sanitizer"`).
      */
-    description: string;
+    action_id: string;
     /**
-     * Toggleable features — each references manifest action IDs
+     * How many rows were affected.
      */
-    features: Array<PlanFeature>;
+    count: number;
     /**
-     * Current generation status (InProgress, Completed, Failed)
+     * Optional extra detail (e.g. the un-parseable values).
      */
-    generationStatus: SchemaGenerationStatus;
+    detail?: string | null;
     /**
-     * One-line headline (e.g. "Here's the plan to connect Workday to your App.")
+     * Human-readable message.
      */
-    headline: string;
-    /**
-     * Synthetic before/after preview data
-     */
-    preview: PlanPreview;
+    message: string;
 };
 
 /**
@@ -797,23 +872,6 @@ export type PresignedUploadResponse = {
      * Presigned PUT URL — the frontend uses this to upload the CSV directly.
      */
     upload_url: string;
-};
-
-/**
- * A warning for a destination field that has no matching source column.
- *
- * The corresponding entry in `PlanPreview::after` will have the sentinel
- * value `__NEEDS_MAPPING__` to signal the UI that user action is required.
- */
-export type PreviewWarning = {
-    /**
-     * The destination field name that could not be mapped
-     */
-    field: string;
-    /**
-     * Human-readable explanation of why the mapping is missing
-     */
-    message: string;
 };
 
 /**
@@ -868,6 +926,120 @@ export type RenameConfig = {
 };
 
 /**
+ * Top-level response from the Sage HR `/api/employees` endpoint.
+ */
+export type SageHrApiResponse = {
+    data: Array<SageHrEmployee>;
+    meta: SageHrMeta;
+};
+
+/**
+ * Configuration for the Sage HR REST API connector.
+ *
+ * # JSON config example
+ *
+ * ```json
+ * {
+ * "subdomain": "acme",
+ * "api_token": "<your-sage-hr-api-token>",
+ * "include_team_history": true,
+ * "include_employment_status_history": true,
+ * "include_position_history": true
+ * }
+ * ```
+ *
+ * | Field                              | Type   | Required | Description                                         |
+ * |------------------------------------|--------|----------|-----------------------------------------------------|
+ * | `subdomain`                        | string | **yes**  | Sage HR subdomain (e.g. `acme` → `acme.sage.hr`)    |
+ * | `api_token`                        | string | **yes**  | API token provided by the user                       |
+ * | `include_team_history`             | bool   | no       | Include team history (default false)                 |
+ * | `include_employment_status_history`| bool   | no       | Include employment status history (default false)    |
+ * | `include_position_history`         | bool   | no       | Include position history (default false)             |
+ */
+export type SageHrConfig = {
+    api_token: string;
+    include_employment_status_history?: boolean;
+    include_position_history?: boolean;
+    include_team_history?: boolean;
+    subdomain: string;
+};
+
+/**
+ * A single employee record as returned by the Sage HR API.
+ */
+export type SageHrEmployee = {
+    city?: string | null;
+    country?: string | null;
+    date_of_birth?: string | null;
+    email?: string | null;
+    employee_number?: string | null;
+    employment_start_date?: string | null;
+    employment_status?: string | null;
+    employment_status_history?: Array<SageHrEmploymentStatusHistory> | null;
+    first_name?: string | null;
+    gender?: string | null;
+    home_phone?: string | null;
+    id: number;
+    last_name?: string | null;
+    mobile_phone?: string | null;
+    picture_url?: string | null;
+    position?: string | null;
+    position_history?: Array<SageHrPositionHistory> | null;
+    position_id?: number | null;
+    post_code?: unknown;
+    reports_to_employee_id?: number | null;
+    street_first?: string | null;
+    street_second?: string | null;
+    team?: string | null;
+    team_history?: Array<SageHrTeamHistory> | null;
+    team_id?: number | null;
+    work_phone?: string | null;
+};
+
+/**
+ * An employment status history entry.
+ */
+export type SageHrEmploymentStatusHistory = {
+    employment_statu_name?: string | null;
+    employment_status_id: number;
+    end_date?: string | null;
+    start_date?: string | null;
+};
+
+/**
+ * Pagination metadata from the Sage HR API.
+ */
+export type SageHrMeta = {
+    current_page: number;
+    next_page?: number | null;
+    per_page: number;
+    previous_page?: number | null;
+    total_entries: number;
+    total_pages: number;
+};
+
+/**
+ * A position history entry.
+ */
+export type SageHrPositionHistory = {
+    end_date?: string | null;
+    position_code?: string | null;
+    position_id: number;
+    position_name?: string | null;
+    start_date?: string | null;
+};
+
+/**
+ * A team assignment history entry.
+ */
+export type SageHrTeamHistory = {
+    end_date?: string | null;
+    start_date?: string | null;
+    team_id: number;
+    team_name?: string | null;
+};
+
+/**
  * Configuration for SCD Type 2 effective dating.
  *
  * # JSON config
@@ -893,31 +1065,6 @@ export type ScdType2Config = {
      * The column that identifies the entity (partitioning column).
      */
     entity_column?: string;
-};
-
-/**
- * Result of diffing `final_columns` against the egress schema.
- *
- * Shows which pipeline columns map to destination fields, and which are
- * unmatched on either side.
- */
-export type SchemaDiff = {
-    /**
-     * Columns present in the pipeline that have a mapping in the egress schema
-     */
-    mapped: Array<ColumnMapping>;
-    /**
-     * Pipeline columns with no egress mapping
-     */
-    unmapped_source: Array<string>;
-    /**
-     * Egress schema fields with no matching pipeline column
-     */
-    unmapped_target: Array<string>;
-};
-
-export type SchemaGenerationStatus = 'notStarted' | 'inProgress' | 'completed' | {
-    failed: string;
 };
 
 /**
@@ -951,6 +1098,16 @@ export type StepValidation = {
 };
 
 /**
+ * Response returned when a run is triggered.
+ */
+export type TriggerRunResponse = {
+    /**
+     * Confirmation message
+     */
+    message: string;
+};
+
+/**
  * Overall validation result for the entire pipeline.
  */
 export type ValidationResult = {
@@ -958,7 +1115,6 @@ export type ValidationResult = {
      * Final column set after the last step.
      */
     final_columns: Array<string>;
-    schema_diff?: null | SchemaDiff;
     /**
      * Per-step column snapshots (in execution order).
      */
@@ -1055,7 +1211,16 @@ export type LoginResponse2 = LoginResponses[keyof LoginResponses];
 export type ListConfigsData = {
     body?: never;
     path?: never;
-    query?: never;
+    query?: {
+        /**
+         * Page number (1-based)
+         */
+        page?: number;
+        /**
+         * Items per page (default 20, max 100)
+         */
+        count_per_page?: number;
+    };
     url: '/config';
 };
 
@@ -1074,9 +1239,9 @@ export type ListConfigsError = ListConfigsErrors[keyof ListConfigsErrors];
 
 export type ListConfigsResponses = {
     /**
-     * List of pipeline configurations
+     * Paginated list of pipeline configurations
      */
-    200: Array<PipelineConfig>;
+    200: ListResponsePipelineConfig;
 };
 
 export type ListConfigsResponse = ListConfigsResponses[keyof ListConfigsResponses];
@@ -1321,46 +1486,106 @@ export type CsvPresignedUploadResponses = {
 
 export type CsvPresignedUploadResponse = CsvPresignedUploadResponses[keyof CsvPresignedUploadResponses];
 
-export type GeneratePlanData = {
-    /**
-     * Optional request body (currently empty — source system is derived from the pipeline)
-     */
-    body: GeneratePlanRequest;
+export type ListRunsData = {
+    body?: never;
     path: {
         /**
-         * Unique identifier for the customer company
+         * Customer company ID
+         */
+        customer_company_id: string;
+    };
+    query?: {
+        /**
+         * Page number (1-based)
+         */
+        page?: number;
+        /**
+         * Items per page (default 20, max 100)
+         */
+        count_per_page?: number;
+    };
+    url: '/config/{customer_company_id}/runs';
+};
+
+export type ListRunsErrors = {
+    /**
+     * Unauthorized
+     */
+    401: unknown;
+};
+
+export type ListRunsResponses = {
+    /**
+     * Paginated list of pipeline runs
+     */
+    200: ListResponsePipelineRun;
+};
+
+export type ListRunsResponse = ListRunsResponses[keyof ListRunsResponses];
+
+export type TriggerRunData = {
+    body?: never;
+    path: {
+        /**
+         * Customer company ID
          */
         customer_company_id: string;
     };
     query?: never;
-    url: '/config/{customer_company_id}/generate-plan';
+    url: '/config/{customer_company_id}/runs/trigger';
 };
 
-export type GeneratePlanErrors = {
+export type TriggerRunErrors = {
     /**
-     * Unauthorized — missing or invalid token
+     * Unauthorized
      */
-    401: ErrorResponse;
-    /**
-     * Configuration not found
-     */
-    404: ErrorResponse;
-    /**
-     * Internal server error
-     */
-    500: ErrorResponse;
+    401: unknown;
 };
 
-export type GeneratePlanError = GeneratePlanErrors[keyof GeneratePlanErrors];
-
-export type GeneratePlanResponses = {
+export type TriggerRunResponses = {
     /**
-     * Plan generation started
+     * Run triggered
      */
-    202: GeneratePlanResponse;
+    202: TriggerRunResponse;
 };
 
-export type GeneratePlanResponse2 = GeneratePlanResponses[keyof GeneratePlanResponses];
+export type TriggerRunResponse2 = TriggerRunResponses[keyof TriggerRunResponses];
+
+export type GetRunData = {
+    body?: never;
+    path: {
+        /**
+         * Customer company ID
+         */
+        customer_company_id: string;
+        /**
+         * Pipeline run ID
+         */
+        run_id: string;
+    };
+    query?: never;
+    url: '/config/{customer_company_id}/runs/{run_id}';
+};
+
+export type GetRunErrors = {
+    /**
+     * Unauthorized
+     */
+    401: unknown;
+    /**
+     * Run not found
+     */
+    404: unknown;
+};
+
+export type GetRunResponses = {
+    /**
+     * Pipeline run details
+     */
+    200: PipelineRun;
+};
+
+export type GetRunResponse = GetRunResponses[keyof GetRunResponses];
 
 export type ValidateConfigData = {
     /**

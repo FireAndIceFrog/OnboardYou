@@ -1,8 +1,8 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { type TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
-import chatReducer from '../features/chat/state/chatSlice';
 import configDetailsReducer from '../features/config-details/state/configDetailsSlice';
 import configListReducer from '../features/config-list/state/configListSlice';
+import runHistoryReducer from '../features/run-history/state/runHistorySlice';
 import type { NotificationType } from '../shared/domain/types';
 import { getGlobalValue } from '../shared/hooks';
 
@@ -26,9 +26,9 @@ const thunkExtra: ThunkExtra = {
 
 export const store = configureStore({
   reducer: {
-    chat: chatReducer,
     configDetails: configDetailsReducer,
     configList: configListReducer,
+    runHistory: runHistoryReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

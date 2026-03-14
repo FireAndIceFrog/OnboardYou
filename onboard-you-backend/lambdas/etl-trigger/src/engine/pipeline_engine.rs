@@ -1,4 +1,9 @@
-//! Pipeline engine — loads config, builds actions, runs the ETL pipeline.
+//! Pipeline engine — loads config, validates columns, builds actions, runs the ETL pipeline.
+//!
+//! Before executing the pipeline, the engine performs a dry-run validation
+//! (column propagation via `calculate_columns`) to catch schema mismatches
+//! early. Both the validation result and the run outcome are persisted to
+//! the `pipeline_runs` table.
 //!
 //! When a manifest action specifies `auth_type: "default"`, the engine
 //! fetches the organisation's stored auth settings from the settings table
@@ -7,17 +12,39 @@
 use lambda_runtime::Error;
 use std::sync::Arc;
 
-use crate::dependancies::Dependancies;
+use onboard_you_models::PipelineRun;
 
+use crate::dependancies::Dependancies;
 use crate::models::PipelineResult;
 
-/// Load config from DynamoDB, build the pipeline, and execute it.
+/// Generate a short random run ID (UUID v4 hex, no dashes).
+fn new_run_id() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let ts = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis();
+    // Combine timestamp with a random component for uniqueness
+    let random: u64 = {
+        // Simple xorshift pseudo-random — good enough for an ID, not crypto
+        let mut seed = ts as u64 ^ 0x517cc1b727220a95;
+        seed ^= seed << 13;
+        seed ^= seed >> 7;
+        seed ^= seed << 17;
+        seed
+    };
+    format!("{ts:x}-{random:x}")
+}
+
+/// Load config, validate schema, build the pipeline, and execute it.
 pub async fn run(
     deps: Arc<Dependancies>,
     organization_id: &str,
     customer_company_id: &str,
 ) -> Result<PipelineResult, Error> {
     tracing::info!(%organization_id, %customer_company_id, "ETL trigger fired");
+
+    let run_id = new_run_id();
 
     // 1. Fetch config via injected repository
     let config = deps
@@ -28,7 +55,7 @@ pub async fn run(
     // 2. Deserialize the Manifest
     let mut manifest = config.pipeline;
 
-    // 3. Resolve any "default" auth types from the settings table via injected repo
+    // 3. Resolve any "default" auth types from the settings table
     manifest = deps
         .etl_repo
         .resolve_default_auth(&deps, &mut manifest, organization_id)
@@ -39,8 +66,63 @@ pub async fn run(
         deps.etl_repo
             .resolve_csv_s3_keys(&mut manifest, organization_id, customer_company_id)?;
 
+    // Create the run record (status = "running") with resolved manifest snapshot
+    let run_record = PipelineRun {
+        id: run_id.clone(),
+        organization_id: organization_id.to_string(),
+        customer_company_id: customer_company_id.to_string(),
+        status: "running".to_string(),
+        started_at: String::new(), // DB defaults to NOW()
+        finished_at: None,
+        rows_processed: None,
+        current_action: None,
+        error_message: None,
+        error_action_id: None,
+        error_row: None,
+        warnings: vec![],
+        validation_result: None,
+        manifest_snapshot: Some(manifest.clone()),
+    };
+    let _ = deps.run_log_repo.create_run(&run_record).await;
+
+    // 4. Pre-flight validation: dry-run column propagation
+    let action_factory = deps.action_factory.clone();
+    let validation_result = match action_factory.validate_manifest(&manifest) {
+        Ok(v) => v,
+        Err(e) => {
+            let msg = format!(
+                "Pre-flight validation failed at step '{}' ({}): {}",
+                e.action_id, e.action_type, e.error
+            );
+            tracing::error!(%organization_id, %customer_company_id, %msg);
+
+            let _ = deps.run_log_repo.fail_validation(&run_id, &msg).await;
+
+            return Ok(PipelineResult::failure(
+                &run_id,
+                organization_id,
+                customer_company_id,
+                &msg,
+                vec![],
+            ));
+        }
+    };
+
+    // Store validation result
+    let _ = deps
+        .run_log_repo
+        .store_validation_result(&run_id, &validation_result)
+        .await;
+
+    tracing::info!(
+        %organization_id, %customer_company_id,
+        steps = validation_result.steps.len(),
+        "Pre-flight validation passed"
+    );
+
+    // 5. Execute the pipeline
     deps.pipeline_repo
-        .run_pipeline(&deps, manifest, organization_id, customer_company_id)
+        .run_pipeline(&deps, manifest, organization_id, customer_company_id, &run_id)
         .await
 }
 
@@ -50,10 +132,13 @@ mod tests {
     use crate::dependancies::Dependancies;
     use crate::repositories::{
         config_repository::IConfigRepo, etl_repository::IEtlRepo,
-        pipeline_repository::IPipelineRepo, settings_repository::ISettingsRepo,
+        pipeline_repository::IPipelineRepo, run_log_repository::IRunLogRepo,
+        settings_repository::ISettingsRepo,
     };
     use async_trait::async_trait;
     use lambda_runtime::Error;
+    use onboard_you_models::PipelineWarning;
+    use onboard_you_models::ValidationResult;
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
 
@@ -131,12 +216,15 @@ mod tests {
             _manifest: onboard_you_models::Manifest,
             _organization_id: &str,
             _customer_company_id: &str,
+            _run_id: &str,
         ) -> Result<crate::models::PipelineResult, Error> {
             self.called.store(true, Ordering::SeqCst);
             Ok(crate::models::PipelineResult::success(
+                _run_id,
                 _organization_id,
                 _customer_company_id,
                 Some(0),
+                vec![],
             ))
         }
     }
@@ -152,7 +240,18 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    struct NoopRunLogRepo;
+
+    #[async_trait]
+    impl IRunLogRepo for NoopRunLogRepo {
+        async fn create_run(&self, _: &PipelineRun) -> Result<(), Error> { Ok(()) }
+        async fn complete_run(&self, _: &str, _: Option<i32>, _: &[PipelineWarning]) -> Result<(), Error> { Ok(()) }
+        async fn fail_run(&self, _: &str, _: &str, _: Option<&str>, _: Option<i32>, _: &[PipelineWarning]) -> Result<(), Error> { Ok(()) }
+        async fn fail_validation(&self, _: &str, _: &str) -> Result<(), Error> { Ok(()) }
+        async fn store_validation_result(&self, _: &str, _: &ValidationResult) -> Result<(), Error> { Ok(()) }
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn test_run_calls_repos_and_pipeline() {
         let cfg_called = Arc::new(AtomicBool::new(false));
         let etl_default = Arc::new(AtomicBool::new(false));
@@ -172,6 +271,7 @@ mod tests {
             pipeline_repo: Arc::new(FakePipelineRepo {
                 called: pipeline_called.clone(),
             }),
+            run_log_repo: Arc::new(NoopRunLogRepo),
             action_factory: Arc::new(onboard_you::ActionFactory::new()),
         });
 

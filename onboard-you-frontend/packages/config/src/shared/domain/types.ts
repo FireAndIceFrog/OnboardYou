@@ -14,6 +14,9 @@ export type {
   OrgSettings,
   SettingsRequest,
   ErrorResponse,
+  PipelineRun,
+  PipelineWarning,
+  ListResponsePipelineRun,
   /* ── Config payload variant types ── */
   CsvHrisConnectorConfig,
   WorkdayConfig,

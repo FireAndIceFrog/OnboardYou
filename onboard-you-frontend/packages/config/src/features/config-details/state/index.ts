@@ -9,8 +9,6 @@ export {
   onEdgesChange,
   selectNode,
   deselectNode,
-  toggleChat,
-  setChatOpen,
   addFlowAction,
   resetConfigDetails,
   selectConfigDetails,
@@ -18,7 +16,6 @@ export {
   selectNodes,
   selectEdges,
   selectSelectedNode,
-  selectIsChatOpen,
   selectConfigDetailsLoading,
   selectConfigDetailsError,
 } from './configDetailsSlice';

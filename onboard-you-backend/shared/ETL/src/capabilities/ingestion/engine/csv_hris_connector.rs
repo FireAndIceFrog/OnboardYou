@@ -88,8 +88,9 @@ impl CsvHrisConnector {
 
     /// Download the CSV from S3 and return the bytes.
     ///
-    /// Uses a one-shot `tokio::Runtime` to bridge the async AWS SDK into
-    /// the synchronous `OnboardingAction::execute` interface.
+    /// Uses `block_in_place` on the current tokio runtime to bridge the
+    /// async AWS SDK into the synchronous `OnboardingAction::execute`
+    /// interface — safe inside the Lambda's multi-threaded runtime.
     ///
     /// The bucket name is read from the `CSV_UPLOAD_BUCKET` env var.
     fn download_from_s3(&self) -> Result<Vec<u8>> {
@@ -99,33 +100,34 @@ impl CsvHrisConnector {
             Error::ConfigurationError("CSV_UPLOAD_BUCKET environment variable is not set".into())
         })?;
 
-        let rt = tokio::runtime::Runtime::new()
-            .map_err(|e| Error::IngestionError(format!("Failed to create tokio runtime: {e}")))?;
+        let handle = tokio::runtime::Handle::current();
+        tokio::task::block_in_place(|| {
+            handle.block_on(async {
+                let aws_config =
+                    aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
+                let client = aws_sdk_s3::Client::new(&aws_config);
 
-        rt.block_on(async {
-            let aws_config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
-            let client = aws_sdk_s3::Client::new(&aws_config);
+                let resp = client
+                    .get_object()
+                    .bucket(&bucket)
+                    .key(s3_key)
+                    .send()
+                    .await
+                    .map_err(|e| {
+                        Error::IngestionError(format!(
+                            "S3 GetObject failed for '{}/{}': {e}",
+                            bucket, s3_key
+                        ))
+                    })?;
 
-            let resp = client
-                .get_object()
-                .bucket(&bucket)
-                .key(s3_key)
-                .send()
-                .await
-                .map_err(|e| {
-                    Error::IngestionError(format!(
-                        "S3 GetObject failed for '{}/{}': {e}",
-                        bucket, s3_key
-                    ))
-                })?;
+                let bytes = resp
+                    .body
+                    .collect()
+                    .await
+                    .map_err(|e| Error::IngestionError(format!("Failed to read S3 body: {e}")))?;
 
-            let bytes = resp
-                .body
-                .collect()
-                .await
-                .map_err(|e| Error::IngestionError(format!("Failed to read S3 body: {e}")))?;
-
-            Ok(bytes.into_bytes().to_vec())
+                Ok(bytes.into_bytes().to_vec())
+            })
         })
     }
 }
@@ -134,20 +136,45 @@ impl HrisConnector for CsvHrisConnector {
     fn fetch_data(&self) -> Result<LazyFrame> {
         let csv_bytes = self.download_from_s3()?;
 
-        let cursor = std::io::Cursor::new(csv_bytes);
-        let df = CsvReader::new(cursor).finish().map_err(|e| {
-            Error::IngestionError(format!(
-                "Failed to parse CSV '{}': {e}",
-                self.config.filename.clone().unwrap_or_default()
-            ))
-        })?;
+        // Read header only to discover column names, then build an all-String
+        // schema so Polars never infers numeric types. Ingress data must always
+        // be strings — downstream sanitizers expect string inputs.
+        let header_df = CsvReadOptions::default()
+            .with_n_rows(Some(0))
+            .into_reader_with_file_handle(std::io::Cursor::new(&csv_bytes))
+            .finish()
+            .map_err(|e| {
+                Error::IngestionError(format!(
+                    "Failed to read CSV header '{}': {e}",
+                    self.config.filename.clone().unwrap_or_default()
+                ))
+            })?;
+
+        let all_string_schema: SchemaRef = Arc::new(
+            header_df
+                .get_column_names()
+                .into_iter()
+                .map(|name| Field::new(name.clone(), DataType::String))
+                .collect(),
+        );
+
+        let df = CsvReadOptions::default()
+            .with_schema_overwrite(Some(all_string_schema))
+            .into_reader_with_file_handle(std::io::Cursor::new(csv_bytes))
+            .finish()
+            .map_err(|e| {
+                Error::IngestionError(format!(
+                    "Failed to parse CSV '{}': {e}",
+                    self.config.filename.clone().unwrap_or_default()
+                ))
+            })?;
 
         Ok(df.lazy())
     }
 }
 
 impl ColumnCalculator for CsvHrisConnector {
-    fn calculate_columns(&self, _context: RosterContext) -> Result<RosterContext> {
+    fn calculate_columns(&self, context: RosterContext) -> Result<RosterContext> {
         // Build an empty DataFrame from the declared column names.
         // No S3 access — purely config-driven schema propagation.
         let columns: Vec<Column> = self
@@ -160,7 +187,7 @@ impl ColumnCalculator for CsvHrisConnector {
         let empty_df = DataFrame::new(0, columns)
             .map_err(|e| Error::IngestionError(format!("Failed to build CSV schema: {e}")))?;
 
-        let mut ctx = RosterContext::new(empty_df.lazy());
+        let mut ctx = RosterContext::with_deps(empty_df.lazy(), context.deps.clone());
         for col_name in &self.config.columns {
             ctx.set_field_source(col_name.clone(), "HRIS_CONNECTOR".into());
         }
@@ -174,7 +201,7 @@ impl OnboardingAction for CsvHrisConnector {
         "csv_hris_connector"
     }
 
-    fn execute(&self, _context: RosterContext) -> Result<RosterContext> {
+    fn execute(&self, context: RosterContext) -> Result<RosterContext> {
         tracing::info!(
             filename = %self.config.filename.clone().unwrap_or_default(),
             s3_key = ?self.config.resolved_s3_key,
@@ -191,7 +218,7 @@ impl OnboardingAction for CsvHrisConnector {
             .map_err(|e| Error::IngestionError(format!("Failed to collect schema: {e}")))?;
 
         // 3. Build the RosterContext
-        let mut ctx = RosterContext::new(lf);
+        let mut ctx = RosterContext::with_deps(lf, context.deps.clone());
 
         for field_name in schema.iter_names() {
             ctx.set_field_source(field_name.to_string(), "HRIS_CONNECTOR".into());
@@ -213,6 +240,7 @@ impl OnboardingAction for CsvHrisConnector {
 
 #[cfg(test)]
 mod tests {
+    use onboard_you_models::ETLDependancies;
     use super::*;
 
     fn test_config() -> CsvHrisConnectorConfig {
@@ -306,12 +334,12 @@ mod tests {
     #[test]
     fn test_calculate_columns_uses_declared_columns() {
         let connector = CsvHrisConnector::new(test_config());
-        let initial = RosterContext::new(LazyFrame::default());
-        let mut ctx = connector
+        let initial = RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
+        let ctx = connector
             .calculate_columns(initial)
             .expect("calculate_columns should succeed");
 
-        let schema = ctx.data.collect_schema().expect("schema");
+        let schema = ctx.get_data().collect_schema().expect("schema");
         let col_names: Vec<String> = schema.iter_names().map(|n| n.to_string()).collect();
         assert_eq!(
             col_names,
@@ -327,8 +355,8 @@ mod tests {
         );
 
         // Every column should have HRIS_CONNECTOR metadata
-        assert_eq!(ctx.field_metadata.len(), 7);
-        for (_, meta) in &ctx.field_metadata {
+        assert_eq!(ctx.field_metadata().len(), 7);
+        for (_, meta) in ctx.field_metadata() {
             assert_eq!(meta.source, "HRIS_CONNECTOR");
         }
     }

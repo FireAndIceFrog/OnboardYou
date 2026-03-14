@@ -3,9 +3,11 @@ use std::sync::Arc;
 use crate::repositories::cognito_repository::{AuthRepo, CognitoAuthRepo};
 use crate::repositories::config_repository::{ConfigRepo, PgConfigRepo};
 use crate::repositories::etl_repository::{EtlRepo, EtlRepository};
+use crate::repositories::run_history_repository::{PgRunHistoryRepo, RunHistoryRepo};
 use crate::repositories::s3_repository::{S3Repo, S3Repository};
 use crate::repositories::schedule_repository::{EventBridgeScheduleRepo, ScheduleRepo};
 use crate::repositories::settings_repository::{PgSettingsRepo, SettingsRepo};
+use crate::repositories::trigger_repository::{SqsTriggerRepo, TriggerRepo};
 
 #[derive(Debug, Clone)]
 pub struct Env {
@@ -14,6 +16,7 @@ pub struct Env {
     pub scheduler_role_arn: String,
     pub csv_upload_bucket: String,
     pub cognito_client_id: String,
+    pub sqs_queue_url: String,
 }
 
 impl Default for Env {
@@ -24,6 +27,7 @@ impl Default for Env {
             scheduler_role_arn: String::new(),
             csv_upload_bucket: String::new(),
             cognito_client_id: String::new(),
+            sqs_queue_url: String::new(),
         }
     }
 }
@@ -40,6 +44,8 @@ pub struct Dependancies {
     pub s3_repo: Arc<dyn S3Repo>,
     pub auth_repo: Arc<dyn AuthRepo>,
     pub etl_repo: Arc<dyn EtlRepo>,
+    pub run_history_repo: Arc<dyn RunHistoryRepo>,
+    pub trigger_repo: Arc<dyn TriggerRepo>,
 }
 
 impl Dependancies {
@@ -54,6 +60,8 @@ impl Dependancies {
                 .expect("CSV_UPLOAD_BUCKET must be set"),
             cognito_client_id: std::env::var("COGNITO_CLIENT_ID")
                 .expect("COGNITO_CLIENT_ID must be set"),
+            sqs_queue_url: std::env::var("SQS_QUEUE_URL")
+                .expect("SQS_QUEUE_URL must be set"),
         }
     }
 
@@ -64,6 +72,7 @@ impl Dependancies {
             .parse()
             .expect("Failed to parse DATABASE_URL");
         let pool = sqlx::pool::PoolOptions::new()
+            .max_connections(1)
             .connect_lazy_with(pool_opts.statement_cache_capacity(0));
 
 
@@ -72,6 +81,9 @@ impl Dependancies {
                 pool: pool.clone(),
             }),
             settings_repo: Arc::new(PgSettingsRepo {
+                pool: pool.clone(),
+            }),
+            run_history_repo: Arc::new(PgRunHistoryRepo {
                 pool,
             }),
             schedule_repo: Arc::new(EventBridgeScheduleRepo {
@@ -87,6 +99,10 @@ impl Dependancies {
                 client_id: env.cognito_client_id.clone(),
             }),
             etl_repo: Arc::new(EtlRepository {}),
+            trigger_repo: Arc::new(SqsTriggerRepo {
+                sqs: aws_sdk_sqs::Client::new(&aws_config),
+                queue_url: env.sqs_queue_url.clone(),
+            }),
         }
     }
 }

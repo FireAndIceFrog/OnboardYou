@@ -13,13 +13,31 @@ use crate::capabilities::logic::engine::{
     IsoCountrySanitizer, PIIMasking, RegexReplace, RenameColumn, SCDType2,
 };
 use onboard_you_models::{ActionConfig, ActionConfigPayload};
-use onboard_you_models::{ActionType, Error, OnboardingAction, Result};
-use onboard_you_models::RosterContext;
+use onboard_you_models::{ActionType, Error, Manifest, OnboardingAction, Result};
+use onboard_you_models::{
+    ETLDependancies, RosterContext, StepValidation, ValidationResult, ValidationStepError,
+};
 use async_trait::async_trait;
+use polars::prelude::LazyFrame;
 use std::sync::Arc;
 
 /// Factory for creating OnboardingAction instances from manifest action configs.
 pub struct ActionFactory;
+
+/// Captures which action failed and the error details.
+#[derive(Debug)]
+pub struct StepError {
+    pub action_id: String,
+    pub error: onboard_you_models::Error,
+    /// Warnings accumulated by earlier (successful) actions before this step failed.
+    pub warnings: Vec<onboard_you_models::PipelineWarning>,
+}
+
+impl std::fmt::Display for StepError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Action '{}' failed: {}", self.action_id, self.error)
+    }
+}
 
 impl ActionFactory {
     pub fn new() -> Self {
@@ -30,11 +48,15 @@ impl ActionFactory {
 #[async_trait]
 pub trait ActionFactoryTrait: Send + Sync {
     fn create(&self, action_config: &ActionConfig) -> Result<Arc<dyn OnboardingAction>>;
+    fn validate_manifest(
+        &self,
+        manifest: &Manifest,
+    ) -> std::result::Result<ValidationResult, ValidationStepError>;
     fn run(
         &self,
         actions: Vec<Arc<dyn OnboardingAction>>,
         context: RosterContext,
-    ) -> Result<RosterContext>;
+    ) -> std::result::Result<RosterContext, StepError>;
 }
 
 impl ActionFactoryTrait for ActionFactory {
@@ -116,18 +138,90 @@ impl ActionFactoryTrait for ActionFactory {
         }
     }
 
+    /// Validate a manifest by chaining `calculate_columns` for each action.
+    fn validate_manifest(
+        &self,
+        manifest: &Manifest,
+    ) -> std::result::Result<ValidationResult, ValidationStepError> {
+        if manifest.actions.is_empty() {
+            return Ok(ValidationResult {
+                steps: vec![],
+                final_columns: vec![],
+            });
+        }
+
+        let actions: Vec<_> = manifest
+            .actions
+            .iter()
+            .map(|ac| {
+                self.create(ac).map_err(|e| ValidationStepError {
+                    action_id: ac.id.clone(),
+                    action_type: ac.action_type.to_string(),
+                    error: e,
+                })
+            })
+            .collect::<std::result::Result<_, _>>()?;
+
+        let mut context = RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
+        let mut steps = Vec::with_capacity(actions.len());
+
+        for (action, ac) in actions.iter().zip(manifest.actions.iter()) {
+            context = action.calculate_columns(context).map_err(|e| ValidationStepError {
+                action_id: ac.id.clone(),
+                action_type: ac.action_type.to_string(),
+                error: e,
+            })?;
+
+            let schema = context
+                .get_data()
+                .collect_schema()
+                .map_err(|e| ValidationStepError {
+                    action_id: ac.id.clone(),
+                    action_type: ac.action_type.to_string(),
+                    error: e.into(),
+                })?;
+
+            let columns_after: Vec<String> = schema.iter_names().map(|n| n.to_string()).collect();
+
+            steps.push(StepValidation {
+                action_id: ac.id.clone(),
+                action_type: ac.action_type.to_string(),
+                columns_after,
+            });
+        }
+
+        let final_columns = steps
+            .last()
+            .map(|s| s.columns_after.clone())
+            .unwrap_or_default();
+
+        Ok(ValidationResult {
+            steps,
+            final_columns,
+        })
+    }
+
     /// Execute a pipeline defined by a manifest.
     ///
     /// Each action receives the `RosterContext` produced by the previous step
-    /// (fold pattern). The final context is returned.
+    /// (fold pattern). The final context is returned. On failure the
+    /// `StepError` identifies which action broke.
     fn run(
         &self,
         actions: Vec<Arc<dyn OnboardingAction>>,
         mut context: RosterContext,
-    ) -> Result<RosterContext> {
+    ) -> std::result::Result<RosterContext, StepError> {
         for action in &actions {
             tracing::info!(action_id = action.id(), "PipelineRunner: executing action");
-            context = action.execute(context)?;
+            let logger = context.deps.logger.clone();
+
+            context = action.execute(context).map_err(|e| {
+                StepError {
+                    action_id: action.id().to_string(),
+                    error: e,
+                    warnings: logger.drain_deferred_warnings(),
+                }
+            })?;
         }
         Ok(context)
     }
@@ -135,11 +229,11 @@ impl ActionFactoryTrait for ActionFactory {
 
 #[cfg(test)]
 mod tests {
+    use onboard_you_models::ETLDependancies;
     use super::*;
     use onboard_you_models::ColumnCalculator;
     use onboard_you_models::manifest::{ActionConfig, ActionConfigPayload};
     use ActionType;
-    use polars::prelude::*;
 
     /// A trivial pass-through action for testing the runner.
     struct NoopAction;
@@ -159,17 +253,17 @@ mod tests {
 
     #[test]
     fn test_pipeline_runner_no_actions() {
-        let ctx = RosterContext::new(LazyFrame::default());
+        let ctx = RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
         let result = ActionFactory::new().run(vec![], ctx).expect("run");
-        assert!(result.field_metadata.is_empty());
+        assert!(result.field_metadata().is_empty());
     }
 
     #[test]
     fn test_pipeline_runner_single_action() {
-        let ctx = RosterContext::new(LazyFrame::default());
+        let ctx = RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
         let actions: Vec<Arc<dyn OnboardingAction>> = vec![Arc::new(NoopAction)];
         let result = ActionFactory::new().run(actions, ctx).expect("run");
-        assert!(result.field_metadata.is_empty());
+        assert!(result.field_metadata().is_empty());
     }
 
     #[test]
@@ -324,5 +418,178 @@ mod tests {
             .create(&config)
             .expect("Default should create an unconfigured dispatcher");
         assert_eq!(action.id(), "api_dispatcher");
+    }
+
+    // -----------------------------------------------------------------------
+    // validate_manifest tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_validate_manifest_empty_actions() {
+        let manifest = onboard_you_models::Manifest {
+            version: "1.0".into(),
+            actions: vec![],
+        };
+
+        let result = ActionFactory::new()
+            .validate_manifest(&manifest)
+            .expect("empty manifest should validate");
+
+        assert!(result.steps.is_empty());
+        assert!(result.final_columns.is_empty());
+    }
+
+    #[test]
+    fn test_validate_manifest_csv_then_dispatcher_propagates_columns() {
+        let manifest = onboard_you_models::Manifest {
+            version: "1.0".into(),
+            actions: vec![
+                ActionConfig {
+                    id: "ingest".into(),
+                    action_type: ActionType::CsvHrisConnector,
+                    config: ActionConfigPayload::CsvHrisConnector(
+                        serde_json::from_value(
+                            serde_json::json!({
+                                "filename": "data.csv",
+                                "columns": ["employee_id", "email"]
+                            }),
+                        )
+                        .unwrap(),
+                    ),
+                },
+                ActionConfig {
+                    id: "dispatch".into(),
+                    action_type: ActionType::ApiDispatcher,
+                    config: ActionConfigPayload::ApiDispatcher(
+                        serde_json::from_value(serde_json::json!({ "auth_type": "default" }))
+                            .unwrap(),
+                    ),
+                },
+            ],
+        };
+
+        let result = ActionFactory::new()
+            .validate_manifest(&manifest)
+            .expect("manifest should validate");
+
+        assert_eq!(result.steps.len(), 2);
+        assert_eq!(result.steps[0].action_id, "ingest");
+        assert_eq!(result.steps[1].action_id, "dispatch");
+        assert_eq!(result.steps[0].columns_after, vec!["employee_id", "email"]);
+        assert_eq!(result.steps[1].columns_after, vec!["employee_id", "email"]);
+        assert_eq!(result.final_columns, vec!["employee_id", "email"]);
+    }
+
+    #[test]
+    fn test_validate_manifest_reports_action_for_payload_mismatch() {
+        let manifest = onboard_you_models::Manifest {
+            version: "1.0".into(),
+            actions: vec![ActionConfig {
+                id: "bad_step".into(),
+                action_type: ActionType::CsvHrisConnector,
+                // Intentional mismatch: csv action type with api dispatcher payload
+                config: ActionConfigPayload::ApiDispatcher(
+                    onboard_you_models::ApiDispatcherConfig::Default,
+                ),
+            }],
+        };
+
+        let err = ActionFactory::new()
+            .validate_manifest(&manifest)
+            .expect_err("mismatched payload should fail");
+
+        assert_eq!(err.action_id, "bad_step");
+        assert_eq!(err.action_type, "csv_hris_connector");
+        assert!(matches!(
+            err.error,
+            onboard_you_models::Error::ConfigurationError(_)
+        ));
+    }
+
+    // -----------------------------------------------------------------------
+    // StepError warning preservation tests
+    // -----------------------------------------------------------------------
+
+    /// An action that adds a warning, then succeeds.
+    struct WarnThenSucceed;
+    impl onboard_you_models::ColumnCalculator for WarnThenSucceed {
+        fn calculate_columns(&self, ctx: RosterContext) -> Result<RosterContext> {
+            Ok(ctx)
+        }
+    }
+    impl OnboardingAction for WarnThenSucceed {
+        fn id(&self) -> &str {
+            "warn_action"
+        }
+        fn execute(&self, ctx: RosterContext) -> Result<RosterContext> {
+            ctx.deps.logger.warn(onboard_you_models::PipelineWarning {
+                action_id: self.id().to_string(),
+                message: "test warning".into(),
+                count: 1,
+                detail: None,
+            });
+            Ok(ctx)
+        }
+    }
+
+    /// An action that always fails.
+    struct AlwaysFail;
+    impl onboard_you_models::ColumnCalculator for AlwaysFail {
+        fn calculate_columns(&self, ctx: RosterContext) -> Result<RosterContext> {
+            Ok(ctx)
+        }
+    }
+    impl OnboardingAction for AlwaysFail {
+        fn id(&self) -> &str {
+            "failing_action"
+        }
+        fn execute(&self, _ctx: RosterContext) -> Result<RosterContext> {
+            Err(onboard_you_models::Error::LogicError("boom".into()))
+        }
+    }
+
+    #[test]
+    fn test_step_error_preserves_warnings_from_earlier_steps() {
+        let ctx = RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
+        let actions: Vec<Arc<dyn OnboardingAction>> = vec![
+            Arc::new(WarnThenSucceed),
+            Arc::new(AlwaysFail),
+        ];
+        let err = ActionFactory::new()
+            .run(actions, ctx)
+            .expect_err("should fail");
+
+        assert_eq!(err.action_id, "failing_action");
+        assert_eq!(err.warnings.len(), 1);
+        assert_eq!(err.warnings[0].action_id, "warn_action");
+        assert_eq!(err.warnings[0].message, "test warning");
+    }
+
+    #[test]
+    fn test_step_error_empty_warnings_when_first_action_fails() {
+        let ctx = RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
+        let actions: Vec<Arc<dyn OnboardingAction>> = vec![Arc::new(AlwaysFail)];
+        let err = ActionFactory::new()
+            .run(actions, ctx)
+            .expect_err("should fail");
+
+        assert_eq!(err.action_id, "failing_action");
+        assert!(err.warnings.is_empty());
+    }
+
+    #[test]
+    fn test_successful_pipeline_preserves_warnings() {
+        let ctx = RosterContext::with_deps(LazyFrame::default(), ETLDependancies::default());
+        let actions: Vec<Arc<dyn OnboardingAction>> = vec![
+            Arc::new(WarnThenSucceed),
+            Arc::new(NoopAction),
+        ];
+        let result = ActionFactory::new()
+            .run(actions, ctx)
+            .expect("should succeed");
+
+        let warnings = result.deps.logger.drain_deferred_warnings();
+        assert_eq!(warnings.len(), 1);
+        assert_eq!(warnings[0].message, "test warning");
     }
 }
