@@ -14,6 +14,7 @@ export {
   selectCurrentPage,
   selectLastPage,
   selectFilteredRuns,
+  selectIsRunning,
   type RunHistoryState,
 } from './runHistorySlice';
 export { default as runHistoryReducer } from './runHistorySlice';

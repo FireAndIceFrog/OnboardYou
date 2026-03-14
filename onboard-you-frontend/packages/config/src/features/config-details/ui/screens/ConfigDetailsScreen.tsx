@@ -44,6 +44,7 @@ import {
   fetchSettingsSchemaThunk,
 } from '../../state/configDetailsSlice';
 import { triggerRun as triggerRunService } from '../../services/configDetailsService';
+import { fetchRunHistory, selectIsRunning } from '@/features/run-history/state';
 import { ActionEditPanel, AddButtonEdge, AddStepPanel, PipelineNode } from '../components';
 import { RunHistoryView } from '@/features/run-history/ui/components';
 
@@ -86,11 +87,12 @@ function ConfigDetailsContent({
     (state: RootState) => Object.keys(state.configDetails.validationErrors).length > 0,
   );
 
-  // ── Current / History tab state ───────────────────────────
+  // ── Current / History tab state ———————————————————————————
   const [activeTab, setActiveTab] = useState<'current' | 'history'>('current');
   const [isTriggering, setIsTriggering] = useState(false);
+  const isRunning = useAppSelector(selectIsRunning);
 
-  // ── Fetch existing config or initialise a blank one ───────
+  // ── Fetch existing config or initialise a blank one ———————
   useEffect(() => {
     dispatch(fetchSettingsSchemaThunk());
     if (isNewConfig && connectionForm) {
@@ -99,6 +101,14 @@ function ConfigDetailsContent({
       dispatch(fetchConfigDetails({ customerCompanyId }));
     }
   }, [dispatch, customerCompanyId, isNewConfig, connectionForm]);
+
+  // ── Fetch run history on mount to know if a run is in progress ——
+  useEffect(() => {
+    if (!isNewConfig) {
+      dispatch(fetchRunHistory({ customerCompanyId }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch, customerCompanyId, isNewConfig]);
 
   // ── Show error notifications ──────────────────────────────
   useEffect(() => {
@@ -152,6 +162,8 @@ function ConfigDetailsContent({
     try {
       await triggerRunService(customerCompanyId);
       showNotification(t('configDetails.triggerRunSuccess', 'Pipeline run triggered'), 'success');
+      // Refresh run list so the button immediately reflects the running state
+      dispatch(fetchRunHistory({ customerCompanyId }));
     } catch (err) {
       const message = err && typeof err === 'object' && 'error' in err
         ? (err as { error: string }).error
@@ -160,7 +172,7 @@ function ConfigDetailsContent({
     } finally {
       setIsTriggering(false);
     }
-  }, [customerCompanyId, showNotification, t]);
+  }, [customerCompanyId, dispatch, showNotification, t]);
 
   const handleCloseAddStep = useCallback(() => {
     dispatch(setAddStepPanelOpen(false));
@@ -301,8 +313,19 @@ function ConfigDetailsContent({
                 ➕ {t('configDetails.addStep')}
               </Button>
               {!isNewConfig && (
-                <Button colorPalette="green" variant="outline" size="sm" onClick={handleTriggerRun} disabled={isTriggering} data-testid="trigger-run">
-                  {isTriggering ? t('configDetails.triggering', 'Triggering…') : t('configDetails.runNow', '▶ Run Now')}
+                <Button
+                  colorPalette={isRunning ? 'orange' : 'green'}
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTriggerRun}
+                  disabled={isTriggering || isRunning}
+                  data-testid="trigger-run"
+                >
+                  {isRunning
+                    ? t('configDetails.running', '⏳ Running…')
+                    : isTriggering
+                      ? t('configDetails.triggering', 'Triggering…')
+                      : t('configDetails.runNow', '▶ Run Now')}
                 </Button>
               )}
               <Button colorPalette="blue" size="sm" onClick={handleSave} disabled={isSaving}>

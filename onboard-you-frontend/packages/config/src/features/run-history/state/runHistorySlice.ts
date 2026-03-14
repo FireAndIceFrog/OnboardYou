@@ -138,6 +138,13 @@ export const selectRunHistoryError = (state: RootState) => state.runHistory.erro
 export const selectCurrentPage = (state: RootState) => state.runHistory.currentPage;
 export const selectLastPage = (state: RootState) => state.runHistory.lastPage;
 
+export const selectIsRunning = (state: RootState) => {
+  const halfDayAgo = Date.now() - 12 * 60 * 60 * 1000;
+  return state.runHistory.runs.some(
+    (r) => r.status === 'running' && new Date(r.startedAt).getTime() > halfDayAgo,
+  );
+};
+
 export const selectFilteredRuns = createSelector(
   [
     selectRuns,

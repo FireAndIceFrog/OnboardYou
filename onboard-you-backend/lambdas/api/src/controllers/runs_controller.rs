@@ -4,7 +4,7 @@ use axum::extract::{Path, Query, State};
 use axum::Json;
 
 use crate::dependancies::Dependancies;
-use crate::models::{ApiError, Claims, ListResponse, ListRunsQuery, TriggerRunResponse};
+use crate::models::{ApiError, Claims, ErrorResponse, ListResponse, ListRunsQuery, TriggerRunResponse};
 use onboard_you_models::PipelineRun;
 
 /// List recent pipeline runs for a customer company.
@@ -84,6 +84,7 @@ pub async fn get_run(
     responses(
         (status = 202, description = "Run triggered", body = TriggerRunResponse),
         (status = 401, description = "Unauthorized"),
+        (status = 409, description = "A run is already in progress", body = ErrorResponse),
     ),
     security(("bearer" = [])),
     tag = "Runs",
@@ -93,6 +94,16 @@ pub async fn trigger_run(
     claims: Claims,
     Path(customer_company_id): Path<String>,
 ) -> Result<(axum::http::StatusCode, Json<TriggerRunResponse>), ApiError> {
+    if deps
+        .run_history_repo
+        .has_active_run(&claims.organization_id, &customer_company_id)
+        .await?
+    {
+        return Err(ApiError::Conflict(format!(
+            "A pipeline run is already in progress for {customer_company_id}"
+        )));
+    }
+
     deps.trigger_repo
         .trigger_run(&claims.organization_id, &customer_company_id)
         .await?;

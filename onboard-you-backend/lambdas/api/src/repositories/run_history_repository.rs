@@ -31,6 +31,15 @@ pub trait RunHistoryRepo: Send + Sync + std::fmt::Debug {
         organization_id: &str,
         run_id: &str,
     ) -> Result<Option<PipelineRun>, ApiError>;
+
+    /// Return true if there is a run with status 'running' started within the
+    /// last 12 hours for the given org + customer company. Used to enforce
+    /// idempotency on the trigger endpoint.
+    async fn has_active_run(
+        &self,
+        organization_id: &str,
+        customer_company_id: &str,
+    ) -> Result<bool, ApiError>;
 }
 
 #[derive(Debug)]
@@ -109,5 +118,27 @@ impl RunHistoryRepo for PgRunHistoryRepo {
         .map_err(|e| ApiError::Repository(format!("get_run query failed: {e}")))?;
 
         Ok(row.map(PipelineRun::from))
+    }
+
+    async fn has_active_run(
+        &self,
+        organization_id: &str,
+        customer_company_id: &str,
+    ) -> Result<bool, ApiError> {
+        let (count,): (i64,) = sqlx::query_as(
+            r#"SELECT COUNT(*)
+               FROM pipeline_runs
+               WHERE organization_id = $1
+                 AND customer_company_id = $2
+                 AND status = 'running'
+                 AND started_at > NOW() - INTERVAL '12 hours'"#,
+        )
+        .persistent(false)
+        .bind(organization_id)
+        .bind(customer_company_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| ApiError::Repository(format!("has_active_run query failed: {e}")))?;
+        Ok(count > 0)
     }
 }
