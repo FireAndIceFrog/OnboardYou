@@ -180,8 +180,12 @@ function ConfigDetailsContent({
   }, [dispatch]);
 
   const handleBack = useCallback(() => {
-    navigate(-1);
-  }, [navigate]);
+    if (activeTab === 'history') {
+      setActiveTab('current');
+    } else {
+      navigate(-1);
+    }
+  }, [navigate, activeTab]);
 
   const handleSave = useCallback(async () => {
     if (!config) return;

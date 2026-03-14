@@ -61,7 +61,7 @@ export function Sidebar() {
         }}
         shadow={{ base: sidebarOpen ? 'xl' : 'none', lg: 'none' }}
       >
-        <Flex as="nav" direction="column" flex="1" p={3} gap={1} aria-label="Main navigation">
+        <Flex as="nav" direction="column" flex="1" gap={1} aria-label="Main navigation">
           {NAVIGATION_ITEMS.map((item) => {
             const active = isActive(item.path);
             const NavIcon = item.icon;
@@ -109,8 +109,9 @@ export function Sidebar() {
             size="sm"
             w="full"
             onClick={() => dispatch(toggleSidebarCollapsed())}
-            color="whiteAlpha.700"
-            borderColor="whiteAlpha.300"
+            color="whiteAlpha.900"
+            borderColor="whiteAlpha.800"
+            borderWidth="1px"
             _hover={{ bg: 'whiteAlpha.100' }}
             aria-label={
               sidebarCollapsed
@@ -118,7 +119,7 @@ export function Sidebar() {
                 : t('layout.sidebar.collapseSidebar')
             }
           >
-            {sidebarCollapsed ? <ChevronRightIcon size="1em" /> : <ChevronLeftIcon size="1em" />}
+            {sidebarCollapsed ? <ChevronRightIcon size="1em" strokeWidth={3} /> : <ChevronLeftIcon size="1em" strokeWidth={3} />}
           </IconButton>
         </Box>
       </Flex>
