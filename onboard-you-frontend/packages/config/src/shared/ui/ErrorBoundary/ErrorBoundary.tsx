@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Box, Heading, Text, Button } from '@chakra-ui/react';
+import { AlertTriangleIcon } from '../Icons';
 import i18n from '@/i18n';
 
 interface ErrorBoundaryProps {
@@ -49,7 +50,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           role="alert"
           aria-live="assertive"
         >
-          <Text fontSize="2.5rem">⚠️</Text>
+          <AlertTriangleIcon size="2.5rem" />
           <Heading size="lg">{i18n.t('errorBoundary.title')}</Heading>
           <Text fontSize="sm" color="gray.500" maxW="420px" lineHeight="1.5">
             {i18n.t('errorBoundary.message')}

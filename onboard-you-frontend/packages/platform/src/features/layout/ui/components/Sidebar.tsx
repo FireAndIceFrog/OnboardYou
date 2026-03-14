@@ -8,6 +8,7 @@ import {
   toggleSidebarCollapsed,
 } from '@/features/layout/state/layoutSlice';
 import { NAVIGATION_ITEMS } from '@/features/layout/domain/navigation';
+import { ChevronLeftIcon, ChevronRightIcon } from '@/shared/ui';
 
 const HEADER_HEIGHT = '64px';
 const SIDEBAR_WIDTH = '260px';
@@ -48,9 +49,9 @@ export function Sidebar() {
         left="0"
         height={`calc(100% - ${HEADER_HEIGHT})`}
         width={sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH}
-        bg="bg"
+        bg="primary.500"
         borderRightWidth="1px"
-        borderColor="border"
+        borderColor="primary.600"
         zIndex="modal"
         overflowY="auto"
         transition="width 0.25s ease, transform 0.25s ease"
@@ -60,9 +61,10 @@ export function Sidebar() {
         }}
         shadow={{ base: sidebarOpen ? 'xl' : 'none', lg: 'none' }}
       >
-        <Flex as="nav" direction="column" flex="1" p={3} gap={1} aria-label="Main navigation">
+        <Flex as="nav" direction="column" flex="1" gap={1} aria-label="Main navigation">
           {NAVIGATION_ITEMS.map((item) => {
             const active = isActive(item.path);
+            const NavIcon = item.icon;
             return (
               <Flex
                 key={item.id}
@@ -81,15 +83,15 @@ export function Sidebar() {
                     textDecoration: 'none',
                     fontSize: '0.875rem',
                     fontWeight: active ? 600 : 500,
-                    color: active ? 'var(--chakra-colors-blue-600)' : 'var(--chakra-colors-fg-muted)',
-                    backgroundColor: active ? 'var(--chakra-colors-blue-50)' : 'transparent',
-                    borderLeft: `3px solid ${active ? 'var(--chakra-colors-blue-600)' : 'transparent'}`,
+                    color: active ? '#ffffff' : 'rgba(255,255,255,0.7)',
+                    backgroundColor: active ? 'rgba(37,99,235,0.3)' : 'transparent',
+                    borderLeft: `3px solid ${active ? '#2563eb' : 'transparent'}`,
                     transition: 'all 0.15s ease',
                   }}
                 >
-                  <Text fontSize="lg" w="24px" textAlign="center" flexShrink={0} mr={sidebarCollapsed ? 0 : 3}>
-                    {item.icon}
-                  </Text>
+                  <Box w="24px" display="flex" justifyContent="center" flexShrink={0} mr={sidebarCollapsed ? 0 : 3}>
+                    <NavIcon size="1.125em" />
+                  </Box>
                   {!sidebarCollapsed && (
                     <Text overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
                       {t(item.label)}
@@ -107,13 +109,17 @@ export function Sidebar() {
             size="sm"
             w="full"
             onClick={() => dispatch(toggleSidebarCollapsed())}
+            color="whiteAlpha.900"
+            borderColor="whiteAlpha.800"
+            borderWidth="1px"
+            _hover={{ bg: 'whiteAlpha.100' }}
             aria-label={
               sidebarCollapsed
                 ? t('layout.sidebar.expandSidebar')
                 : t('layout.sidebar.collapseSidebar')
             }
           >
-            {sidebarCollapsed ? '→' : '←'}
+            {sidebarCollapsed ? <ChevronRightIcon size="1em" strokeWidth={3} /> : <ChevronLeftIcon size="1em" strokeWidth={3} />}
           </IconButton>
         </Box>
       </Flex>

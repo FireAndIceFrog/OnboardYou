@@ -17,6 +17,7 @@ import { useAppDispatch, useAppSelector } from '@/store';
 import type { RootState } from '@/store';
 import { useGlobal } from '@/shared/hooks';
 import { humanFrequency } from '@/shared/domain/types';
+import { AlertTriangleIcon, PlusIcon, PlayIcon, ArrowLeftIcon } from '@/shared/ui';
 import type { ConnectionForm } from '../../domain/types';
 import {
   fetchConfigDetails,
@@ -179,8 +180,12 @@ function ConfigDetailsContent({
   }, [dispatch]);
 
   const handleBack = useCallback(() => {
-    navigate(-1);
-  }, [navigate]);
+    if (activeTab === 'history') {
+      setActiveTab('current');
+    } else {
+      navigate(-1);
+    }
+  }, [navigate, activeTab]);
 
   const handleSave = useCallback(async () => {
     if (!config) return;
@@ -257,10 +262,10 @@ function ConfigDetailsContent({
 
   if (error) {
     return (
-      <Flex direction="column" align="center" justify="center" h="100%" gap="3" color="gray.500">
-        <Text fontSize="2xl">⚠️</Text>
+      <Flex direction="column" align="center" justify="center" h="100%" gap="3" color="tertiary.500">
+        <Box color="tertiary.400"><AlertTriangleIcon size="2em" /></Box>
         <Text>{error}</Text>
-        <Button variant="outline" onClick={handleBack}>
+        <Button variant="outline" borderColor="tertiary.300" color="tertiary.600" onClick={handleBack}>
           {t('configDetails.backToConfigurations')}
         </Button>
       </Flex>
@@ -270,25 +275,27 @@ function ConfigDetailsContent({
   if (!config) return null;
 
   return (
-    <Flex direction="column" h="100%" bg="gray.50">
+    <Flex direction="column" h="100%" bg="tertiary.50">
       {/* Header */}
-      <Flex as="header" align="center" px="6" py="3" bg="white" borderBottom="1px solid" borderColor="gray.200">
+      <Flex as="header" align="center" px="6" py="3" bg="white" borderBottom="1px solid" borderColor="tertiary.200">
         {/* Left: navigation + title */}
         <Flex align="center" gap="3" flex="1">
-          <Button variant="ghost" size="sm" onClick={handleBack}>
-            {t('configDetails.back')}
+          <Button variant="ghost" size="sm" color="tertiary.600" onClick={handleBack}>
+            <ArrowLeftIcon size="1em" /> {t('configDetails.back')}
           </Button>
-          <Heading size="md" fontWeight="600">{config.name}</Heading>
+          <Heading size="md" fontWeight="600" color="primary.500">{config.name}</Heading>
           <Badge colorPalette="blue">{humanFrequency(config.cron)}</Badge>
         </Flex>
 
         {/* Center: tab toggle (fixed position) */}
         {!isNewConfig && (
-          <Flex bg="gray.100" borderRadius="md" p="1" gap="1" data-testid="tab-toggle">
+          <Flex bg="tertiary.100" borderRadius="md" p="1" gap="1" data-testid="tab-toggle">
             <Button
               size="xs"
               variant={activeTab === 'current' ? 'solid' : 'ghost'}
-              colorPalette={activeTab === 'current' ? 'blue' : undefined}
+              bg={activeTab === 'current' ? 'secondary.500' : undefined}
+              color={activeTab === 'current' ? 'white' : 'tertiary.600'}
+              _hover={activeTab === 'current' ? { bg: 'secondary.600' } : undefined}
               onClick={() => setActiveTab('current')}
               data-testid="tab-current"
             >
@@ -297,7 +304,9 @@ function ConfigDetailsContent({
             <Button
               size="xs"
               variant={activeTab === 'history' ? 'solid' : 'ghost'}
-              colorPalette={activeTab === 'history' ? 'blue' : undefined}
+              bg={activeTab === 'history' ? 'secondary.500' : undefined}
+              color={activeTab === 'history' ? 'white' : 'tertiary.600'}
+              _hover={activeTab === 'history' ? { bg: 'secondary.600' } : undefined}
               onClick={() => setActiveTab('history')}
               data-testid="tab-history"
             >
@@ -309,30 +318,31 @@ function ConfigDetailsContent({
         {/* Right: action buttons — use visibility to reserve space on both tabs */}
         <Flex align="center" gap="2" flex="1" justify="flex-end" visibility={activeTab === 'current' ? 'visible' : 'hidden'}>
             <>
-              <Button variant="ghost" size="sm" onClick={handleToggleAddStep}>
-                ➕ {t('configDetails.addStep')}
+              <Button variant="outline" size="sm" borderColor="tertiary.300" color="tertiary.600" onClick={handleToggleAddStep}>
+                <PlusIcon size="0.875em" /> {t('configDetails.addStep')}
               </Button>
               {!isNewConfig && (
                 <Button
-                  colorPalette={isRunning ? 'orange' : 'green'}
                   variant="outline"
                   size="sm"
+                  borderColor={isRunning ? 'tertiary.300' : 'secondary.500'}
+                  color={isRunning ? 'tertiary.500' : 'secondary.500'}
                   onClick={handleTriggerRun}
                   disabled={isTriggering || isRunning}
                   data-testid="trigger-run"
                 >
                   {isRunning
-                    ? t('configDetails.running', '⏳ Running…')
+                    ? t('configDetails.running', 'Running…')
                     : isTriggering
                       ? t('configDetails.triggering', 'Triggering…')
-                      : t('configDetails.runNow', '▶ Run Now')}
+                      : (<><PlayIcon size="0.75em" /> {t('configDetails.runNow', 'Run Now')}</>)}
                 </Button>
               )}
-              <Button colorPalette="blue" size="sm" onClick={handleSave} disabled={isSaving}>
+              <Button bg="primary.500" color="white" _hover={{ bg: 'primary.600' }} size="sm" onClick={handleSave} disabled={isSaving}>
                 {isSaving ? t('configDetails.saving') : t('configDetails.save')}
               </Button>
               {!isNewConfig && (
-                <Button colorPalette="red" variant="outline" size="sm" onClick={handleDelete} disabled={isDeleting}>
+                <Button variant="outline" size="sm" borderColor="tertiary.300" color="red.500" _hover={{ bg: 'red.50' }} onClick={handleDelete} disabled={isDeleting}>
                   {isDeleting ? t('configDetails.deleting') : t('configDetails.delete')}
                 </Button>
               )}
@@ -386,8 +396,8 @@ export function ConfigDetailsScreen() {
 
   if (isNewConfig && !connectionForm) {
     return (
-      <Flex direction="column" align="center" justify="center" h="100%" gap="3" color="gray.500">
-        <Text fontSize="2xl">⚠️</Text>
+      <Flex direction="column" align="center" justify="center" h="100%" gap="3" color="tertiary.500">
+        <Box color="tertiary.400"><AlertTriangleIcon size="2em" /></Box>
         <Text>{t('configDetails.noConnectionData')}</Text>
       </Flex>
     );
@@ -395,8 +405,8 @@ export function ConfigDetailsScreen() {
 
   if (!customerCompanyId) {
     return (
-      <Flex direction="column" align="center" justify="center" h="100%" gap="3" color="gray.500">
-        <Text fontSize="2xl">⚠️</Text>
+      <Flex direction="column" align="center" justify="center" h="100%" gap="3" color="tertiary.500">
+        <Box color="tertiary.400"><AlertTriangleIcon size="2em" /></Box>
         <Text>{t('configDetails.noConfigId')}</Text>
       </Flex>
     );

@@ -14,6 +14,7 @@ import {
 import { useAppDispatch, useAppSelector } from '@/store';
 import { performLogin, selectAuth } from '@/features/auth/state/authSlice';
 import { APP_NAME } from '@/shared/domain/constants';
+import { ClipboardIcon } from '@/shared/ui';
 
 export function LoginPage() {
   const { t } = useTranslation();
@@ -37,7 +38,7 @@ export function LoginPage() {
       <Card.Root maxW="420px" w="full" shadow="lg">
         <Card.Body p={{ base: 8, md: 12 }}>
           <VStack gap={2} mb={7} textAlign="center">
-            <Text fontSize="4xl">📋</Text>
+            <ClipboardIcon size="2.5rem" />
             <Heading
               size="xl"
               fontWeight="bold"

@@ -2,8 +2,8 @@
   "configDetails": {
     "loading": "Loading configuration…",
     "noConfigId": "No configuration ID provided.",
-    "backToConfigurations": "← Back to Configurations",
-    "back": "← Back",
+    "backToConfigurations": "Back to Configurations",
+    "back": "Back",
     "save": "Save",
     "saving": "Saving…",
     "saveSuccess": "Configuration saved successfully",
@@ -72,7 +72,7 @@
         "discoveredColumns": "Discovered Columns",
         "columnsHint": "{{count}} column(s) detected from the CSV header row."
       },
-      "backButton": "← Back",
+      "backButton": "Back",
       "nextButton": "Next: Customize Flow →",
       "systems": {
         "workday": "Workday",

@@ -72,7 +72,7 @@ export function AddButtonEdge({
             width: 24,
             height: 24,
             borderRadius: '50%',
-            background: '#2563EB',
+            background: '#1a365d',
             color: '#fff',
             border: 'none',
             display: 'flex',

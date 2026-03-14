@@ -10,16 +10,16 @@ export function SettingsHeader() {
   return (
     <Flex justifyContent="space-between" alignItems="flex-start" mb={7}>
       <Box>
-        <Heading as="h1" size="2xl" fontWeight="bold" mb={1}>
+        <Heading as="h1" size="2xl" fontWeight="bold" mb={1} color="primary.500">
           {t('settings.title')}
         </Heading>
-            <Text fontSize="sm" color="fg.muted" maxW="480px">
+            <Text fontSize="sm" color="tertiary.500" maxW="480px">
             {t('settings.subtitle')}
             </Text>
       </Box>
       <Box>
             {/* toggle for advanced controls */}
-            <Button variant="solid" size="lg" onClick={handleToggleShowAdvanced}>
+            <Button variant="outline" size="lg" borderColor="tertiary.300" color="tertiary.600" onClick={handleToggleShowAdvanced}>
                 {showAdvanced ? t('settings.hideAdvanced') : t('settings.showAdvanced')}
             </Button>
         <Flex gap={2} alignItems="center" mt={5}>

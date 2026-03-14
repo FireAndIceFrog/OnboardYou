@@ -4,6 +4,7 @@ import { useAppDispatch } from '@/store';
 import { toggleSidebar } from '@/features/layout/state/layoutSlice';
 import { useGlobal } from '@/shared/hooks/useGlobal';
 import { APP_NAME } from '@/shared/domain/constants';
+import { MenuIcon } from '@/shared/ui';
 
 const HEADER_HEIGHT = '64px';
 
@@ -30,9 +31,9 @@ export function Header() {
       right="0"
       height={HEADER_HEIGHT}
       px={5}
-      bg="bg"
+      bg="primary.500"
       borderBottomWidth="1px"
-      borderColor="border"
+      borderColor="primary.600"
       zIndex="modal"
       alignItems="center"
       justifyContent="space-between"
@@ -42,19 +43,18 @@ export function Header() {
           display={{ base: 'flex', lg: 'none' }}
           variant="ghost"
           size="sm"
+          color="white"
+          _hover={{ bg: 'whiteAlpha.200' }}
           onClick={() => dispatch(toggleSidebar())}
           aria-label={t('layout.header.toggleNavigation')}
         >
-          ☰
+          <MenuIcon size="1.25em" />
         </IconButton>
         <Text
           fontSize="xl"
           fontWeight="bold"
           letterSpacing="-0.02em"
-          bgGradient="to-r"
-          gradientFrom="blue.600"
-          gradientTo="purple.600"
-          bgClip="text"
+          color="white"
         >
           {APP_NAME}
         </Text>
@@ -66,7 +66,9 @@ export function Header() {
             <IconButton
               rounded="full"
               size="sm"
-              colorPalette="blue"
+              bg="secondary.500"
+              color="white"
+              _hover={{ bg: 'secondary.600' }}
               aria-label={t('layout.header.userMenu')}
             >
               {initials}

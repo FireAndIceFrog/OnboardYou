@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Box, Heading, SimpleGrid, Text } from '@chakra-ui/react';
 import { useSettingsState } from '../../../state/useSettingsState';
+import { KeyIcon, ShieldIcon } from '@/shared/ui';
 
 export function AuthTypeSelector() {
   const { t } = useTranslation();
@@ -53,7 +54,7 @@ export function AuthTypeSelector() {
               }
             }}
           >
-            <Text fontSize="xl">{type === 'bearer' ? '🔑' : '🛡️'}</Text>
+            {type === 'bearer' ? <KeyIcon size="1.25em" /> : <ShieldIcon size="1.25em" />}
             <Text fontSize="sm" fontWeight="semibold">
               {t(`settings.authType.${type}`)}
             </Text>

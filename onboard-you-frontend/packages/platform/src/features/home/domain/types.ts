@@ -3,5 +3,5 @@ export interface StatCardData {
   value: string | number;
   change?: string;
   trend?: 'up' | 'down' | 'neutral';
-  icon: string;
+  iconName: string;
 }

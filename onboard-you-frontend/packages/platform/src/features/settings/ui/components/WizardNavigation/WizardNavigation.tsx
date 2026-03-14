@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Button, Flex, Text } from '@chakra-ui/react';
 import { useTranslation } from 'react-i18next';
 import { useSettingsState } from '../../../state/useSettingsState';
+import { ArrowLeftIcon } from '@/shared/ui';
 
 /** Step labels displayed in the dot indicator */
 const STEP_KEYS = [
@@ -36,7 +37,7 @@ export function WizardNavigation() {
         disabled={isFirst}
         aria-label={t('settings.wizard.previous')}
       >
-        ← {t('settings.wizard.previous')}
+        <ArrowLeftIcon size="0.85em" /> {t('settings.wizard.previous')}
       </Button>
 
       {/* Step dots + label */}
@@ -66,7 +67,7 @@ export function WizardNavigation() {
         disabled={isLast}
         aria-label={t('settings.wizard.next')}
       >
-        {t('settings.wizard.next')} →
+        {t('settings.wizard.next')} <ArrowLeftIcon size="0.85em" style={{ transform: 'rotate(180deg)' }} />
       </Button>
     </Flex>
   );

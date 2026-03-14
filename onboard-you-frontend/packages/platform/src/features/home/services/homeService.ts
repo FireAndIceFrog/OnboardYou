@@ -34,28 +34,28 @@ export async function fetchDashboardStats(): Promise<StatCardData[]> {
       value: res.connectedSystems,
       change: res.changes?.connectedSystems?.text,
       trend: res.changes?.connectedSystems?.trend,
-      icon: '🔗',
+      iconName: 'link',
     },
     {
       label: 'Pending Reviews',
       value: res.pendingReviews,
       change: res.changes?.pendingReviews?.text,
       trend: res.changes?.pendingReviews?.trend,
-      icon: '📋',
+      iconName: 'clipboard',
     },
     {
       label: 'Team Members',
       value: res.teamMembers,
       change: res.changes?.teamMembers?.text,
       trend: res.changes?.teamMembers?.trend,
-      icon: '👥',
+      iconName: 'users',
     },
     {
       label: 'Activity Today',
       value: res.activityToday,
       change: res.changes?.activityToday?.text,
       trend: res.changes?.activityToday?.trend,
-      icon: '📊',
+      iconName: 'chart',
     },
   ];
 }
@@ -66,9 +66,9 @@ export async function fetchDashboardStats(): Promise<StatCardData[]> {
  */
 export function MOCK_STATS(t: TFunction): StatCardData[] {
   return [
-    { label: t('home.stats.connectedSystems'), value: 3, change: t('home.stats.plusOneThisWeek'), trend: 'up', icon: '🔗' },
-    { label: t('home.stats.pendingReviews'), value: 7, change: t('home.stats.plusThreeToday'), trend: 'up', icon: '📋' },
-    { label: t('home.stats.teamMembers'), value: 12, change: t('home.stats.noChange'), trend: 'neutral', icon: '👥' },
-    { label: t('home.stats.activityToday'), value: 156, change: t('home.stats.plusTwelvePercent'), trend: 'up', icon: '📊' },
+    { label: t('home.stats.connectedSystems'), value: 3, change: t('home.stats.plusOneThisWeek'), trend: 'up', iconName: 'link' },
+    { label: t('home.stats.pendingReviews'), value: 7, change: t('home.stats.plusThreeToday'), trend: 'up', iconName: 'clipboard' },
+    { label: t('home.stats.teamMembers'), value: 12, change: t('home.stats.noChange'), trend: 'neutral', iconName: 'users' },
+    { label: t('home.stats.activityToday'), value: 156, change: t('home.stats.plusTwelvePercent'), trend: 'up', iconName: 'chart' },
   ];
 }

@@ -11,6 +11,7 @@ import {
   Text,
   IconButton,
 } from '@chakra-ui/react';
+import { CloseIcon } from '@/shared/ui';
 import { useSettingsState } from '../../../state/useSettingsState';
 import { FIELD_TYPE_OPTIONS } from '../../../domain/types';
 import type { SchemaFieldType } from '../../../domain/types';
@@ -219,7 +220,7 @@ export function FieldSettings() {
                     size="sm"
                     onClick={() => handleDelete(row.id)}
                   >
-                    ✕
+                    <CloseIcon size="0.75em" />
                   </IconButton>
                 </Table.Cell>
               </Table.Row>

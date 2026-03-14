@@ -2,6 +2,7 @@ import { useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import { Box, Flex, Heading, Text, Button, chakra } from '@chakra-ui/react';
+import { FolderOpenIcon } from '@/shared/ui';
 import { validateCsvFile, uploadCsvAndDiscoverColumns } from '../../../services/csvUploadService';
 import type { ActionEditorProps } from './registry';
 
@@ -121,7 +122,7 @@ export function CsvConnectorPanel({ config, onChange }: ActionEditorProps) {
           cursor={isUploading ? 'not-allowed' : 'pointer'}
           mb="3"
         >
-          <Text fontSize="2xl" mb="1">📂</Text>
+          <FolderOpenIcon size="1.5em" />
           <Text fontSize="sm" fontWeight="500" color="gray.600">
             {isUploading
               ? t('configDetails.panels.csv.uploading')
