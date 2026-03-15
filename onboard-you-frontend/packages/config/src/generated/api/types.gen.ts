@@ -1540,7 +1540,13 @@ export type TriggerRunErrors = {
      * Unauthorized
      */
     401: unknown;
+    /**
+     * A run is already in progress
+     */
+    409: ErrorResponse;
 };
+
+export type TriggerRunError = TriggerRunErrors[keyof TriggerRunErrors];
 
 export type TriggerRunResponses = {
     /**

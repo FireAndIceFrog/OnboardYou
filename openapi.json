@@ -622,6 +622,16 @@
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "409": {
+            "description": "A run is already in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         },
         "security": [
