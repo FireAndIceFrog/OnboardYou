@@ -63,15 +63,6 @@
         "historyOptions": "History Options",
         "historyOptionsHint": "Optionally include historical records from Sage HR."
       },
-      "csv": {
-        "uploadTitle": "Upload CSV File",
-        "uploadLabel": "CSV File",
-        "chooseFile": "Choose CSV file…",
-        "uploading": "Uploading…",
-        "uploadHint": "Upload a .csv file (max 50 MB). Column headers will be auto-discovered.",
-        "discoveredColumns": "Discovered Columns",
-        "columnsHint": "{{count}} column(s) detected from the CSV header row."
-      },
       "genericIngestion": {
         "uploadTitle": "Upload Any File",
         "uploadLabel": "File",
@@ -85,7 +76,6 @@
       "systems": {
         "workday": "Workday",
         "sage_hr": "Sage HR",
-        "csv": "CSV File Upload",
         "generic_ingestion": "Generic File Upload"
       },
       "responseGroupLabels": {
@@ -102,16 +92,6 @@
       }
     },
     "panels": {
-      "csv": {
-        "currentFile": "Current file",
-        "dropHint": "Drop a CSV file here",
-        "orClick": "or use the button below to browse",
-        "chooseFile": "Choose CSV file",
-        "replaceFile": "Replace CSV file",
-        "uploading": "Uploading…",
-        "uploadSuccess": "CSV uploaded and columns updated",
-        "uploadFailed": "Upload failed"
-      },
       "genericIngestion": {
         "currentFile": "Current file",
         "dropHint": "Drop any file here",
@@ -163,7 +143,6 @@
     "minLength": "Must be at least {{min}} characters",
     "selectSystem": "Please select an HR system",
     "selectResponseGroup": "At least one response group must be selected",
-    "csvRequired": "Please upload a CSV file",
     "genericIngestionRequired": "Please upload a file"
   },
   "common": {

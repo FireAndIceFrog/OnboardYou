@@ -33,16 +33,6 @@ pub struct CsvFileQuery {
     pub filename: String,
 }
 
-/// Response payload after reading the uploaded CSV headers.
-#[derive(Debug, serde::Serialize, utoipa::ToSchema)]
-pub struct CsvColumnsResponse {
-    /// The filename of the CSV.
-    pub filename: String,
-
-    /// Column names parsed from the CSV header row.
-    pub columns: Vec<String>,
-}
-
 /// Response payload for the presigned upload URL request.
 #[derive(Debug, serde::Serialize, utoipa::ToSchema)]
 pub struct PresignedUploadResponse {

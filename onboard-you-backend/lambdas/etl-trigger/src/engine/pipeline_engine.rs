@@ -61,11 +61,6 @@ pub async fn run(
         .resolve_default_auth(&deps, &mut manifest, organization_id)
         .await?;
 
-    // 3b. Resolve CSV S3 keys from org_id / company_id / filename
-    manifest =
-        deps.etl_repo
-            .resolve_csv_s3_keys(&mut manifest, organization_id, customer_company_id)?;
-
     // Create the run record (status = "running") with resolved manifest snapshot
     let run_record = PipelineRun {
         id: run_id.clone(),
@@ -178,7 +173,6 @@ mod tests {
 
     struct FakeEtlRepo {
         resolved_default: Arc<AtomicBool>,
-        resolved_csv: Arc<AtomicBool>,
     }
 
     #[async_trait]
@@ -190,16 +184,6 @@ mod tests {
             _organization_id: &str,
         ) -> Result<onboard_you_models::Manifest, Error> {
             self.resolved_default.store(true, Ordering::SeqCst);
-            Ok(manifest.clone())
-        }
-
-        fn resolve_csv_s3_keys(
-            &self,
-            manifest: &mut onboard_you_models::Manifest,
-            _organization_id: &str,
-            _customer_company_id: &str,
-        ) -> Result<onboard_you_models::Manifest, Error> {
-            self.resolved_csv.store(true, Ordering::SeqCst);
             Ok(manifest.clone())
         }
     }
@@ -255,7 +239,6 @@ mod tests {
     async fn test_run_calls_repos_and_pipeline() {
         let cfg_called = Arc::new(AtomicBool::new(false));
         let etl_default = Arc::new(AtomicBool::new(false));
-        let etl_csv = Arc::new(AtomicBool::new(false));
         let pipeline_called = Arc::new(AtomicBool::new(false));
 
 
@@ -266,7 +249,6 @@ mod tests {
             settings_repo: Arc::new(FakeSettingsRepo),
             etl_repo: Arc::new(FakeEtlRepo {
                 resolved_default: etl_default.clone(),
-                resolved_csv: etl_csv.clone(),
             }),
             pipeline_repo: Arc::new(FakePipelineRepo {
                 called: pipeline_called.clone(),
@@ -279,7 +261,6 @@ mod tests {
         assert_eq!(result.status, "success");
         assert!(cfg_called.load(Ordering::SeqCst));
         assert!(etl_default.load(Ordering::SeqCst));
-        assert!(etl_csv.load(Ordering::SeqCst));
         assert!(pipeline_called.load(Ordering::SeqCst));
     }
 }

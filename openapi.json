@@ -387,78 +387,6 @@
         }
       }
     },
-    "/config/{customer_company_id}/csv-columns": {
-      "get": {
-        "tags": [
-          "CSV Upload"
-        ],
-        "summary": "GET /config/{customer_company_id}/csv-columns?filename=employees.csv",
-        "description": "Reads the header row of an already-uploaded CSV and returns the column\nnames.  Call this after the frontend finishes the presigned PUT upload.",
-        "operationId": "csv_columns",
-        "parameters": [
-          {
-            "name": "customer_company_id",
-            "in": "path",
-            "description": "Customer company identifier",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "filename",
-            "in": "query",
-            "description": "The CSV filename (e.g. `\"employees.csv\"`).",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "CSV column names",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CsvColumnsResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid CSV or missing file",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/config/{customer_company_id}/csv-upload": {
       "post": {
         "tags": [
@@ -957,7 +885,7 @@
         "properties": {
           "action_type": {
             "$ref": "#/components/schemas/ActionType",
-            "description": "Factory key — selects the Rust implementation (e.g. `ActionType::CsvHrisConnector`)"
+            "description": "Factory key — selects the Rust implementation (e.g. `ActionType::GenericIngestionConnector`)"
           },
           "config": {
             "$ref": "#/components/schemas/ActionConfigPayload",
@@ -971,9 +899,6 @@
       },
       "ActionConfigPayload": {
         "oneOf": [
-          {
-            "$ref": "#/components/schemas/CsvHrisConnectorConfig"
-          },
           {
             "$ref": "#/components/schemas/WorkdayConfig"
           },
@@ -1021,9 +946,8 @@
       },
       "ActionType": {
         "type": "string",
-        "description": "All known action types in the pipeline.\n\nThis is the **single source of truth** — adding a new capability requires\nadding a variant here, which then forces the factory to handle it\n(exhaustive match). Serde maps these to/from `snake_case` JSON strings.\n\n| JSON value                | Variant                |\n|---------------------------|------------------------|\n| `\"csv_hris_connector\"`    | `CsvHrisConnector`     |\n| `\"workday_hris_connector\"`| `WorkdayHrisConnector` |\n| `\"sage_hr_connector\"`     | `SageHrConnector`      |\n| `\"scd_type_2\"`            | `ScdType2`             |\n| `\"pii_masking\"`           | `PiiMasking`           |\n| `\"identity_deduplicator\"` | `IdentityDeduplicator` |\n| `\"regex_replace\"`         | `RegexReplace`         |\n| `\"iso_country_sanitizer\"` | `IsoCountrySanitizer`  |\n| `\"cellphone_sanitizer\"`   | `CellphoneSanitizer`   |\n| `\"handle_diacritics\"`     | `HandleDiacritics`     |\n| `\"rename_column\"`         | `RenameColumn`         |\n| `\"drop_column\"`           | `DropColumn`           |\n| `\"filter_by_value\"`       | `FilterByValue`        |\n| `\"api_dispatcher\"`        | `ApiDispatcher`        |\n| `\"generic_ingestion_connector\"` | `GenericIngestionConnector` |",
+        "description": "All known action types in the pipeline.\n\nThis is the **single source of truth** — adding a new capability requires\nadding a variant here, which then forces the factory to handle it\n(exhaustive match). Serde maps these to/from `snake_case` JSON strings.\n\n| JSON value                | Variant                |\n|---------------------------|------------------------|\n| `\"workday_hris_connector\"`| `WorkdayHrisConnector` |\n| `\"sage_hr_connector\"`     | `SageHrConnector`      |\n| `\"scd_type_2\"`            | `ScdType2`             |\n| `\"pii_masking\"`           | `PiiMasking`           |\n| `\"identity_deduplicator\"` | `IdentityDeduplicator` |\n| `\"regex_replace\"`         | `RegexReplace`         |\n| `\"iso_country_sanitizer\"` | `IsoCountrySanitizer`  |\n| `\"cellphone_sanitizer\"`   | `CellphoneSanitizer`   |\n| `\"handle_diacritics\"`     | `HandleDiacritics`     |\n| `\"rename_column\"`         | `RenameColumn`         |\n| `\"drop_column\"`           | `DropColumn`           |\n| `\"filter_by_value\"`       | `FilterByValue`        |\n| `\"api_dispatcher\"`        | `ApiDispatcher`        |\n| `\"generic_ingestion_connector\"` | `GenericIngestionConnector` |",
         "enum": [
-          "csv_hris_connector",
           "workday_hris_connector",
           "sage_hr_connector",
           "generic_ingestion_connector",
@@ -1273,50 +1197,6 @@
           "alpha2",
           "alpha3"
         ]
-      },
-      "CsvColumnsResponse": {
-        "type": "object",
-        "description": "Response payload after reading the uploaded CSV headers.",
-        "required": [
-          "filename",
-          "columns"
-        ],
-        "properties": {
-          "columns": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Column names parsed from the CSV header row."
-          },
-          "filename": {
-            "type": "string",
-            "description": "The filename of the CSV."
-          }
-        }
-      },
-      "CsvHrisConnectorConfig": {
-        "type": "object",
-        "description": "Configuration extracted from the manifest `ActionConfig.config` JSON.\n\n# JSON config (user-facing)\n\n```json\n{\n  \"filename\": \"employees.csv\",\n  \"columns\": [\"employee_id\", \"first_name\", \"last_name\", \"email\"]\n}\n```\n\n| Field      | Type     | Required | Description                                        |\n|------------|----------|----------|----------------------------------------------------|\n| `filename` | string   | **yes**  | CSV file name — the S3 key prefix is added at runtime |\n| `columns`  | [string] | **yes**  | Declared column names from the CSV header           |",
-        "required": [
-          "columns"
-        ],
-        "properties": {
-          "columns": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Declared column names — set when the CSV is first uploaded.\n\nUsed by `calculate_columns` for schema propagation and by the\nvalidation engine to verify downstream column references."
-          },
-          "filename": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "CSV file name only (e.g. `\"employees.csv\"`).\n\nThe full S3 key `{org_id}/{company_id}/{filename}` is resolved at\nruntime by the ETL trigger before pipeline execution."
-          }
-        }
       },
       "DedupConfig": {
         "type": "object",
@@ -2640,7 +2520,7 @@
           },
           "action_type": {
             "type": "string",
-            "description": "Action type (e.g. `csv_hris_connector`, `drop_column`)."
+            "description": "Action type (e.g. `generic_ingestion_connector`, `drop_column`)."
           },
           "columns_after": {
             "type": "array",

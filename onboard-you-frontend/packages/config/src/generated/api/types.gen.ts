@@ -9,7 +9,7 @@ export type ClientOptions = {
  */
 export type ActionConfig = {
     /**
-     * Factory key — selects the Rust implementation (e.g. `ActionType::CsvHrisConnector`)
+     * Factory key — selects the Rust implementation (e.g. `ActionType::GenericIngestionConnector`)
      */
     action_type: ActionType;
     /**
@@ -33,7 +33,7 @@ export type ActionConfig = {
  * JSON serialisation (no wrapper key), while `ToSchema` generates a
  * `oneOf` schema listing every config variant for OpenAPI.
  */
-export type ActionConfigPayload = CsvHrisConnectorConfig | WorkdayConfig | SageHrConfig | ScdType2Config | PiiMaskingConfig | DedupConfig | RegexReplaceConfig | IsoCountrySanitizerConfig | CellphoneSanitizerConfig | HandleDiacriticsConfig | RenameConfig | DropConfig | FilterByValueConfig | ApiDispatcherConfig | GenericIngestionConnectorConfig;
+export type ActionConfigPayload = WorkdayConfig | SageHrConfig | ScdType2Config | PiiMaskingConfig | DedupConfig | RegexReplaceConfig | IsoCountrySanitizerConfig | CellphoneSanitizerConfig | HandleDiacriticsConfig | RenameConfig | DropConfig | FilterByValueConfig | ApiDispatcherConfig | GenericIngestionConnectorConfig;
 
 /**
  * All known action types in the pipeline.
@@ -44,7 +44,6 @@ export type ActionConfigPayload = CsvHrisConnectorConfig | WorkdayConfig | SageH
  *
  * | JSON value                | Variant                |
  * |---------------------------|------------------------|
- * | `"csv_hris_connector"`    | `CsvHrisConnector`     |
  * | `"workday_hris_connector"`| `WorkdayHrisConnector` |
  * | `"sage_hr_connector"`     | `SageHrConnector`      |
  * | `"scd_type_2"`            | `ScdType2`             |
@@ -60,7 +59,7 @@ export type ActionConfigPayload = CsvHrisConnectorConfig | WorkdayConfig | SageH
  * | `"api_dispatcher"`        | `ApiDispatcher`        |
  * | `"generic_ingestion_connector"` | `GenericIngestionConnector` |
  */
-export type ActionType = 'csv_hris_connector' | 'workday_hris_connector' | 'sage_hr_connector' | 'generic_ingestion_connector' | 'scd_type_2' | 'pii_masking' | 'identity_deduplicator' | 'regex_replace' | 'iso_country_sanitizer' | 'cellphone_sanitizer' | 'handle_diacritics' | 'rename_column' | 'drop_column' | 'filter_by_value' | 'api_dispatcher';
+export type ActionType = 'workday_hris_connector' | 'sage_hr_connector' | 'generic_ingestion_connector' | 'scd_type_2' | 'pii_masking' | 'identity_deduplicator' | 'regex_replace' | 'iso_country_sanitizer' | 'cellphone_sanitizer' | 'handle_diacritics' | 'rename_column' | 'drop_column' | 'filter_by_value' | 'api_dispatcher';
 
 /**
  * Fully-typed API dispatcher configuration.
@@ -205,54 +204,6 @@ export type ConfigRequest = {
  * Desired output ISO code format.
  */
 export type CountryOutputFormat = 'alpha2' | 'alpha3';
-
-/**
- * Response payload after reading the uploaded CSV headers.
- */
-export type CsvColumnsResponse = {
-    /**
-     * Column names parsed from the CSV header row.
-     */
-    columns: Array<string>;
-    /**
-     * The filename of the CSV.
-     */
-    filename: string;
-};
-
-/**
- * Configuration extracted from the manifest `ActionConfig.config` JSON.
- *
- * # JSON config (user-facing)
- *
- * ```json
- * {
- * "filename": "employees.csv",
- * "columns": ["employee_id", "first_name", "last_name", "email"]
- * }
- * ```
- *
- * | Field      | Type     | Required | Description                                        |
- * |------------|----------|----------|----------------------------------------------------|
- * | `filename` | string   | **yes**  | CSV file name — the S3 key prefix is added at runtime |
- * | `columns`  | [string] | **yes**  | Declared column names from the CSV header           |
- */
-export type CsvHrisConnectorConfig = {
-    /**
-     * Declared column names — set when the CSV is first uploaded.
-     *
-     * Used by `calculate_columns` for schema propagation and by the
-     * validation engine to verify downstream column references.
-     */
-    columns: Array<string>;
-    /**
-     * CSV file name only (e.g. `"employees.csv"`).
-     *
-     * The full S3 key `{org_id}/{company_id}/{filename}` is resolved at
-     * runtime by the ETL trigger before pipeline execution.
-     */
-    filename?: string | null;
-};
 
 /**
  * Configuration for the identity deduplicator.
@@ -1176,7 +1127,7 @@ export type StepValidation = {
      */
     action_id: string;
     /**
-     * Action type (e.g. `csv_hris_connector`, `drop_column`).
+     * Action type (e.g. `generic_ingestion_connector`, `drop_column`).
      */
     action_type: string;
     /**
@@ -1487,49 +1438,6 @@ export type UpdateConfigResponses = {
 };
 
 export type UpdateConfigResponse = UpdateConfigResponses[keyof UpdateConfigResponses];
-
-export type CsvColumnsData = {
-    body?: never;
-    path: {
-        /**
-         * Customer company identifier
-         */
-        customer_company_id: string;
-    };
-    query: {
-        /**
-         * The CSV filename (e.g. `"employees.csv"`).
-         */
-        filename: string;
-    };
-    url: '/config/{customer_company_id}/csv-columns';
-};
-
-export type CsvColumnsErrors = {
-    /**
-     * Invalid CSV or missing file
-     */
-    400: ErrorResponse;
-    /**
-     * Unauthorized
-     */
-    401: ErrorResponse;
-    /**
-     * Internal server error
-     */
-    500: ErrorResponse;
-};
-
-export type CsvColumnsError = CsvColumnsErrors[keyof CsvColumnsErrors];
-
-export type CsvColumnsResponses = {
-    /**
-     * CSV column names
-     */
-    200: CsvColumnsResponse;
-};
-
-export type CsvColumnsResponse2 = CsvColumnsResponses[keyof CsvColumnsResponses];
 
 export type CsvPresignedUploadData = {
     body?: never;

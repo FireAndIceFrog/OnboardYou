@@ -4,7 +4,7 @@
 export interface StepValidation {
   /** Action id from the manifest. */
   action_id: string;
-  /** Action type (e.g. csv_hris_connector, drop_column). */
+  /** Action type (e.g. generic_ingestion_connector, drop_column). */
   action_type: string;
   /** Columns present after this step completes. */
   columns_after: string[];

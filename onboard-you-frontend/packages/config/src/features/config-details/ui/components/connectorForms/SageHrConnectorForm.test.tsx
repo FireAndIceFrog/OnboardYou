@@ -11,7 +11,6 @@ function baseProps(overrides: Partial<ConnectorFormProps> = {}): ConnectorFormPr
       displayName: 'Test',
       workday: { tenantUrl: '', tenantId: '', username: '', password: '', workerCountLimit: '200', responseGroup: '' },
       sageHr: { subdomain: '', apiToken: '', includeTeamHistory: false, includeEmploymentStatusHistory: false, includePositionHistory: false },
-      csv: { filename: '', columns: [], uploadStatus: 'idle' as const, uploadError: null },
       genericIngestion: { filename: '', columns: [], uploadStatus: 'idle' as const, uploadError: null, conversionStatus: null },
     },
     errors: {},

@@ -77,7 +77,7 @@ const MOCK_CONFIGS = [
       actions: [
         {
           id: 'ingest',
-          actionType: 'csv_hris_connector',
+          actionType: 'generic_ingestion_connector',
           config: {
             name: 'CSV Upload Fetch',
             csv_path: 's3://onboardyou-landing/globex/latest.csv',

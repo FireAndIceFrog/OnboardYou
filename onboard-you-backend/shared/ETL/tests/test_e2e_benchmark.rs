@@ -61,7 +61,7 @@ fn get_rss_bytes() -> usize {
 
 /// Execute the full pipeline on a generated CSV of `n` rows, returning metrics.
 ///
-/// The first manifest action (`csv_hris_connector`) would try to download from
+/// The first manifest action (`generic_ingestion_connector`) would try to download from
 /// S3, which is unavailable in tests.  Instead we:
 ///   1. Generate the CSV in-memory and read it directly into a Polars DataFrame.
 ///   2. Build a `RosterContext` from that DataFrame.
@@ -94,7 +94,7 @@ fn run_full_pipeline(n: usize) -> RunMetrics {
     let manifest_json = full_pipeline_manifest("data.csv", generated_columns);
     let manifest = Manifest::from_json(&manifest_json).expect("parse manifest");
 
-    // 4. Resolve all actions via the factory, but skip the first (csv_hris_connector)
+    // 4. Resolve all actions via the factory, but skip the first (generic_ingestion_connector)
     let actions: Vec<_> = manifest
         .actions
         .iter()

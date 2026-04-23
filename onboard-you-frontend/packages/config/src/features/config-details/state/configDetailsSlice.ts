@@ -13,7 +13,7 @@ import {
   type EdgeChange,
 } from '@xyflow/react';
 import type { RootState, ThunkExtra } from '@/store';
-import type { PipelineConfig, ActionConfig, ActionConfigPayload, ValidationResult, ActionType, WorkdayConfig, CsvHrisConnectorConfig, SageHrConfig } from '@/generated/api';
+import type { PipelineConfig, ActionConfig, ActionConfigPayload, ValidationResult, ActionType, WorkdayConfig, SageHrConfig } from '@/generated/api';
 
 /* ── API error extraction ──────────────────────────────────── */
 

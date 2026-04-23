@@ -51,7 +51,7 @@ describe('Trigger Run end-to-end', () => {
     expect((body.defaultAuth as Record<string, unknown>).auth_type).toBe('bearer');
   });
 
-  // 2. Create a pipeline config: CSV → API dispatcher
+  // 2. Create a pipeline config: generic ingestion → API dispatcher
   it('creates a pipeline config with csv ingestion', async () => {
     const payload: Partial<PipelineConfig> = {
       name: 'Trigger Run Smoke',
@@ -61,7 +61,7 @@ describe('Trigger Run end-to-end', () => {
         actions: [
           {
             id: 'ingest',
-            action_type: 'csv_hris_connector',
+            action_type: 'generic_ingestion_connector',
             config: {
               filename: csvFilename,
               columns: ['employee_id', 'cellphone', 'first_name', 'country'],

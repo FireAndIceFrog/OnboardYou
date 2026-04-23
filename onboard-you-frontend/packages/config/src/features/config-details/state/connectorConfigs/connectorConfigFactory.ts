@@ -1,4 +1,3 @@
-import { CsvConnectorConfig } from "./csvConnectorConfig";
 import { GenericIngestionConnectorConfig } from "./genericIngestionConnectorConfig";
 import { IConnectorConfig } from "./IConnectorConfig";
 import { SageHrConnectorConfig } from "./sageHrConnectorConfig";
@@ -7,7 +6,6 @@ import { WorkdayConnectorConfig } from "./workdayConnectorConfig";
 export enum ConnectorType {
     Workday = "workday",
     SageHR = "sage_hr",
-    Csv = "csv",
     GenericIngestion = "generic_ingestion"
 }
 
@@ -17,7 +15,6 @@ export class ConnectorConfigFactory {
         this.configs = {
             [ConnectorType.Workday]: new WorkdayConnectorConfig(),
             [ConnectorType.SageHR]: new SageHrConnectorConfig(),
-            [ConnectorType.Csv]: new CsvConnectorConfig(),
             [ConnectorType.GenericIngestion]: new GenericIngestionConnectorConfig(),
         }
     }

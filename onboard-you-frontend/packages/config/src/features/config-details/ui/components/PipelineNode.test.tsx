@@ -48,10 +48,10 @@ function renderNode(data: Record<string, unknown>) {
 
 describe('PipelineNode', () => {
   it('renders an ingestion node with green styling', () => {
-    renderNode({ category: 'ingestion', actionType: 'csv_hris_connector', label: 'CSV Upload' });
+    renderNode({ category: 'ingestion', actionType: 'generic_ingestion_connector', label: 'Generic Upload' });
     const node = screen.getByTestId('pipeline-node-ingestion');
     expect(node).toBeInTheDocument();
-    expect(screen.getByText('CSV Upload')).toBeInTheDocument();
+    expect(screen.getByText('Generic Upload')).toBeInTheDocument();
   });
 
   it('renders a logic node with blue styling', () => {

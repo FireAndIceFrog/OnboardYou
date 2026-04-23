@@ -11,11 +11,6 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock('../services/csvUploadService', () => ({
-  validateCsvFile: vi.fn(),
-  uploadCsvAndDiscoverColumns: vi.fn(),
-}));
-
 import { useConnectionForm } from './useConnectionForm';
 import { ConnectorType } from './connectorConfigs/connectorConfigFactory';
 
