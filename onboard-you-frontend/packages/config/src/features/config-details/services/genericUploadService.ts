@@ -10,8 +10,8 @@ const ACCEPTED_EXTENSIONS = [
 ];
 
 export interface StartConversionResponse {
-  /** `"not_needed"` for CSVs (already a CSV — columns returned inline). */
-  /** `"converted"` for non-CSV files successfully converted by the API. */
+  /** `"not_needed"` — file was already a CSV; columns returned inline.
+   *  `"converted"` — file was converted to CSV synchronously; columns returned. */
   status: 'not_needed' | 'converted';
   /** Column names from the converted (or original CSV) file. */
   columns?: string[];

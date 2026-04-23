@@ -42,7 +42,6 @@ impl S3Repo for S3Repository {
             .put_object()
             .bucket(&self.bucket)
             .key(key)
-            .content_type("text/csv")
             .presigned(presign_config)
             .await
             .map_err(|e| ApiError::Repository(format!("Failed to generate presigned URL: {e}")))?;

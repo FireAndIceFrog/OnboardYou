@@ -67,10 +67,7 @@ export function GenericIngestionConnectorForm({ form, errors, onChange }: Connec
           {filename && (
             <Flex align="center" gap="2">
               <Text fontSize="sm" color="gray.600">{filename}</Text>
-              {conversionStatus === 'queued' && (
-                <Badge colorScheme="orange" fontSize="xs">Converting…</Badge>
-              )}
-              {conversionStatus === 'not_needed' && (
+              {(conversionStatus === 'not_needed' || conversionStatus === 'converted') && (
                 <Badge colorScheme="green" fontSize="xs">Ready</Badge>
               )}
             </Flex>
@@ -80,11 +77,7 @@ export function GenericIngestionConnectorForm({ form, errors, onChange }: Connec
         <Text fontSize="xs" color="gray.400" mt="1">
           {t('configDetails.connection.genericIngestion.uploadHint')}
         </Text>
-        {conversionStatus === 'queued' && (
-          <Text fontSize="xs" color="orange.600" mt="1">
-            {t('configDetails.connection.genericIngestion.convertingHint')}
-          </Text>
-        )}
+
       </Box>
 
       {columns.length > 0 && (

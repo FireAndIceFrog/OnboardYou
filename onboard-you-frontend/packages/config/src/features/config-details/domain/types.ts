@@ -67,8 +67,8 @@ export interface GenericIngestionFields {
   columns: string[];
   uploadStatus: GenericUploadStatus;
   uploadError: string | null;
-  /** `null` = not yet uploaded, `"not_needed"` = was CSV, `"queued"` = Textract conversion queued. */
-  conversionStatus: 'not_needed' | 'queued' | null;
+  /** `null` = not yet uploaded, `"not_needed"` = was CSV, `"converted"` = converted synchronously. */
+  conversionStatus: 'not_needed' | 'converted' | null;
 }
 
 /** Per-field validation error map (field path → error message). */
