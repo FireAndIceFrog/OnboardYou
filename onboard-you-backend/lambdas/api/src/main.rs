@@ -19,18 +19,20 @@ use controllers::{
     create_config, delete_config, get_config, list_configs, update_config, validate_config,
 };
 use controllers::{get_run, list_runs, trigger_run};
-use controllers::{csv_columns, csv_presigned_upload};
+use controllers::{csv_columns, csv_presigned_upload, start_conversion};
 use controllers::{get_settings, upsert_settings};
 use dependancies::Dependancies;
 use models::{
     ConfigRequest, CsvColumnsResponse, ErrorResponse, LoginRequest, LoginResponse,
-    PresignedUploadResponse, SettingsRequest, StepValidation, TriggerRunResponse, ValidationResult,
+    PresignedUploadResponse, SettingsRequest, StepValidation, StartConversionRequest,
+    StartConversionResponse, TriggerRunResponse, ValidationResult,
 };
 use onboard_you_models::{
     ActionConfig, ActionConfigPayload, ActionType, ApiDispatcherConfig, BearerPlacement,
-    BearerRepoConfig, Manifest, OAuth2GrantType, OAuth2RepoConfig, OAuthRepoConfig, OrgSettings,
-    PipelineConfig, PipelineRun, PipelineWarning, SageHrApiResponse, SageHrConfig, SageHrEmployee,
-    SageHrEmploymentStatusHistory, SageHrMeta, SageHrPositionHistory, SageHrTeamHistory,
+    BearerRepoConfig, GenericIngestionConnectorConfig, Manifest, OAuth2GrantType, OAuth2RepoConfig,
+    OAuthRepoConfig, OrgSettings, PipelineConfig, PipelineRun, PipelineWarning, SageHrApiResponse,
+    SageHrConfig, SageHrEmployee, SageHrEmploymentStatusHistory, SageHrMeta, SageHrPositionHistory,
+    SageHrTeamHistory,
 };
 use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::{fmt, EnvFilter};
@@ -56,6 +58,7 @@ use utoipa_swagger_ui::SwaggerUi;
         controllers::config_controller::validate_config,
         controllers::csv_upload_controller::csv_presigned_upload,
         controllers::csv_upload_controller::csv_columns,
+        controllers::csv_upload_controller::start_conversion,
         controllers::runs_controller::list_runs,
         controllers::runs_controller::get_run,
         controllers::runs_controller::trigger_run,
@@ -84,6 +87,9 @@ use utoipa_swagger_ui::SwaggerUi;
         SettingsRequest,
         PresignedUploadResponse,
         CsvColumnsResponse,
+        StartConversionRequest,
+        StartConversionResponse,
+        GenericIngestionConnectorConfig,
         PipelineRun,
         PipelineWarning,
         TriggerRunResponse,
@@ -198,6 +204,10 @@ fn router(state: Dependancies) -> Router {
         .route(
             "/config/{customer_company_id}/csv-columns",
             get(csv_columns),
+        )
+        .route(
+            "/config/{customer_company_id}/start-conversion",
+            post(start_conversion),
         )
         .route(
             "/config/{customer_company_id}/runs",

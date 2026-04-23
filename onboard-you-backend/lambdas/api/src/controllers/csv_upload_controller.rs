@@ -6,11 +6,12 @@ use axum::{
     Json,
 };
 
+use axum::extract::rejection::JsonRejection;
 use crate::models::{ApiError, Claims};
 use crate::{
     dependancies::Dependancies,
     engine,
-    models::{CsvColumnsResponse, CsvFileQuery, PresignedUploadResponse},
+    models::{CsvColumnsResponse, CsvFileQuery, PresignedUploadResponse, StartConversionRequest, StartConversionResponse},
 };
 
 /// POST /config/{customer_company_id}/csv-upload?filename=employees.csv
@@ -79,6 +80,47 @@ pub async fn csv_columns(
         &claims.organization_id,
         &customer_company_id,
         &query.filename,
+    )
+    .await?;
+
+    Ok(Json(resp))
+}
+
+/// POST /config/{customer_company_id}/start-conversion
+///
+/// For CSV files: reads the header row immediately and returns columns inline
+/// (`status = "not_needed"`). For all other file types: validates the upload
+/// exists and returns `status = "queued"` — the async Textract conversion will
+/// run before the ETL pipeline executes.
+#[utoipa::path(
+    post,
+    path = "/config/{customer_company_id}/start-conversion",
+    tag = "CSV Upload",
+    params(
+        ("customer_company_id" = String, Path, description = "Customer company identifier"),
+    ),
+    request_body = StartConversionRequest,
+    responses(
+        (status = 200, description = "Conversion status", body = StartConversionResponse),
+        (status = 400, description = "Invalid request", body = crate::models::ErrorResponse),
+        (status = 401, description = "Unauthorized", body = crate::models::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::models::ErrorResponse),
+    )
+)]
+pub async fn start_conversion(
+    State(state): State<Dependancies>,
+    claims: Claims,
+    Path(customer_company_id): Path<String>,
+    body: Result<Json<StartConversionRequest>, JsonRejection>,
+) -> Result<impl IntoResponse, ApiError> {
+    let Json(req) = body.map_err(|e| ApiError::Validation(e.to_string()))?;
+
+    let resp = engine::csv_upload_engine::start_conversion(
+        &state,
+        &claims.organization_id,
+        &customer_company_id,
+        &req.filename,
+        req.table_index.unwrap_or(0),
     )
     .await?;
 

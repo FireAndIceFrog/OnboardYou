@@ -28,12 +28,14 @@ use utoipa::ToSchema;
 /// | `"drop_column"`           | `DropColumn`           |
 /// | `"filter_by_value"`       | `FilterByValue`        |
 /// | `"api_dispatcher"`        | `ApiDispatcher`        |
+/// | `"generic_ingestion_connector"` | `GenericIngestionConnector` |
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ActionType {
     CsvHrisConnector,
     WorkdayHrisConnector,
     SageHrConnector,
+    GenericIngestionConnector,
     #[serde(rename = "scd_type_2")]
     ScdType2,
     PiiMasking,
@@ -144,6 +146,9 @@ impl<'de> Deserialize<'de> for ActionConfig {
             ActionType::ApiDispatcher => ActionConfigPayload::ApiDispatcher(
                 serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
             ),
+            ActionType::GenericIngestionConnector => ActionConfigPayload::GenericIngestionConnector(
+                serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
+            ),
         };
 
         Ok(ActionConfig {
@@ -179,6 +184,8 @@ pub enum ActionConfigPayload {
     FilterByValue(crate::FilterByValueConfig),
 
     ApiDispatcher(crate::ApiDispatcherConfig),
+
+    GenericIngestionConnector(crate::GenericIngestionConnectorConfig),
 }
 
 impl Manifest {

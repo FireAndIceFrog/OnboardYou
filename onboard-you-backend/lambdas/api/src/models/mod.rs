@@ -13,7 +13,7 @@ pub use auth::{LoginRequest, LoginResponse};
 pub use claims::Claims;
 pub use config_request::ConfigRequest;
 pub use config_validation::{StepValidation, ValidationResult};
-pub use csv_upload::{CsvColumnsResponse, CsvFileQuery, PresignedUploadResponse};
+pub use csv_upload::{CsvColumnsResponse, CsvFileQuery, PresignedUploadResponse, StartConversionRequest, StartConversionResponse};
 pub use list_response::{ListResponse};
 pub use runs::{ListRunsQuery, TriggerRunResponse};
 pub use settings_request::SettingsRequest;

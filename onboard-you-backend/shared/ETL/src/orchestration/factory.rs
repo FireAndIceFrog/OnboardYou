@@ -7,7 +7,7 @@
 //! a compiler error here until you wire it up.
 
 use crate::capabilities::egress::api_dispatcher::ApiDispatcher;
-use crate::capabilities::ingestion::engine::{CsvHrisConnector, WorkdayHrisConnector, SageHrConnector};
+use crate::capabilities::ingestion::engine::{CsvHrisConnector, GenericIngestionConnector, WorkdayHrisConnector, SageHrConnector};
 use crate::capabilities::logic::engine::{
     CellphoneSanitizer, DropColumn, FilterByValue, HandleDiacritics, IdentityDeduplicator,
     IsoCountrySanitizer, PIIMasking, RegexReplace, RenameColumn, SCDType2,
@@ -79,6 +79,10 @@ impl ActionFactoryTrait for ActionFactory {
             }
             (ActionType::SageHrConnector, ActionConfigPayload::SageHrConnector(cfg)) => {
                 let connector = SageHrConnector::from_action_config(&cfg)?;
+                Ok(Arc::new(connector))
+            }
+            (ActionType::GenericIngestionConnector, ActionConfigPayload::GenericIngestionConnector(cfg)) => {
+                let connector = GenericIngestionConnector::from_action_config(&cfg)?;
                 Ok(Arc::new(connector))
             }
             (ActionType::ScdType2, ActionConfigPayload::ScdType2(cfg)) => {

@@ -160,6 +160,18 @@ module "etl_trigger" {
       actions   = ["s3:GetObject"]
       resources = ["${module.csv_upload_bucket.bucket_arn}/*"]
     },
+    # Textract — required when the ETL processes a GenericIngestionConnector
+    # action on a non-CSV file (PDF, image, XML etc.).  The ETL calls
+    # StartDocumentAnalysis / GetDocumentAnalysis on objects in the CSV upload
+    # bucket and needs s3:GetObject on the same bucket (already granted above).
+    {
+      actions = [
+        "textract:StartDocumentAnalysis",
+        "textract:GetDocumentAnalysis",
+        "textract:AnalyzeDocument",
+      ]
+      resources = ["*"]  # Textract does not support resource-level ARN scoping
+    },
     # Required so the Lambda can poll the SQS queue configured below. The
     # event source mapping will fail with InvalidParameterValueException if the
     # execution role can't call ReceiveMessage (and related) on the queue.
@@ -245,6 +257,17 @@ module "config_api" {
     {
       actions   = ["s3:PutObject", "s3:GetObject"]
       resources = ["${module.csv_upload_bucket.bucket_arn}/*"]
+    },
+    # Textract — needed by the start-conversion endpoint to submit async
+    # conversion jobs for non-CSV uploads (PDF, images, XML etc.) and to
+    # poll job status.  Textract does not support resource-level ARN scoping.
+    {
+      actions = [
+        "textract:StartDocumentAnalysis",
+        "textract:GetDocumentAnalysis",
+        "textract:AnalyzeDocument",
+      ]
+      resources = ["*"]
     },
     {
       actions   = ["sqs:SendMessage"]

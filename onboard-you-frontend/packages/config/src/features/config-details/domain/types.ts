@@ -2,7 +2,7 @@ import type { ComponentType, SVGProps } from 'react';
 import type { Node, Edge } from '@xyflow/react';
 import type { PipelineConfig, ValidationResult, WorkdayResponseGroup, SageHrConfig as SageHrConfigApi } from '@/generated/api';
 import { ConnectorConfigFactory, ConnectorType } from '../state/connectorConfigs/connectorConfigFactory';
-import { OfficeBuildingIcon, LeafIcon, FileSpreadsheetIcon } from '@/shared/ui';
+import { OfficeBuildingIcon, LeafIcon, FileSpreadsheetIcon, FolderOpenIcon } from '@/shared/ui';
 
 const connectorFactory = new ConnectorConfigFactory();
 
@@ -33,6 +33,7 @@ export const HR_SYSTEMS = [
   { id: ConnectorType.Workday, nameKey: 'configDetails.connection.systems.workday', icon: OfficeBuildingIcon },
   { id: ConnectorType.SageHR, nameKey: 'configDetails.connection.systems.sage_hr', icon: LeafIcon },
   { id: ConnectorType.Csv, nameKey: 'configDetails.connection.systems.csv', icon: FileSpreadsheetIcon },
+  { id: ConnectorType.GenericIngestion, nameKey: 'configDetails.connection.systems.generic_ingestion', icon: FolderOpenIcon },
 ] as const;
 
 export type SystemId = (typeof HR_SYSTEMS)[number]['id'];
@@ -56,6 +57,20 @@ export interface SageHrFields {
 
 export type CsvUploadStatus = 'idle' | 'uploading' | 'discovering' | 'done' | 'error';
 
+/** Upload status for the generic ingestion connector. */
+export type GenericUploadStatus = 'idle' | 'uploading' | 'done' | 'error';
+
+/** Form fields for the generic ingestion connector (any file type). */
+export interface GenericIngestionFields {
+  filename: string;
+  /** Column header overrides. Empty = auto-detect from source. */
+  columns: string[];
+  uploadStatus: GenericUploadStatus;
+  uploadError: string | null;
+  /** `null` = not yet uploaded, `"not_needed"` = was CSV, `"converted"` = converted synchronously. */
+  conversionStatus: 'not_needed' | 'converted' | null;
+}
+
 /** Per-field validation error map (field path → error message). */
 export type ValidationErrors = Record<string, string | undefined>;
 
@@ -72,6 +87,7 @@ export interface ConnectionForm {
   workday: WorkdayFields;
   sageHr: SageHrFields;
   csv: CsvFields;
+  genericIngestion: GenericIngestionFields;
 }
 
 export const INITIAL_CONNECTION_FORM: ConnectionForm = {
@@ -80,6 +96,7 @@ export const INITIAL_CONNECTION_FORM: ConnectionForm = {
   workday: connectorFactory.getConfig(ConnectorType.Workday).getDefaultState().workday!,
   sageHr: connectorFactory.getConfig(ConnectorType.SageHR).getDefaultState().sageHr!,
   csv: connectorFactory.getConfig(ConnectorType.Csv).getDefaultState().csv!,
+  genericIngestion: connectorFactory.getConfig(ConnectorType.GenericIngestion).getDefaultState().genericIngestion!,
 };
 
 /**

@@ -3,6 +3,7 @@ import { ConnectorConfigFactory, ConnectorType } from './connectorConfigFactory'
 import { WorkdayConnectorConfig } from './workdayConnectorConfig';
 import { SageHrConnectorConfig } from './sageHrConnectorConfig';
 import { CsvConnectorConfig } from './csvConnectorConfig';
+import { GenericIngestionConnectorConfig } from './genericIngestionConnectorConfig';
 
 describe('ConnectorConfigFactory', () => {
   const factory = new ConnectorConfigFactory();
@@ -12,6 +13,7 @@ describe('ConnectorConfigFactory', () => {
     { type: ConnectorType.Workday, expected: WorkdayConnectorConfig },
     { type: ConnectorType.SageHR, expected: SageHrConnectorConfig },
     { type: ConnectorType.Csv, expected: CsvConnectorConfig },
+    { type: ConnectorType.GenericIngestion, expected: GenericIngestionConnectorConfig },
   ];
 
   it.each(cases)('getConfig($type) returns $expected.name instance', ({ type, expected }) => {

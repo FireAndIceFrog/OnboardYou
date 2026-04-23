@@ -693,6 +693,79 @@
         ]
       }
     },
+    "/config/{customer_company_id}/start-conversion": {
+      "post": {
+        "tags": [
+          "CSV Upload"
+        ],
+        "summary": "POST /config/{customer_company_id}/start-conversion",
+        "description": "For CSV files: reads the header row immediately and returns columns inline\n(`status = \"not_needed\"`). For all other file types: validates the upload\nexists and returns `status = \"queued\"` — the async Textract conversion will\nrun before the ETL pipeline executes.",
+        "operationId": "start_conversion",
+        "parameters": [
+          {
+            "name": "customer_company_id",
+            "in": "path",
+            "description": "Customer company identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartConversionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Conversion status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartConversionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/config/{customer_company_id}/validate": {
       "post": {
         "tags": [
@@ -939,17 +1012,21 @@
           },
           {
             "$ref": "#/components/schemas/ApiDispatcherConfig"
+          },
+          {
+            "$ref": "#/components/schemas/GenericIngestionConnectorConfig"
           }
         ],
         "description": "Wrapper enum for action-specific config payloads.\n\nEach variant holds the **concrete, typed** configuration struct for\nits `ActionType`.  The `#[serde(untagged)]` attribute produces flat\nJSON serialisation (no wrapper key), while `ToSchema` generates a\n`oneOf` schema listing every config variant for OpenAPI."
       },
       "ActionType": {
         "type": "string",
-        "description": "All known action types in the pipeline.\n\nThis is the **single source of truth** — adding a new capability requires\nadding a variant here, which then forces the factory to handle it\n(exhaustive match). Serde maps these to/from `snake_case` JSON strings.\n\n| JSON value                | Variant                |\n|---------------------------|------------------------|\n| `\"csv_hris_connector\"`    | `CsvHrisConnector`     |\n| `\"workday_hris_connector\"`| `WorkdayHrisConnector` |\n| `\"sage_hr_connector\"`     | `SageHrConnector`      |\n| `\"scd_type_2\"`            | `ScdType2`             |\n| `\"pii_masking\"`           | `PiiMasking`           |\n| `\"identity_deduplicator\"` | `IdentityDeduplicator` |\n| `\"regex_replace\"`         | `RegexReplace`         |\n| `\"iso_country_sanitizer\"` | `IsoCountrySanitizer`  |\n| `\"cellphone_sanitizer\"`   | `CellphoneSanitizer`   |\n| `\"handle_diacritics\"`     | `HandleDiacritics`     |\n| `\"rename_column\"`         | `RenameColumn`         |\n| `\"drop_column\"`           | `DropColumn`           |\n| `\"filter_by_value\"`       | `FilterByValue`        |\n| `\"api_dispatcher\"`        | `ApiDispatcher`        |",
+        "description": "All known action types in the pipeline.\n\nThis is the **single source of truth** — adding a new capability requires\nadding a variant here, which then forces the factory to handle it\n(exhaustive match). Serde maps these to/from `snake_case` JSON strings.\n\n| JSON value                | Variant                |\n|---------------------------|------------------------|\n| `\"csv_hris_connector\"`    | `CsvHrisConnector`     |\n| `\"workday_hris_connector\"`| `WorkdayHrisConnector` |\n| `\"sage_hr_connector\"`     | `SageHrConnector`      |\n| `\"scd_type_2\"`            | `ScdType2`             |\n| `\"pii_masking\"`           | `PiiMasking`           |\n| `\"identity_deduplicator\"` | `IdentityDeduplicator` |\n| `\"regex_replace\"`         | `RegexReplace`         |\n| `\"iso_country_sanitizer\"` | `IsoCountrySanitizer`  |\n| `\"cellphone_sanitizer\"`   | `CellphoneSanitizer`   |\n| `\"handle_diacritics\"`     | `HandleDiacritics`     |\n| `\"rename_column\"`         | `RenameColumn`         |\n| `\"drop_column\"`           | `DropColumn`           |\n| `\"filter_by_value\"`       | `FilterByValue`        |\n| `\"api_dispatcher\"`        | `ApiDispatcher`        |\n| `\"generic_ingestion_connector\"` | `GenericIngestionConnector` |",
         "enum": [
           "csv_hris_connector",
           "workday_hris_connector",
           "sage_hr_connector",
+          "generic_ingestion_connector",
           "scd_type_2",
           "pii_masking",
           "identity_deduplicator",
@@ -1307,6 +1384,37 @@
           "pattern": {
             "type": "string",
             "description": "The raw regex pattern."
+          }
+        }
+      },
+      "GenericIngestionConnectorConfig": {
+        "type": "object",
+        "description": "Configuration for the `GenericIngestionConnector` pipeline action.\n\nAccepts **any file type** (PDF, XML, CSV, images, etc.).  Non-CSV files are\nconverted to CSV asynchronously via AWS Textract before the ETL pipeline\nruns.  The connector reads the pre-converted CSV from S3 using the same\n`CSV_UPLOAD_BUCKET` as `CsvHrisConnector`.\n\n# JSON config (user-facing)\n\n```json\n{\n  \"filename\": \"employees.pdf\",\n  \"columns\": [\"employee_id\", \"first_name\", \"last_name\"],\n  \"table_index\": 0\n}\n```\n\n| Field         | Type       | Required | Description                                                       |\n|---------------|------------|----------|-------------------------------------------------------------------|\n| `filename`    | string     | **yes**  | Original upload filename — any extension supported               |\n| `columns`     | [string]   | no       | Override column headers. If absent, the CSV header row is used    |\n| `table_index` | number     | no       | Which Textract table to use (0-based, default 0). Only applies    |\n|               |            |          | when a multi-table document is converted via Textract             |",
+        "required": [
+          "filename"
+        ],
+        "properties": {
+          "columns": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "User-defined column headers.\n\nWhen provided, these override the header row in the converted CSV.\nMust exactly match the number of columns produced by Textract (or the\nCSV header count for native CSV uploads).  When `None`, column names\nare taken directly from the first row of the CSV."
+          },
+          "filename": {
+            "type": "string",
+            "description": "Original upload filename (e.g. `\"employees.pdf\"`, `\"roster.xml\"`).\n\nThe connector resolves the converted CSV path by stripping the file\nextension and appending `.csv`:\n`{org_id}/{company_id}/{stem}.csv` on `CSV_UPLOAD_BUCKET`."
+          },
+          "table_index": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Zero-based index of the Textract table to extract.\n\nRelevant only for multi-table documents (PDFs, etc.).  Defaults to `0`\n(the first table found by Textract).  Ignored when the upload is\nalready a CSV — no Textract call is made for CSV files.",
+            "minimum": 0
           }
         }
       },
@@ -2470,6 +2578,50 @@
           "defaultAuth": {
             "type": "object",
             "description": "Full auth configuration — typed to `ApiDispatcherConfig`."
+          }
+        }
+      },
+      "StartConversionRequest": {
+        "type": "object",
+        "description": "Request body for `POST /config/{id}/start-conversion`.\n\nInstructs the backend to convert the already-uploaded file to CSV.\nCSV files are short-circuited — no conversion is needed and column names\nare returned immediately.",
+        "required": [
+          "filename"
+        ],
+        "properties": {
+          "filename": {
+            "type": "string",
+            "description": "The filename of the already-uploaded file (e.g. `\"employees.pdf\"`)."
+          },
+          "table_index": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Zero-based index of the Textract table / Excel sheet / JSON array to\nextract from multi-table documents.  Defaults to `0` when absent.",
+            "minimum": 0
+          }
+        }
+      },
+      "StartConversionResponse": {
+        "type": "object",
+        "description": "Response from `POST /config/{id}/start-conversion`.",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "columns": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "Column names of the CSV (always present on success)."
+          },
+          "status": {
+            "type": "string",
+            "description": "`\"not_needed\"` — file was already a CSV; columns returned inline.\n`\"converted\"`  — file was converted to CSV synchronously; columns returned."
           }
         }
       },
