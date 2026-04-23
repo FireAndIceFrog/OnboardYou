@@ -18,12 +18,6 @@ pub trait IEtlRepo: Send + Sync {
         organization_id: &str,
     ) -> Result<Manifest, Error>;
 
-    fn resolve_csv_s3_keys(
-        &self,
-        manifest: &mut Manifest,
-        organization_id: &str,
-        customer_company_id: &str,
-    ) -> Result<Manifest, Error>;
 }
 
 /// Dynamo-backed implementation of `IEtlRepo`.
@@ -94,30 +88,6 @@ impl IEtlRepo for EtlRepository {
         Ok(manifest)
     }
 
-    /// Inject the resolved S3 key (`{org_id}/{company_id}/{filename}`) into every
-    /// `CsvHrisConnector` action in the manifest.
-    ///
-    /// This must run **before** the factory builds the actions so that
-    /// `download_from_s3` can find the correct S3 object at runtime.
-    fn resolve_csv_s3_keys(
-        &self,
-        manifest: &mut Manifest,
-        organization_id: &str,
-        customer_company_id: &str,
-    ) -> Result<Manifest, Error> {
-        for action in &mut manifest.actions {
-            if let ActionConfigPayload::CsvHrisConnector(ref mut cfg) = action.config {
-                cfg.resolve_s3_key(organization_id, customer_company_id);
-                tracing::info!(
-                    action_id = %action.id,
-                    filename = %cfg.filename.clone().unwrap_or_default(),
-                    s3_key = ?cfg.resolved_s3_key,
-                    "Resolved CSV S3 key"
-                );
-            }
-        }
-        Ok(manifest.clone())
-    }
 }
 
 #[cfg(test)]
@@ -191,40 +161,4 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn test_resolve_csv_s3_keys_replaces_path() {
-        let etl_repo = EtlRepository::new();
-
-        // Build a manifest with one CsvHrisConnector action
-        let mut manifest = onboard_you_models::Manifest {
-            version: "1.0".into(),
-            actions: vec![onboard_you_models::ActionConfig {
-                id: "csv".into(),
-                action_type: onboard_you_models::ActionType::CsvHrisConnector,
-                config: onboard_you_models::ActionConfigPayload::CsvHrisConnector(
-                    onboard_you_models::CsvHrisConnectorConfig {
-                        filename: Some("data.csv".into()),
-                        resolved_s3_key: None,
-                        columns: vec![],
-                    },
-                ),
-            }],
-        };
-
-        let resolved = etl_repo
-            .resolve_csv_s3_keys(&mut manifest, "org-1", "comp-1")
-            .expect("resolve");
-
-        assert_eq!(resolved.actions.len(), 1);
-        match &resolved.actions[0].config {
-            onboard_you_models::ActionConfigPayload::CsvHrisConnector(cfg) => {
-                assert_eq!(
-                    cfg.resolved_s3_key.as_deref(),
-                    Some("org-1/comp-1/data.csv"),
-                    "expected S3 key to be resolved with org and company ID"
-                );
-            }
-            _ => panic!("unexpected payload variant"),
-        }
-    }
 }

@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateConfigData, CreateConfigErrors, CreateConfigResponses, CsvColumnsData, CsvColumnsErrors, CsvColumnsResponses, CsvPresignedUploadData, CsvPresignedUploadErrors, CsvPresignedUploadResponses, DeleteConfigData, DeleteConfigErrors, DeleteConfigResponses, GetConfigData, GetConfigErrors, GetConfigResponses, GetRunData, GetRunErrors, GetRunResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, ListConfigsData, ListConfigsErrors, ListConfigsResponses, ListRunsData, ListRunsErrors, ListRunsResponses, LoginData, LoginErrors, LoginResponses, StartConversionData, StartConversionErrors, StartConversionResponses, TriggerRunData, TriggerRunErrors, TriggerRunResponses, UpdateConfigData, UpdateConfigErrors, UpdateConfigResponses, UpsertSettingsData, UpsertSettingsErrors, UpsertSettingsResponses, ValidateConfigData, ValidateConfigErrors, ValidateConfigResponses } from './types.gen';
+import type { CreateConfigData, CreateConfigErrors, CreateConfigResponses, CsvPresignedUploadData, CsvPresignedUploadErrors, CsvPresignedUploadResponses, DeleteConfigData, DeleteConfigErrors, DeleteConfigResponses, GetConfigData, GetConfigErrors, GetConfigResponses, GetRunData, GetRunErrors, GetRunResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, ListConfigsData, ListConfigsErrors, ListConfigsResponses, ListRunsData, ListRunsErrors, ListRunsResponses, LoginData, LoginErrors, LoginResponses, StartConversionData, StartConversionErrors, StartConversionResponses, TriggerRunData, TriggerRunErrors, TriggerRunResponses, UpdateConfigData, UpdateConfigErrors, UpdateConfigResponses, UpsertSettingsData, UpsertSettingsErrors, UpsertSettingsResponses, ValidateConfigData, ValidateConfigErrors, ValidateConfigResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -103,18 +103,6 @@ export const updateConfig = <ThrowOnError extends boolean = false>(options: Opti
         'Content-Type': 'application/json',
         ...options.headers
     }
-});
-
-/**
- * GET /config/{customer_company_id}/csv-columns?filename=employees.csv
- *
- * Reads the header row of an already-uploaded CSV and returns the column
- * names.  Call this after the frontend finishes the presigned PUT upload.
- */
-export const csvColumns = <ThrowOnError extends boolean = false>(options: Options<CsvColumnsData, ThrowOnError>) => (options.client ?? client).get<CsvColumnsResponses, CsvColumnsErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/config/{customer_company_id}/csv-columns',
-    ...options
 });
 
 /**

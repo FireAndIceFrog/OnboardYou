@@ -42,7 +42,7 @@ depends on the action.
   "actions": [
     {
       "id": "ingest_csv",
-      "action_type": "csv_hris_connector",
+      "action_type": "generic_ingestion_connector",
       "config": { "csv_path": "/data/employees.csv" }
     },
     {
@@ -88,7 +88,7 @@ Every action shares the outer envelope:
 
 ---
 
-### `csv_hris_connector`
+### `generic_ingestion_connector`
 
 Reads a CSV file and populates the `RosterContext` LazyFrame. Every ingested
 column is tagged with `HRIS_CONNECTOR` field-ownership metadata.
@@ -99,7 +99,7 @@ column is tagged with `HRIS_CONNECTOR` field-ownership metadata.
 
 ```json
 {
-  "action_type": "csv_hris_connector",
+  "action_type": "generic_ingestion_connector",
   "config": {
     "csv_path": "/data/employees.csv"
   }

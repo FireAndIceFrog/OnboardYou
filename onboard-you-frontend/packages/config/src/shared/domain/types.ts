@@ -18,7 +18,6 @@ export type {
   PipelineWarning,
   ListResponsePipelineRun,
   /* ── Config payload variant types ── */
-  CsvHrisConnectorConfig,
   WorkdayConfig,
   WorkdayResponseGroup,
   ScdType2Config,
@@ -49,7 +48,7 @@ import type { PipelineConfig } from '@/generated/api';
 
 /** Known action-type categories for React Flow node styling. */
 export const ACTION_CATEGORIES: Record<string, 'ingestion' | 'logic' | 'egress'> = {
-  csv_hris_connector: 'ingestion',
+  generic_ingestion_connector: 'ingestion',
   workday_hris_connector: 'ingestion',
   // logic / transform steps
   scd_type_2: 'logic',
@@ -78,7 +77,7 @@ export function actionCategory(actionType: string): 'ingestion' | 'logic' | 'egr
  */
 export const ACTION_BUSINESS_LABELS: Record<string, string> = {
   // Ingestion
-  csv_hris_connector: 'Import CSV File',
+  generic_ingestion_connector: 'Import Any File',
   workday_hris_connector: 'Connect to Workday',
   // Logic / Transform
   scd_type_2: 'Track Change History',

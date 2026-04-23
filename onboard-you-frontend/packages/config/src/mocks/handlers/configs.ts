@@ -6,7 +6,7 @@ import type {
   DedupConfig,
   PiiMaskingConfig,
   RenameConfig,
-  CsvHrisConnectorConfig,
+  GenericIngestionConnectorConfig,
   FilterByValueConfig,
   DropConfig,
   CellphoneSanitizerConfig,
@@ -14,7 +14,6 @@ import type {
   HandleDiacriticsConfig,
   ScdType2Config,
   PresignedUploadResponse,
-  CsvColumnsResponse,
 } from '@/generated/api';
 
 /**
@@ -96,11 +95,11 @@ const MOCK_CONFIGS: PipelineConfig[] = [
       actions: [
         {
           id: 'ingest',
-          action_type: 'csv_hris_connector',
+          action_type: 'generic_ingestion_connector',
           config: {
             filename: 'latest.csv',
             columns: ['employee_id', 'first_name', 'last_name', 'email', 'employmentStatus', 'internalNote', 'legacyId'],
-          } satisfies CsvHrisConnectorConfig as ActionConfigPayload,
+          } satisfies GenericIngestionConnectorConfig as ActionConfigPayload,
         },
         {
           id: 'filter',
@@ -294,14 +293,4 @@ export const configHandlers = [
     } satisfies PresignedUploadResponse);
   }),
 
-  // GET /config/:customerCompanyId/csv-columns — discover CSV headers
-  http.get(`${API_BASE}/config/:customerCompanyId/csv-columns`, ({ request }) => {
-    const url = new URL(request.url);
-    const filename = url.searchParams.get('filename') ?? 'upload.csv';
-    // Return realistic mock columns
-    return HttpResponse.json({
-      filename,
-      columns: ['employee_id', 'first_name', 'last_name', 'email', 'department', 'hire_date', 'salary'],
-    } satisfies CsvColumnsResponse);
-  }),
 ];

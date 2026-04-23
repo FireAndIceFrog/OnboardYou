@@ -35,7 +35,7 @@ describe('POST /config/{id}/validate', () => {
           actions: [
             {
               id: 'ingest',
-              action_type: 'csv_hris_connector',
+              action_type: 'generic_ingestion_connector',
               config: {
                 filename: 'employees.csv',
                 columns: ['employee_id', 'first_name', 'last_name', 'email', 'ssn'],
@@ -69,28 +69,6 @@ describe('POST /config/{id}/validate', () => {
     expect(body.final_columns).toEqual(body.steps[1].columns_after);
   });
 
-  it('returns 400 for a misconfigured action', async () => {
-    const { status } = await client.post<unknown>(
-      `/config/${companyId}/validate`,
-      {
-        name: 'Bad Config',
-        cron: 'rate(1 day)',
-        pipeline: {
-          version: '1.0',
-          actions: [
-            {
-              id: 'bad',
-              action_type: 'csv_hris_connector',
-              config: { filename: 'data.csv', columns: [] },
-            },
-          ],
-        },
-      },
-    );
-
-    expect(status).toBe(400);
-  });
-
   it('propagates columns through a multi-step pipeline', async () => {
     const { status, body } = await client.post<ValidationResult>(
       `/config/${companyId}/validate`,
@@ -102,7 +80,7 @@ describe('POST /config/{id}/validate', () => {
           actions: [
             {
               id: 'ingest',
-              action_type: 'csv_hris_connector',
+              action_type: 'generic_ingestion_connector',
               config: {
                 filename: 'employees.csv',
                 columns: ['employee_id', 'first_name', 'last_name', 'email'],

@@ -9,7 +9,7 @@ export type ClientOptions = {
  */
 export type ActionConfig = {
     /**
-     * Factory key — selects the Rust implementation (e.g. `ActionType::CsvHrisConnector`)
+     * Factory key — selects the Rust implementation (e.g. `ActionType::GenericIngestionConnector`)
      */
     action_type: ActionType;
     /**
@@ -33,7 +33,7 @@ export type ActionConfig = {
  * JSON serialisation (no wrapper key), while `ToSchema` generates a
  * `oneOf` schema listing every config variant for OpenAPI.
  */
-export type ActionConfigPayload = CsvHrisConnectorConfig | WorkdayConfig | SageHrConfig | ScdType2Config | PiiMaskingConfig | DedupConfig | RegexReplaceConfig | IsoCountrySanitizerConfig | CellphoneSanitizerConfig | HandleDiacriticsConfig | RenameConfig | DropConfig | FilterByValueConfig | ApiDispatcherConfig;
+export type ActionConfigPayload = WorkdayConfig | SageHrConfig | ScdType2Config | PiiMaskingConfig | DedupConfig | RegexReplaceConfig | IsoCountrySanitizerConfig | CellphoneSanitizerConfig | HandleDiacriticsConfig | RenameConfig | DropConfig | FilterByValueConfig | ApiDispatcherConfig | GenericIngestionConnectorConfig;
 
 /**
  * All known action types in the pipeline.
@@ -44,7 +44,6 @@ export type ActionConfigPayload = CsvHrisConnectorConfig | WorkdayConfig | SageH
  *
  * | JSON value                | Variant                |
  * |---------------------------|------------------------|
- * | `"csv_hris_connector"`    | `CsvHrisConnector`     |
  * | `"workday_hris_connector"`| `WorkdayHrisConnector` |
  * | `"sage_hr_connector"`     | `SageHrConnector`      |
  * | `"scd_type_2"`            | `ScdType2`             |
@@ -58,8 +57,9 @@ export type ActionConfigPayload = CsvHrisConnectorConfig | WorkdayConfig | SageH
  * | `"drop_column"`           | `DropColumn`           |
  * | `"filter_by_value"`       | `FilterByValue`        |
  * | `"api_dispatcher"`        | `ApiDispatcher`        |
+ * | `"generic_ingestion_connector"` | `GenericIngestionConnector` |
  */
-export type ActionType = 'csv_hris_connector' | 'workday_hris_connector' | 'sage_hr_connector' | 'scd_type_2' | 'pii_masking' | 'identity_deduplicator' | 'regex_replace' | 'iso_country_sanitizer' | 'cellphone_sanitizer' | 'handle_diacritics' | 'rename_column' | 'drop_column' | 'filter_by_value' | 'api_dispatcher';
+export type ActionType = 'workday_hris_connector' | 'sage_hr_connector' | 'generic_ingestion_connector' | 'scd_type_2' | 'pii_masking' | 'identity_deduplicator' | 'regex_replace' | 'iso_country_sanitizer' | 'cellphone_sanitizer' | 'handle_diacritics' | 'rename_column' | 'drop_column' | 'filter_by_value' | 'api_dispatcher';
 
 /**
  * Fully-typed API dispatcher configuration.
@@ -206,54 +206,6 @@ export type ConfigRequest = {
 export type CountryOutputFormat = 'alpha2' | 'alpha3';
 
 /**
- * Response payload after reading the uploaded CSV headers.
- */
-export type CsvColumnsResponse = {
-    /**
-     * Column names parsed from the CSV header row.
-     */
-    columns: Array<string>;
-    /**
-     * The filename of the CSV.
-     */
-    filename: string;
-};
-
-/**
- * Configuration extracted from the manifest `ActionConfig.config` JSON.
- *
- * # JSON config (user-facing)
- *
- * ```json
- * {
- * "filename": "employees.csv",
- * "columns": ["employee_id", "first_name", "last_name", "email"]
- * }
- * ```
- *
- * | Field      | Type     | Required | Description                                        |
- * |------------|----------|----------|----------------------------------------------------|
- * | `filename` | string   | **yes**  | CSV file name — the S3 key prefix is added at runtime |
- * | `columns`  | [string] | **yes**  | Declared column names from the CSV header           |
- */
-export type CsvHrisConnectorConfig = {
-    /**
-     * Declared column names — set when the CSV is first uploaded.
-     *
-     * Used by `calculate_columns` for schema propagation and by the
-     * validation engine to verify downstream column references.
-     */
-    columns: Array<string>;
-    /**
-     * CSV file name only (e.g. `"employees.csv"`).
-     *
-     * The full S3 key `{org_id}/{company_id}/{filename}` is resolved at
-     * runtime by the ETL trigger before pipeline execution.
-     */
-    filename?: string | null;
-};
-
-/**
  * Configuration for the identity deduplicator.
  *
  * Columns are inspected in priority order — the first non-null value across
@@ -335,6 +287,59 @@ export type FilterByValueConfig = {
      * The raw regex pattern.
      */
     pattern: string;
+};
+
+/**
+ * Configuration for the `GenericIngestionConnector` pipeline action.
+ *
+ * Accepts **any file type** (PDF, XML, CSV, images, etc.).  Non-CSV files are
+ * converted to CSV asynchronously via AWS Textract before the ETL pipeline
+ * runs.  The connector reads the pre-converted CSV from S3 using the same
+ * `CSV_UPLOAD_BUCKET` as `CsvHrisConnector`.
+ *
+ * # JSON config (user-facing)
+ *
+ * ```json
+ * {
+ * "filename": "employees.pdf",
+ * "columns": ["employee_id", "first_name", "last_name"],
+ * "table_index": 0
+ * }
+ * ```
+ *
+ * | Field         | Type       | Required | Description                                                       |
+ * |---------------|------------|----------|-------------------------------------------------------------------|
+ * | `filename`    | string     | **yes**  | Original upload filename — any extension supported               |
+ * | `columns`     | [string]   | no       | Override column headers. If absent, the CSV header row is used    |
+ * | `table_index` | number     | no       | Which Textract table to use (0-based, default 0). Only applies    |
+ * |               |            |          | when a multi-table document is converted via Textract             |
+ */
+export type GenericIngestionConnectorConfig = {
+    /**
+     * User-defined column headers.
+     *
+     * When provided, these override the header row in the converted CSV.
+     * Must exactly match the number of columns produced by Textract (or the
+     * CSV header count for native CSV uploads).  When `None`, column names
+     * are taken directly from the first row of the CSV.
+     */
+    columns?: Array<string> | null;
+    /**
+     * Original upload filename (e.g. `"employees.pdf"`, `"roster.xml"`).
+     *
+     * The connector resolves the converted CSV path by stripping the file
+     * extension and appending `.csv`:
+     * `{org_id}/{company_id}/{stem}.csv` on `CSV_UPLOAD_BUCKET`.
+     */
+    filename: string;
+    /**
+     * Zero-based index of the Textract table to extract.
+     *
+     * Relevant only for multi-table documents (PDFs, etc.).  Defaults to `0`
+     * (the first table found by Textract).  Ignored when the upload is
+     * already a CSV — no Textract call is made for CSV files.
+     */
+    table_index?: number | null;
 };
 
 /**
@@ -1080,6 +1085,40 @@ export type SettingsRequest = {
 };
 
 /**
+ * Request body for `POST /config/{id}/start-conversion`.
+ *
+ * Instructs the backend to convert the already-uploaded file to CSV.
+ * CSV files are short-circuited — no conversion is needed and column names
+ * are returned immediately.
+ */
+export type StartConversionRequest = {
+    /**
+     * The filename of the already-uploaded file (e.g. `"employees.pdf"`).
+     */
+    filename: string;
+    /**
+     * Zero-based index of the Textract table / Excel sheet / JSON array to
+     * extract from multi-table documents.  Defaults to `0` when absent.
+     */
+    table_index?: number | null;
+};
+
+/**
+ * Response from `POST /config/{id}/start-conversion`.
+ */
+export type StartConversionResponse = {
+    /**
+     * Column names of the CSV (always present on success).
+     */
+    columns?: Array<string> | null;
+    /**
+     * `"not_needed"` — file was already a CSV; columns returned inline.
+     * `"converted"`  — file was converted to CSV synchronously; columns returned.
+     */
+    status: string;
+};
+
+/**
  * Result of validating a single step in the pipeline.
  */
 export type StepValidation = {
@@ -1088,7 +1127,7 @@ export type StepValidation = {
      */
     action_id: string;
     /**
-     * Action type (e.g. `csv_hris_connector`, `drop_column`).
+     * Action type (e.g. `generic_ingestion_connector`, `drop_column`).
      */
     action_type: string;
     /**
@@ -1400,49 +1439,6 @@ export type UpdateConfigResponses = {
 
 export type UpdateConfigResponse = UpdateConfigResponses[keyof UpdateConfigResponses];
 
-export type CsvColumnsData = {
-    body?: never;
-    path: {
-        /**
-         * Customer company identifier
-         */
-        customer_company_id: string;
-    };
-    query: {
-        /**
-         * The CSV filename (e.g. `"employees.csv"`).
-         */
-        filename: string;
-    };
-    url: '/config/{customer_company_id}/csv-columns';
-};
-
-export type CsvColumnsErrors = {
-    /**
-     * Invalid CSV or missing file
-     */
-    400: ErrorResponse;
-    /**
-     * Unauthorized
-     */
-    401: ErrorResponse;
-    /**
-     * Internal server error
-     */
-    500: ErrorResponse;
-};
-
-export type CsvColumnsError = CsvColumnsErrors[keyof CsvColumnsErrors];
-
-export type CsvColumnsResponses = {
-    /**
-     * CSV column names
-     */
-    200: CsvColumnsResponse;
-};
-
-export type CsvColumnsResponse2 = CsvColumnsResponses[keyof CsvColumnsResponses];
-
 export type CsvPresignedUploadData = {
     body?: never;
     path: {
@@ -1540,7 +1536,13 @@ export type TriggerRunErrors = {
      * Unauthorized
      */
     401: unknown;
+    /**
+     * A run is already in progress
+     */
+    409: ErrorResponse;
 };
+
+export type TriggerRunError = TriggerRunErrors[keyof TriggerRunErrors];
 
 export type TriggerRunResponses = {
     /**
@@ -1586,6 +1588,44 @@ export type GetRunResponses = {
 };
 
 export type GetRunResponse = GetRunResponses[keyof GetRunResponses];
+
+export type StartConversionData = {
+    body: StartConversionRequest;
+    path: {
+        /**
+         * Customer company identifier
+         */
+        customer_company_id: string;
+    };
+    query?: never;
+    url: '/config/{customer_company_id}/start-conversion';
+};
+
+export type StartConversionErrors = {
+    /**
+     * Invalid request
+     */
+    400: ErrorResponse;
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Internal server error
+     */
+    500: ErrorResponse;
+};
+
+export type StartConversionError = StartConversionErrors[keyof StartConversionErrors];
+
+export type StartConversionResponses = {
+    /**
+     * Conversion status
+     */
+    200: StartConversionResponse;
+};
+
+export type StartConversionResponse2 = StartConversionResponses[keyof StartConversionResponses];
 
 export type ValidateConfigData = {
     /**

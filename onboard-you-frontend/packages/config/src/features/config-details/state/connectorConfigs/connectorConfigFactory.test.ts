@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { ConnectorConfigFactory, ConnectorType } from './connectorConfigFactory';
 import { WorkdayConnectorConfig } from './workdayConnectorConfig';
 import { SageHrConnectorConfig } from './sageHrConnectorConfig';
-import { CsvConnectorConfig } from './csvConnectorConfig';
 import { GenericIngestionConnectorConfig } from './genericIngestionConnectorConfig';
 
 describe('ConnectorConfigFactory', () => {
@@ -12,7 +11,6 @@ describe('ConnectorConfigFactory', () => {
   const cases: Case[] = [
     { type: ConnectorType.Workday, expected: WorkdayConnectorConfig },
     { type: ConnectorType.SageHR, expected: SageHrConnectorConfig },
-    { type: ConnectorType.Csv, expected: CsvConnectorConfig },
     { type: ConnectorType.GenericIngestion, expected: GenericIngestionConnectorConfig },
   ];
 

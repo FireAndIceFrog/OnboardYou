@@ -2,7 +2,7 @@
 
 use crate::dependancies::Dependancies;
 use crate::engine::file_converter_engine;
-use crate::models::{ApiError, CsvColumnsResponse, PresignedUploadResponse};
+use crate::models::{ApiError, PresignedUploadResponse};
 
 /// Build the S3 object key from runtime context.
 fn s3_key(organization_id: &str, customer_company_id: &str, filename: &str) -> String {
@@ -35,23 +35,6 @@ pub async fn presigned_upload(
         upload_url,
         key,
         filename: filename.to_string(),
-    })
-}
-
-/// Read the columns from an already-uploaded CSV in S3.
-pub async fn read_columns(
-    deps: &Dependancies,
-    organization_id: &str,
-    customer_company_id: &str,
-    filename: &str,
-) -> Result<CsvColumnsResponse, ApiError> {
-    let key = s3_key(organization_id, customer_company_id, filename);
-
-    let columns = deps.s3_repo.read_csv_headers(&key).await?;
-
-    Ok(CsvColumnsResponse {
-        filename: filename.to_string(),
-        columns,
     })
 }
 
@@ -226,22 +209,5 @@ mod tests {
             .await
             .unwrap_err();
         assert!(matches!(err2, ApiError::Validation(_)));
-    }
-
-    #[tokio::test]
-    async fn read_columns_success() {
-        let headers = vec!["a".into(), "b".into()];
-        let state = build_state(FakeS3 {
-            presign: None,
-            headers: Some(headers.clone()),
-            err: None,
-        })
-        .await;
-
-        let out = super::read_columns(&state, "org", "comp", "file.csv")
-            .await
-            .unwrap();
-        assert_eq!(out.filename, "file.csv");
-        assert_eq!(out.columns, headers);
     }
 }

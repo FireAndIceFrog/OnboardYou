@@ -14,7 +14,6 @@ use utoipa::ToSchema;
 ///
 /// | JSON value                | Variant                |
 /// |---------------------------|------------------------|
-/// | `"csv_hris_connector"`    | `CsvHrisConnector`     |
 /// | `"workday_hris_connector"`| `WorkdayHrisConnector` |
 /// | `"sage_hr_connector"`     | `SageHrConnector`      |
 /// | `"scd_type_2"`            | `ScdType2`             |
@@ -32,7 +31,6 @@ use utoipa::ToSchema;
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ActionType {
-    CsvHrisConnector,
     WorkdayHrisConnector,
     SageHrConnector,
     GenericIngestionConnector,
@@ -75,7 +73,7 @@ pub struct Manifest {
 pub struct ActionConfig {
     /// Unique identifier for this pipeline step
     pub id: String,
-    /// Factory key — selects the Rust implementation (e.g. `ActionType::CsvHrisConnector`)
+    /// Factory key — selects the Rust implementation (e.g. `ActionType::GenericIngestionConnector`)
     pub action_type: ActionType,
     /// Action-specific configuration (shape depends on action_type)
     ///
@@ -104,9 +102,6 @@ impl<'de> Deserialize<'de> for ActionConfig {
         let raw = Raw::deserialize(deserializer)?;
 
         let config = match raw.action_type {
-            ActionType::CsvHrisConnector => ActionConfigPayload::CsvHrisConnector(
-                serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
-            ),
             ActionType::WorkdayHrisConnector => ActionConfigPayload::WorkdayHrisConnector(
                 serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
             ),
@@ -168,7 +163,6 @@ impl<'de> Deserialize<'de> for ActionConfig {
 #[derive(Clone, Debug, Serialize, ToSchema)]
 #[serde(untagged)]
 pub enum ActionConfigPayload {
-    CsvHrisConnector(crate::CsvHrisConnectorConfig),
     WorkdayHrisConnector(crate::WorkdayConfig),
     SageHrConnector(crate::SageHrConfig),
     
@@ -211,7 +205,7 @@ mod tests {
             "actions": [
                 {
                     "id": "ingest_hris",
-                    "action_type": "csv_hris_connector",
+                    "action_type": "generic_ingestion_connector",
                     "config": { "filename": "data.csv", "columns": ["a", "b"] }
                 }
             ]
@@ -222,7 +216,7 @@ mod tests {
         assert_eq!(manifest.actions.len(), 1);
         assert_eq!(
             manifest.actions[0].action_type,
-            ActionType::CsvHrisConnector
+            ActionType::GenericIngestionConnector
         );
     }
 
@@ -245,11 +239,8 @@ mod tests {
 
     #[test]
     fn test_action_type_display() {
-        assert_eq!(
-            ActionType::CsvHrisConnector.to_string(),
-            "csv_hris_connector"
-        );
         assert_eq!(ActionType::ScdType2.to_string(), "scd_type_2");
         assert_eq!(ActionType::ApiDispatcher.to_string(), "api_dispatcher");
+        assert_eq!(ActionType::GenericIngestionConnector.to_string(), "generic_ingestion_connector");
     }
 }

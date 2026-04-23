@@ -2,7 +2,7 @@ import type { ComponentType, SVGProps } from 'react';
 import type { Node, Edge } from '@xyflow/react';
 import type { PipelineConfig, ValidationResult, WorkdayResponseGroup, SageHrConfig as SageHrConfigApi } from '@/generated/api';
 import { ConnectorConfigFactory, ConnectorType } from '../state/connectorConfigs/connectorConfigFactory';
-import { OfficeBuildingIcon, LeafIcon, FileSpreadsheetIcon, FolderOpenIcon } from '@/shared/ui';
+import { OfficeBuildingIcon, LeafIcon, FolderOpenIcon } from '@/shared/ui';
 
 const connectorFactory = new ConnectorConfigFactory();
 
@@ -32,7 +32,6 @@ export interface ConfigDetailsState {
 export const HR_SYSTEMS = [
   { id: ConnectorType.Workday, nameKey: 'configDetails.connection.systems.workday', icon: OfficeBuildingIcon },
   { id: ConnectorType.SageHR, nameKey: 'configDetails.connection.systems.sage_hr', icon: LeafIcon },
-  { id: ConnectorType.Csv, nameKey: 'configDetails.connection.systems.csv', icon: FileSpreadsheetIcon },
   { id: ConnectorType.GenericIngestion, nameKey: 'configDetails.connection.systems.generic_ingestion', icon: FolderOpenIcon },
 ] as const;
 
@@ -55,8 +54,6 @@ export interface SageHrFields {
   includePositionHistory: boolean;
 }
 
-export type CsvUploadStatus = 'idle' | 'uploading' | 'discovering' | 'done' | 'error';
-
 /** Upload status for the generic ingestion connector. */
 export type GenericUploadStatus = 'idle' | 'uploading' | 'done' | 'error';
 
@@ -74,28 +71,19 @@ export interface GenericIngestionFields {
 /** Per-field validation error map (field path → error message). */
 export type ValidationErrors = Record<string, string | undefined>;
 
-export interface CsvFields {
-  filename: string;
-  columns: string[];
-  uploadStatus: CsvUploadStatus;
-  uploadError: string | null;
-}
-
 export interface ConnectionForm {
   system: SystemId;
   displayName: string;
   workday: WorkdayFields;
   sageHr: SageHrFields;
-  csv: CsvFields;
   genericIngestion: GenericIngestionFields;
 }
 
 export const INITIAL_CONNECTION_FORM: ConnectionForm = {
-  system: ConnectorType.Csv,
+  system: ConnectorType.GenericIngestion,
   displayName: '',
   workday: connectorFactory.getConfig(ConnectorType.Workday).getDefaultState().workday!,
   sageHr: connectorFactory.getConfig(ConnectorType.SageHR).getDefaultState().sageHr!,
-  csv: connectorFactory.getConfig(ConnectorType.Csv).getDefaultState().csv!,
   genericIngestion: connectorFactory.getConfig(ConnectorType.GenericIngestion).getDefaultState().genericIngestion!,
 };
 

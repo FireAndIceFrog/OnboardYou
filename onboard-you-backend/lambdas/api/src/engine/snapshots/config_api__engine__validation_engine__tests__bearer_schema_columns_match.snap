@@ -6,7 +6,7 @@ expression: output
   "steps": [
     {
       "action_id": "ingest",
-      "action_type": "csv_hris_connector",
+      "action_type": "generic_ingestion_connector",
       "columns_after": [
         "a",
         "b"

@@ -14,21 +14,21 @@ describe('convertToFlow', () => {
     const manifest: Manifest = {
       version: '1',
       actions: [
-        { id: 'step-1', action_type: 'csv_hris_connector', config: { filename: 'test.csv', columns: ['id', 'name'] } },
+        { id: 'step-1', action_type: 'generic_ingestion_connector', config: { filename: 'test.csv', columns: ['id', 'name'] } },
       ],
     };
     const { nodes, edges } = convertToFlow(manifest);
     expect(nodes).toHaveLength(1);
     expect(edges).toHaveLength(0);
     expect(nodes[0].id).toBe('step-1');
-    expect(nodes[0].data.actionType).toBe('csv_hris_connector');
+    expect(nodes[0].data.actionType).toBe('generic_ingestion_connector');
   });
 
   it('produces a chain of nodes with connecting edges for multiple actions', () => {
     const manifest: Manifest = {
       version: '1',
       actions: [
-        { id: 'step-1', action_type: 'csv_hris_connector', config: { filename: 'test.csv', columns: ['id', 'name'] } },
+        { id: 'step-1', action_type: 'generic_ingestion_connector', config: { filename: 'test.csv', columns: ['id', 'name'] } },
         { id: 'step-2', action_type: 'pii_masking', config: { columns: [] } },
         { id: 'step-3', action_type: 'api_dispatcher', config: { auth_type: 'bearer', destination_url: 'https://example.com' } },
       ],
@@ -53,7 +53,7 @@ describe('convertToFlow', () => {
     const manifest: Manifest = {
       version: '1',
       actions: [
-        { id: 'a', action_type: 'csv_hris_connector', config: { filename: 'a.csv', columns: ['id'] } },
+        { id: 'a', action_type: 'generic_ingestion_connector', config: { filename: 'a.csv', columns: ['id'] } },
         { id: 'b', action_type: 'pii_masking', config: { columns: [] } },
         { id: 'c', action_type: 'api_dispatcher', config: { auth_type: 'bearer', destination_url: 'https://example.com' } },
       ],
@@ -75,7 +75,7 @@ describe('convertToFlow', () => {
     const manifest: Manifest = {
       version: '1',
       actions: [
-        { id: 'ing', action_type: 'csv_hris_connector', config: { filename: 'test.csv', columns: ['id'] } },
+        { id: 'ing', action_type: 'generic_ingestion_connector', config: { filename: 'test.csv', columns: ['id'] } },
         { id: 'logic', action_type: 'pii_masking', config: { columns: [] } },
         { id: 'eg', action_type: 'api_dispatcher', config: { auth_type: 'bearer', destination_url: 'https://example.com' } },
       ],

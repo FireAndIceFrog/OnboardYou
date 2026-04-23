@@ -11,7 +11,7 @@ use crate::models::{ApiError, Claims};
 use crate::{
     dependancies::Dependancies,
     engine,
-    models::{CsvColumnsResponse, CsvFileQuery, PresignedUploadResponse, StartConversionRequest, StartConversionResponse},
+    models::{CsvFileQuery, PresignedUploadResponse, StartConversionRequest, StartConversionResponse},
 };
 
 /// POST /config/{customer_company_id}/csv-upload?filename=employees.csv
@@ -40,42 +40,6 @@ pub async fn csv_presigned_upload(
     Query(query): Query<CsvFileQuery>,
 ) -> Result<impl IntoResponse, ApiError> {
     let resp = engine::csv_upload_engine::presigned_upload(
-        &state,
-        &claims.organization_id,
-        &customer_company_id,
-        &query.filename,
-    )
-    .await?;
-
-    Ok(Json(resp))
-}
-
-/// GET /config/{customer_company_id}/csv-columns?filename=employees.csv
-///
-/// Reads the header row of an already-uploaded CSV and returns the column
-/// names.  Call this after the frontend finishes the presigned PUT upload.
-#[utoipa::path(
-    get,
-    path = "/config/{customer_company_id}/csv-columns",
-    tag = "CSV Upload",
-    params(
-        ("customer_company_id" = String, Path, description = "Customer company identifier"),
-        CsvFileQuery,
-    ),
-    responses(
-        (status = 200, description = "CSV column names", body = CsvColumnsResponse),
-        (status = 400, description = "Invalid CSV or missing file", body = crate::models::ErrorResponse),
-        (status = 401, description = "Unauthorized", body = crate::models::ErrorResponse),
-        (status = 500, description = "Internal server error", body = crate::models::ErrorResponse),
-    )
-)]
-pub async fn csv_columns(
-    State(state): State<Dependancies>,
-    claims: Claims,
-    Path(customer_company_id): Path<String>,
-    Query(query): Query<CsvFileQuery>,
-) -> Result<impl IntoResponse, ApiError> {
-    let resp = engine::csv_upload_engine::read_columns(
         &state,
         &claims.organization_id,
         &customer_company_id,

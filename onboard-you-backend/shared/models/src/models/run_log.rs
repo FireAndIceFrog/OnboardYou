@@ -15,7 +15,7 @@ use crate::models::Manifest;
 pub struct StepValidation {
     /// Action id from the manifest.
     pub action_id: String,
-    /// Action type (e.g. `csv_hris_connector`, `drop_column`).
+    /// Action type (e.g. `generic_ingestion_connector`, `drop_column`).
     pub action_type: String,
     /// Columns present *after* this step completes.
     pub columns_after: Vec<String>,

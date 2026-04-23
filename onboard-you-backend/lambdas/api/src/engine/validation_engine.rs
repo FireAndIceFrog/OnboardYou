@@ -155,14 +155,14 @@ mod tests {
         serde_json::from_value(json).unwrap()
     }
 
-    /// Helper: CSV ingest + api_dispatcher manifest JSON
+    /// Helper: generic ingest + api_dispatcher manifest JSON
     fn pipeline_with_dispatcher(columns: &[&str], dispatcher_config: serde_json::Value) -> String {
         let cols: Vec<String> = columns.iter().map(|c| format!("\"{}\"", c)).collect();
         format!(
             r#"{{
                 "version": "1.0",
                 "actions": [
-                    {{ "id": "ingest", "action_type": "csv_hris_connector", "config": {{ "filename": "data.csv", "columns": [{}] }} }},
+                    {{ "id": "ingest", "action_type": "generic_ingestion_connector", "config": {{ "filename": "data.csv", "columns": [{}] }} }},
                     {{ "id": "dispatch", "action_type": "api_dispatcher", "config": {} }}
                 ]
             }}"#,
@@ -176,7 +176,7 @@ mod tests {
         name: &'static str,
         /// Raw manifest JSON. If `None`, built from `columns` + `dispatcher`.
         manifest_json: Option<&'static str>,
-        /// Pipeline input columns (fed to csv_hris_connector). Ignored when `manifest_json` is set.
+        /// Pipeline input columns (fed to generic_ingestion_connector). Ignored when `manifest_json` is set.
         columns: &'static [&'static str],
         /// Dispatcher config JSON — `None` means CSV-only pipeline.
         dispatcher: Option<serde_json::Value>,
@@ -234,7 +234,7 @@ mod tests {
                 manifest_json: Some(r#"{
                     "version": "1.0",
                     "actions": [
-                        { "id": "ingest", "action_type": "csv_hris_connector", "config": { "filename": "data.csv", "columns": [] } }
+                        { "id": "ingest", "action_type": "generic_ingestion_connector", "config": { "filename": "data.csv", "columns": [] } }
                     ]
                 }"#),
                 ..Default::default()
@@ -312,7 +312,7 @@ mod tests {
                 let cols: Vec<String> = case.columns.iter().map(|c| format!("\"{}\"", c)).collect();
                 format!(
                     r#"{{ "version": "1.0", "actions": [
-                        {{ "id": "ingest", "action_type": "csv_hris_connector", "config": {{ "filename": "data.csv", "columns": [{}] }} }}
+                        {{ "id": "ingest", "action_type": "generic_ingestion_connector", "config": {{ "filename": "data.csv", "columns": [{}] }} }}
                     ] }}"#,
                     cols.join(",")
                 )

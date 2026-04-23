@@ -1,6 +1,3 @@
-pub mod csv_hris_connector_config;
-pub use csv_hris_connector_config::*;
-
 pub mod generic_ingestion_connector_config;
 pub use generic_ingestion_connector_config::*;
 

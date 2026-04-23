@@ -198,7 +198,7 @@ pub fn write_generated_csv(n: usize) -> (tempfile::NamedTempFile, PathBuf) {
 // Manifest helpers
 // ---------------------------------------------------------------------------
 
-/// Manifest that uses the CSV connector with S3 URI and declared columns.
+/// Manifest that uses the generic ingestion connector with S3 URI and declared columns.
 pub fn sample_csv_manifest(s3_uri: &str, columns: &[&str]) -> String {
     let cols_json: Vec<String> = columns.iter().map(|c| format!("\"{}\"", c)).collect();
     format!(
@@ -207,7 +207,7 @@ pub fn sample_csv_manifest(s3_uri: &str, columns: &[&str]) -> String {
   "actions": [
     {{
       "id": "ingest_hris",
-      "action_type": "csv_hris_connector",
+      "action_type": "generic_ingestion_connector",
       "config": {{ "s3_uri": "{}", "columns": [{}] }}
     }}
   ]
@@ -220,7 +220,7 @@ pub fn sample_csv_manifest(s3_uri: &str, columns: &[&str]) -> String {
 /// Manifest exercising **every** registered action in dependency order.
 ///
 /// The pipeline chain:
-///  1. csv_hris_connector   — ingest from file
+///  1. generic_ingestion_connector — ingest from file
 ///  2. handle_diacritics    — transliterate first_name, last_name
 ///  3. iso_country_sanitizer— country_raw → country_code (alpha2)
 ///  4. cellphone_sanitizer  — mobile_phone + country_code → mobile_phone_intl
@@ -240,7 +240,7 @@ pub fn full_pipeline_manifest(filename: &str, columns: &[&str]) -> String {
   "actions": [
     {{
       "id": "ingest",
-      "action_type": "csv_hris_connector",
+      "action_type": "generic_ingestion_connector",
       "config": {{ "filename": "{filename}", "columns": [{cols_str}] }}
     }},
     {{
@@ -336,7 +336,7 @@ pub const SAMPLE_MANIFEST_JSON: &str = r#"{
   "actions": [
     {
       "id": "hris_connector",
-      "action_type": "csv_hris_connector",
+      "action_type": "generic_ingestion_connector",
       "config": {
         "filename": "data.csv",
         "columns": ["employee_id", "first_name", "last_name", "email", "ssn", "salary", "start_date"]

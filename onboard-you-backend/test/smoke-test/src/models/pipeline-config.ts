@@ -5,7 +5,7 @@
  * Values are snake_case strings matching the Rust `ActionType` enum.
  */
 export type ActionType =
-  | 'csv_hris_connector'
+  | 'generic_ingestion_connector'
   | 'workday_hris_connector'
   | 'scd_type_2'
   | 'pii_masking'

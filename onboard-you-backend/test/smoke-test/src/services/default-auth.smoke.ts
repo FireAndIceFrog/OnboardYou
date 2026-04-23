@@ -57,7 +57,7 @@ describe('Default auth end-to-end', () => {
         actions: [
           {
             id: 'ingest',
-            action_type: 'csv_hris_connector',
+            action_type: 'generic_ingestion_connector',
             config: {
               filename: 'employees.csv',
               columns: ['employee_id', 'cellphone', 'first_name', 'country'],
@@ -92,7 +92,7 @@ describe('Default auth end-to-end', () => {
           actions: [
             {
               id: 'ingest',
-              action_type: 'csv_hris_connector',
+              action_type: 'generic_ingestion_connector',
               config: {
                 filename: 'employees.csv',
                 columns: ['employee_id', 'cellphone', 'first_name', 'country'],

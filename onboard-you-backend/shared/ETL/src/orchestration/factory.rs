@@ -7,7 +7,7 @@
 //! a compiler error here until you wire it up.
 
 use crate::capabilities::egress::api_dispatcher::ApiDispatcher;
-use crate::capabilities::ingestion::engine::{CsvHrisConnector, GenericIngestionConnector, WorkdayHrisConnector, SageHrConnector};
+use crate::capabilities::ingestion::engine::{GenericIngestionConnector, WorkdayHrisConnector, SageHrConnector};
 use crate::capabilities::logic::engine::{
     CellphoneSanitizer, DropColumn, FilterByValue, HandleDiacritics, IdentityDeduplicator,
     IsoCountrySanitizer, PIIMasking, RegexReplace, RenameColumn, SCDType2,
@@ -69,10 +69,6 @@ impl ActionFactoryTrait for ActionFactory {
         let payload = action_config.config.clone();
 
         match (action_type, payload) {
-            (ActionType::CsvHrisConnector, ActionConfigPayload::CsvHrisConnector(cfg)) => {
-                let connector = CsvHrisConnector::from_action_config(&cfg)?;
-                Ok(Arc::new(connector))
-            }
             (ActionType::WorkdayHrisConnector, ActionConfigPayload::WorkdayHrisConnector(cfg)) => {
                 let connector = WorkdayHrisConnector::from_action_config(&cfg)?;
                 Ok(Arc::new(connector))
@@ -274,8 +270,8 @@ mod tests {
     fn test_factory_creates_csv_connector() {
         let config = ActionConfig {
             id: "ingest".into(),
-            action_type: ActionType::CsvHrisConnector,
-            config: ActionConfigPayload::CsvHrisConnector(
+            action_type: ActionType::GenericIngestionConnector,
+            config: ActionConfigPayload::GenericIngestionConnector(
                 serde_json::from_value(
                     serde_json::json!({ "filename": "data.csv", "columns": ["a", "b"] }),
                 )
@@ -284,8 +280,8 @@ mod tests {
         };
         let action = ActionFactory::new()
             .create(&config)
-            .expect("should create csv connector");
-        assert_eq!(action.id(), "csv_hris_connector");
+            .expect("should create generic ingestion connector");
+        assert_eq!(action.id(), "generic_ingestion_connector");
     }
 
     #[test]
@@ -450,8 +446,8 @@ mod tests {
             actions: vec![
                 ActionConfig {
                     id: "ingest".into(),
-                    action_type: ActionType::CsvHrisConnector,
-                    config: ActionConfigPayload::CsvHrisConnector(
+                    action_type: ActionType::GenericIngestionConnector,
+                    config: ActionConfigPayload::GenericIngestionConnector(
                         serde_json::from_value(
                             serde_json::json!({
                                 "filename": "data.csv",
@@ -490,8 +486,8 @@ mod tests {
             version: "1.0".into(),
             actions: vec![ActionConfig {
                 id: "bad_step".into(),
-                action_type: ActionType::CsvHrisConnector,
-                // Intentional mismatch: csv action type with api dispatcher payload
+                action_type: ActionType::GenericIngestionConnector,
+                // Intentional mismatch: generic ingestion type with api dispatcher payload
                 config: ActionConfigPayload::ApiDispatcher(
                     onboard_you_models::ApiDispatcherConfig::Default,
                 ),
@@ -503,7 +499,7 @@ mod tests {
             .expect_err("mismatched payload should fail");
 
         assert_eq!(err.action_id, "bad_step");
-        assert_eq!(err.action_type, "csv_hris_connector");
+        assert_eq!(err.action_type, "generic_ingestion_connector");
         assert!(matches!(
             err.error,
             onboard_you_models::Error::ConfigurationError(_)

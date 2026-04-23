@@ -19,11 +19,11 @@ use controllers::{
     create_config, delete_config, get_config, list_configs, update_config, validate_config,
 };
 use controllers::{get_run, list_runs, trigger_run};
-use controllers::{csv_columns, csv_presigned_upload, start_conversion};
+use controllers::{csv_presigned_upload, start_conversion};
 use controllers::{get_settings, upsert_settings};
 use dependancies::Dependancies;
 use models::{
-    ConfigRequest, CsvColumnsResponse, ErrorResponse, LoginRequest, LoginResponse,
+    ConfigRequest, ErrorResponse, LoginRequest, LoginResponse,
     PresignedUploadResponse, SettingsRequest, StepValidation, StartConversionRequest,
     StartConversionResponse, TriggerRunResponse, ValidationResult,
 };
@@ -57,7 +57,6 @@ use utoipa_swagger_ui::SwaggerUi;
         controllers::config_controller::delete_config,
         controllers::config_controller::validate_config,
         controllers::csv_upload_controller::csv_presigned_upload,
-        controllers::csv_upload_controller::csv_columns,
         controllers::csv_upload_controller::start_conversion,
         controllers::runs_controller::list_runs,
         controllers::runs_controller::get_run,
@@ -86,7 +85,6 @@ use utoipa_swagger_ui::SwaggerUi;
         OrgSettings,
         SettingsRequest,
         PresignedUploadResponse,
-        CsvColumnsResponse,
         StartConversionRequest,
         StartConversionResponse,
         GenericIngestionConnectorConfig,
@@ -200,10 +198,6 @@ fn router(state: Dependancies) -> Router {
         .route(
             "/config/{customer_company_id}/csv-upload",
             post(csv_presigned_upload),
-        )
-        .route(
-            "/config/{customer_company_id}/csv-columns",
-            get(csv_columns),
         )
         .route(
             "/config/{customer_company_id}/start-conversion",

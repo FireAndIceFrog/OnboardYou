@@ -23,7 +23,7 @@ vi.mock('../../state/useConnectionForm', () => ({
         includeEmploymentStatusHistory: false,
         includePositionHistory: false,
       },
-      csv: { filename: '', columns: [], uploadStatus: 'idle', uploadError: null },
+      genericIngestion: { filename: '', columns: [], uploadStatus: 'idle' as const, uploadError: null, conversionStatus: null },
     },
     errors: {},
     isValid: false,
@@ -56,7 +56,7 @@ const cases: Case[] = [
     assert: (s) => {
       expect(s.getByText('Workday')).toBeInTheDocument();
       expect(s.getByText('Sage HR')).toBeInTheDocument();
-      expect(s.getByText('CSV File Upload')).toBeInTheDocument();
+      expect(s.getByText('Generic File Upload')).toBeInTheDocument();
     },
   },
   {

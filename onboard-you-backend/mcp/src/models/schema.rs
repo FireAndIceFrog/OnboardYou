@@ -49,10 +49,10 @@ pub fn build_schema_resources() -> Vec<SchemaResource> {
         },
         // ── Ingress ──────────────────────────────────────────
         SchemaResource {
-            uri: "onboardyou://schema/csv-hris-connector-config".into(),
-            name: "CsvHrisConnectorConfig",
-            description: "Ingress: reads a CSV file from S3",
-            text: schema_json::<CsvHrisConnectorConfig>(),
+            uri: "onboardyou://schema/generic-ingestion-connector-config".into(),
+            name: "GenericIngestionConnectorConfig",
+            description: "Ingress: reads any file (CSV, PDF, XML, Excel, JSON, image) from S3",
+            text: schema_json::<GenericIngestionConnectorConfig>(),
         },
         SchemaResource {
             uri: "onboardyou://schema/workday-config".into(),
