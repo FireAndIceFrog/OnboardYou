@@ -123,6 +123,7 @@ module "csv_upload_bucket" {
   project_prefix = "onboardyou"
   environment    = var.environment
   env_postfix    = var.env_postfix
+  retention_days = var.csv_upload_retention_days
 }
 
 # ══════════════════════════════════════════════════════════════

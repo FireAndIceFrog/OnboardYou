@@ -25,6 +25,12 @@ variable "log_retention_days" {
   default     = 14
 }
 
+variable "csv_upload_retention_days" {
+  description = "Days before uploaded objects in the CSV upload bucket expire"
+  type        = number
+  default     = 90
+}
+
 variable "env_postfix" {
   description = "Unique postfix appended to all resource names (avoids naming collisions on destroy/recreate)"
   type        = string
