@@ -71,8 +71,11 @@ async function uploadFileToS3(uploadUrl: string, file: File): Promise<void> {
  *
  * - CSV files: columns returned inline immediately (`status = "not_needed"`).
  * - All other types: Textract job queued (`status = "queued"`).
+ *
+ * Can also be called independently to re-convert an already-uploaded file
+ * (e.g., before triggering a pipeline run to ensure the CSV is present).
  */
-async function startConversion(
+export async function startConversion(
   customerCompanyId: string,
   filename: string,
   tableIndex?: number,

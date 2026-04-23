@@ -6,7 +6,7 @@ use lambda_runtime::Error;
 use polars::prelude::LazyFrame;
 use std::sync::Arc;
 
-use onboard_you_models::{ETLDependancies, Manifest, RosterContext};
+use onboard_you_models::{ActionConfigPayload, ETLDependancies, Manifest, RosterContext};
 
 use crate::{dependancies::Dependancies, models::PipelineResult};
 
@@ -43,6 +43,15 @@ impl IPipelineRepo for PipelineRepository {
         run_id: &str,
     ) -> Result<PipelineResult, Error> {
         let action_factory = deps.action_factory.clone();
+
+        // Resolve the S3 key for any GenericIngestionConnector before building actions.
+        // The key is derived from the filename and org/company IDs.
+        let mut manifest = manifest;
+        for ac in &mut manifest.actions {
+            if let ActionConfigPayload::GenericIngestionConnector(ref mut cfg) = ac.config {
+                cfg.resolve_s3_key(organization_id, customer_company_id);
+            }
+        }
 
         // Build actions from manifest via Factory
         let actions: Vec<_> = manifest

@@ -45,6 +45,7 @@ import {
   fetchSettingsSchemaThunk,
 } from '../../state/configDetailsSlice';
 import { triggerRun as triggerRunService } from '../../services/configDetailsService';
+import { startConversion } from '../../services/genericUploadService';
 import { fetchRunHistory, selectIsRunning } from '@/features/run-history/state';
 import { ActionEditPanel, AddButtonEdge, AddStepPanel, PipelineNode } from '../components';
 import { RunHistoryView } from '@/features/run-history/ui/components';
@@ -161,6 +162,18 @@ function ConfigDetailsContent({
   const handleTriggerRun = useCallback(async () => {
     setIsTriggering(true);
     try {
+      // Ensure any generic ingestion CSV files are present in S3 before triggering
+      // the ETL. If the original file is gone (e.g. expired lifecycle), this will
+      // throw and we surface the error instead of silently failing inside the ETL.
+      const ingestionActions = config?.pipeline?.actions?.filter(
+        (a) => a.action_type === 'generic_ingestion_connector' && typeof a.config?.filename === 'string',
+      ) ?? [];
+      await Promise.all(
+        ingestionActions.map((a) =>
+          startConversion(customerCompanyId, a.config.filename as string),
+        ),
+      );
+
       await triggerRunService(customerCompanyId);
       showNotification(t('configDetails.triggerRunSuccess', 'Pipeline run triggered'), 'success');
       // Refresh run list so the button immediately reflects the running state
@@ -173,7 +186,7 @@ function ConfigDetailsContent({
     } finally {
       setIsTriggering(false);
     }
-  }, [customerCompanyId, dispatch, showNotification, t]);
+  }, [config, customerCompanyId, dispatch, showNotification, t]);
 
   const handleCloseAddStep = useCallback(() => {
     dispatch(setAddStepPanelOpen(false));
