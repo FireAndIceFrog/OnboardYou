@@ -166,11 +166,12 @@ function ConfigDetailsContent({
       // the ETL. If the original file is gone (e.g. expired lifecycle), this will
       // throw and we surface the error instead of silently failing inside the ETL.
       const ingestionActions = config?.pipeline?.actions?.filter(
-        (a) => a.action_type === 'generic_ingestion_connector' && typeof a.config?.filename === 'string',
+        (a): a is typeof a & { config: { filename: string } } =>
+          a.action_type === 'generic_ingestion_connector' && typeof (a.config as Record<string, unknown>).filename === 'string',
       ) ?? [];
       await Promise.all(
         ingestionActions.map((a) =>
-          startConversion(customerCompanyId, a.config.filename as string),
+          startConversion(customerCompanyId, (a.config as { filename: string }).filename),
         ),
       );
 
