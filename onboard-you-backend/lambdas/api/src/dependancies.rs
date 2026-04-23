@@ -7,6 +7,7 @@ use crate::repositories::run_history_repository::{PgRunHistoryRepo, RunHistoryRe
 use crate::repositories::s3_repository::{S3Repo, S3Repository};
 use crate::repositories::schedule_repository::{EventBridgeScheduleRepo, ScheduleRepo};
 use crate::repositories::settings_repository::{PgSettingsRepo, SettingsRepo};
+use crate::repositories::textract_repository::{TextractRepo, TextractRepository};
 use crate::repositories::trigger_repository::{SqsTriggerRepo, TriggerRepo};
 
 #[derive(Debug, Clone)]
@@ -46,6 +47,7 @@ pub struct Dependancies {
     pub etl_repo: Arc<dyn EtlRepo>,
     pub run_history_repo: Arc<dyn RunHistoryRepo>,
     pub trigger_repo: Arc<dyn TriggerRepo>,
+    pub textract_repo: Arc<dyn TextractRepo>,
 }
 
 impl Dependancies {
@@ -102,6 +104,10 @@ impl Dependancies {
             trigger_repo: Arc::new(SqsTriggerRepo {
                 sqs: aws_sdk_sqs::Client::new(&aws_config),
                 queue_url: env.sqs_queue_url.clone(),
+            }),
+            textract_repo: Arc::new(TextractRepository {
+                textract: aws_sdk_textract::Client::new(&aws_config),
+                bucket: env.csv_upload_bucket.clone(),
             }),
         }
     }

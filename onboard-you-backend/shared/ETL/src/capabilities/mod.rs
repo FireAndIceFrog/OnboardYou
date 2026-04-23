@@ -8,6 +8,7 @@
 pub mod egress;
 pub mod ingestion;
 pub mod logic;
+pub mod conversion;
 
 // Re-export concrete engine types for ergonomic access
 pub use egress::*;

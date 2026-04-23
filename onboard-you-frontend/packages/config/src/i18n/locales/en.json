@@ -72,12 +72,21 @@
         "discoveredColumns": "Discovered Columns",
         "columnsHint": "{{count}} column(s) detected from the CSV header row."
       },
+      "genericIngestion": {
+        "uploadTitle": "Upload Any File",
+        "uploadLabel": "File",
+        "uploadHint": "Upload a CSV, PDF, XML, Excel, JSON, or image file (max 50 MB).",
+        "discoveredColumns": "Discovered Columns",
+        "columnsHint": "{{count}} column(s) detected.",
+        "convertingHint": "Non-CSV files are converted automatically using AWS Textract before the pipeline runs."
+      },
       "backButton": "Back",
       "nextButton": "Next: Customize Flow →",
       "systems": {
         "workday": "Workday",
         "sage_hr": "Sage HR",
-        "csv": "CSV File Upload"
+        "csv": "CSV File Upload",
+        "generic_ingestion": "Generic File Upload"
       },
       "responseGroupLabels": {
         "include_personal_information": "Personal Information",
@@ -102,6 +111,17 @@
         "uploading": "Uploading…",
         "uploadSuccess": "CSV uploaded and columns updated",
         "uploadFailed": "Upload failed"
+      },
+      "genericIngestion": {
+        "currentFile": "Current file",
+        "dropHint": "Drop any file here",
+        "orClick": "or use the button below to browse",
+        "chooseFile": "Choose file",
+        "replaceFile": "Replace file",
+        "uploading": "Uploading…",
+        "uploadSuccess": "File uploaded and columns detected",
+        "uploadFailed": "Upload failed",
+        "converting": "File uploaded — converting with AWS Textract before pipeline runs"
       },
       "responseGroup": {
         "title": "Response Groups",
@@ -143,7 +163,8 @@
     "minLength": "Must be at least {{min}} characters",
     "selectSystem": "Please select an HR system",
     "selectResponseGroup": "At least one response group must be selected",
-    "csvRequired": "Please upload a CSV file"
+    "csvRequired": "Please upload a CSV file",
+    "genericIngestionRequired": "Please upload a file"
   },
   "common": {
     "chatIcon": "💬",

@@ -20,6 +20,10 @@ pub struct S3Repository {
 pub trait S3Repo: Send + Sync {
     async fn presigned_put_url(&self, key: &str) -> Result<String, ApiError>;
     async fn read_csv_headers(&self, key: &str) -> Result<Vec<String>, ApiError>;
+    /// Download the full object bytes from S3.
+    async fn get_object_bytes(&self, key: &str) -> Result<Vec<u8>, ApiError>;
+    /// Upload raw bytes to S3 with the given content type.
+    async fn put_object_bytes(&self, key: &str, bytes: Vec<u8>, content_type: &str) -> Result<(), ApiError>;
 }
 
 #[async_trait]
@@ -93,5 +97,53 @@ impl S3Repo for S3Repository {
         }
 
         Ok(columns)
+    }
+
+    async fn get_object_bytes(&self, key: &str) -> Result<Vec<u8>, ApiError> {
+        let resp = self
+            .s3
+            .get_object()
+            .bucket(&self.bucket)
+            .key(key)
+            .send()
+            .await
+            .map_err(|e| {
+                ApiError::Repository(format!(
+                    "Failed to download s3://{}/{}: {e}",
+                    self.bucket, key
+                ))
+            })?;
+
+        let bytes = resp
+            .body
+            .collect()
+            .await
+            .map_err(|e| ApiError::Repository(format!("Failed to read S3 body: {e}")))?;
+
+        Ok(bytes.into_bytes().to_vec())
+    }
+
+    async fn put_object_bytes(
+        &self,
+        key: &str,
+        bytes: Vec<u8>,
+        content_type: &str,
+    ) -> Result<(), ApiError> {
+        self.s3
+            .put_object()
+            .bucket(&self.bucket)
+            .key(key)
+            .body(bytes.into())
+            .content_type(content_type)
+            .send()
+            .await
+            .map_err(|e| {
+                ApiError::Repository(format!(
+                    "Failed to upload to s3://{}/{}: {e}",
+                    self.bucket, key
+                ))
+            })?;
+
+        Ok(())
     }
 }

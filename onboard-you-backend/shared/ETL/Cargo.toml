@@ -38,6 +38,8 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 macro_rules_attribute.workspace = true
 onboard_you_models = { path = "../../shared/models" }
+calamine = { workspace = true }
+quick-xml = { workspace = true }
 
 [features]
 benchmark = []

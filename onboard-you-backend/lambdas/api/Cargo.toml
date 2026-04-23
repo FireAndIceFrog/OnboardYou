@@ -26,6 +26,7 @@ sqlx = { workspace = true }
 aws-sdk-s3 = { workspace = true }
 aws-sdk-scheduler = { workspace = true }
 aws-sdk-sqs = { workspace = true }
+aws-sdk-textract = { workspace = true }
 chrono = { workspace = true }
 uuid = { workspace = true }
 utoipa = { workspace = true }
