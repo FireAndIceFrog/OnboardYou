@@ -17,7 +17,7 @@ import { useAppDispatch, useAppSelector } from '@/store';
 import type { RootState } from '@/store';
 import { useGlobal } from '@/shared/hooks';
 import { humanFrequency } from '@/shared/domain/types';
-import { AlertTriangleIcon, PlusIcon, PlayIcon, ArrowLeftIcon } from '@/shared/ui';
+import { AlertTriangleIcon, PlusIcon, PlayIcon, ArrowLeftIcon, MenuIcon, CloseIcon } from '@/shared/ui';
 import type { ConnectionForm } from '../../domain/types';
 import {
   fetchConfigDetails,
@@ -92,6 +92,59 @@ function ConfigDetailsContent({
   // ── Current / History tab state ———————————————————————————
   const [activeTab, setActiveTab] = useState<'current' | 'history'>('current');
   const [isTriggering, setIsTriggering] = useState(false);
+
+  // ── Mobile nav drawer ─────────────────────────────────────
+  const [isNavOpen, setIsNavOpen] = useState(false);
+  const hamburgerRef = useRef<HTMLButtonElement>(null);
+  const drawerRef = useRef<HTMLElement>(null);
+
+  // Close on Escape; return focus to trigger
+  useEffect(() => {
+    if (!isNavOpen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsNavOpen(false);
+        hamburgerRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [isNavOpen]);
+
+  // Focus trap: Tab / Shift+Tab cycle within drawer
+  useEffect(() => {
+    if (!isNavOpen || !drawerRef.current) return;
+    const el = drawerRef.current;
+    const FOCUSABLE =
+      'button:not([disabled]),[href],input:not([disabled]),select:not([disabled]),' +
+      'textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+    const focusable = () => Array.from(el.querySelectorAll<HTMLElement>(FOCUSABLE));
+    focusable()[0]?.focus();
+    const trap = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      const els = focusable();
+      if (e.shiftKey) {
+        if (document.activeElement === els[0]) { e.preventDefault(); els[els.length - 1]?.focus(); }
+      } else {
+        if (document.activeElement === els[els.length - 1]) { e.preventDefault(); els[0]?.focus(); }
+      }
+    };
+    el.addEventListener('keydown', trap);
+    return () => el.removeEventListener('keydown', trap);
+  }, [isNavOpen]);
+
+  // Prevent body scroll while drawer is open
+  useEffect(() => {
+    if (!isNavOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [isNavOpen]);
+
+  const closeNav = useCallback(() => {
+    setIsNavOpen(false);
+    hamburgerRef.current?.focus();
+  }, []);
   const isRunning = useAppSelector(selectIsRunning);
 
   // ── Fetch existing config or initialise a blank one ———————
@@ -290,79 +343,224 @@ function ConfigDetailsContent({
 
   return (
     <Flex direction="column" h="100%" bg="tertiary.50">
-      {/* Header */}
-      <Flex as="header" align="center" px="6" py="3" bg="white" borderBottom="1px solid" borderColor="tertiary.200">
-        {/* Left: navigation + title */}
-        <Flex align="center" gap="3" flex="1">
-          <Button variant="ghost" size="sm" color="tertiary.600" onClick={handleBack}>
+      {/* ── Header ─────────────────────────────────────────── */}
+      <Flex
+        as="header"
+        align="center"
+        px={{ base: '3', md: '6' }}
+        py="3"
+        bg="white"
+        borderBottom="1px solid"
+        borderColor="tertiary.200"
+        gap="3"
+      >
+        {/* Always visible: Back + title + badge */}
+        <Flex align="center" gap={{ base: '2', md: '3' }} flex="1" minW="0">
+          <Button variant="ghost" size="sm" color="tertiary.600" onClick={handleBack} flexShrink={0}>
             <ArrowLeftIcon size="1em" /> {t('configDetails.back')}
           </Button>
-          <Heading size="md" fontWeight="600" color="primary.500">{config.name}</Heading>
-          <Badge colorPalette="blue">{humanFrequency(config.cron)}</Badge>
+          <Heading
+            size={{ base: 'sm', md: 'md' }}
+            fontWeight="600"
+            color="primary.500"
+            overflow="hidden"
+            textOverflow="ellipsis"
+            whiteSpace="nowrap"
+            flex="1"
+            minW="0"
+          >
+            {config.name}
+          </Heading>
+          <Badge colorPalette="blue" flexShrink={0}>{humanFrequency(config.cron)}</Badge>
         </Flex>
 
-        {/* Center: tab toggle (fixed position) */}
+        {/* Desktop ≥ md: tab toggle + action buttons inline */}
         {!isNewConfig && (
-          <Flex bg="tertiary.100" borderRadius="md" p="1" gap="1" data-testid="tab-toggle">
-            <Button
-              size="xs"
-              variant={activeTab === 'current' ? 'solid' : 'ghost'}
-              bg={activeTab === 'current' ? 'secondary.500' : undefined}
-              color={activeTab === 'current' ? 'white' : 'tertiary.600'}
-              _hover={activeTab === 'current' ? { bg: 'secondary.600' } : undefined}
-              onClick={() => setActiveTab('current')}
-              data-testid="tab-current"
-            >
+          <Flex display={{ base: 'none', md: 'flex' }} bg="tertiary.100" borderRadius="md" p="1" gap="1" flexShrink={0} data-testid="tab-toggle">
+            <Button size="xs" variant={activeTab === 'current' ? 'solid' : 'ghost'} bg={activeTab === 'current' ? 'secondary.500' : undefined} color={activeTab === 'current' ? 'white' : 'tertiary.600'} _hover={activeTab === 'current' ? { bg: 'secondary.600' } : undefined} onClick={() => setActiveTab('current')} data-testid="tab-current">
               {t('configDetails.tabCurrent', 'Current')}
             </Button>
-            <Button
-              size="xs"
-              variant={activeTab === 'history' ? 'solid' : 'ghost'}
-              bg={activeTab === 'history' ? 'secondary.500' : undefined}
-              color={activeTab === 'history' ? 'white' : 'tertiary.600'}
-              _hover={activeTab === 'history' ? { bg: 'secondary.600' } : undefined}
-              onClick={() => setActiveTab('history')}
-              data-testid="tab-history"
-            >
+            <Button size="xs" variant={activeTab === 'history' ? 'solid' : 'ghost'} bg={activeTab === 'history' ? 'secondary.500' : undefined} color={activeTab === 'history' ? 'white' : 'tertiary.600'} _hover={activeTab === 'history' ? { bg: 'secondary.600' } : undefined} onClick={() => setActiveTab('history')} data-testid="tab-history">
               {t('configDetails.tabHistory', 'History')}
             </Button>
           </Flex>
         )}
 
-        {/* Right: action buttons — use visibility to reserve space on both tabs */}
-        <Flex align="center" gap="2" flex="1" justify="flex-end" visibility={activeTab === 'current' ? 'visible' : 'hidden'}>
-            <>
-              <Button variant="outline" size="sm" borderColor="tertiary.300" color="tertiary.600" onClick={handleToggleAddStep}>
+        {activeTab === 'current' && (
+          <Flex display={{ base: 'none', md: 'flex' }} align="center" gap="2" flexShrink={0}>
+            <Button variant="outline" size="sm" borderColor="tertiary.300" color="tertiary.600" onClick={handleToggleAddStep}>
+              <PlusIcon size="0.875em" /> {t('configDetails.addStep')}
+            </Button>
+            {!isNewConfig && (
+              <Button variant="outline" size="sm" borderColor={isRunning ? 'tertiary.300' : 'secondary.500'} color={isRunning ? 'tertiary.500' : 'secondary.500'} onClick={handleTriggerRun} disabled={isTriggering || isRunning} data-testid="trigger-run">
+                {isRunning ? t('configDetails.running', 'Running…') : isTriggering ? t('configDetails.triggering', 'Triggering…') : (<><PlayIcon size="0.75em" /> {t('configDetails.runNow', 'Run Now')}</>)}
+              </Button>
+            )}
+            <Button bg="primary.500" color="white" _hover={{ bg: 'primary.600' }} size="sm" onClick={handleSave} disabled={isSaving}>
+              {isSaving ? t('configDetails.saving') : t('configDetails.save')}
+            </Button>
+            {!isNewConfig && (
+              <Button variant="outline" size="sm" borderColor="tertiary.300" color="red.500" _hover={{ bg: 'red.50' }} onClick={handleDelete} disabled={isDeleting}>
+                {isDeleting ? t('configDetails.deleting') : t('configDetails.delete')}
+              </Button>
+            )}
+          </Flex>
+        )}
+
+        {/* Mobile < md: hamburger trigger */}
+        <Box display={{ base: 'flex', md: 'none' }} flexShrink={0}>
+          <Button
+            ref={hamburgerRef}
+            variant="ghost"
+            size="sm"
+            color="tertiary.600"
+            aria-label={t('configDetails.openMenu', 'Open menu')}
+            aria-haspopup="dialog"
+            aria-expanded={isNavOpen}
+            aria-controls="pipeline-nav-drawer"
+            onClick={() => setIsNavOpen(true)}
+          >
+            <MenuIcon size="1.25em" />
+          </Button>
+        </Box>
+      </Flex>
+
+      {/* ── Mobile nav drawer (< md) ───────────────────────── */}
+      {/* Backdrop */}
+      {isNavOpen && (
+        <Box
+          position="fixed"
+          inset="0"
+          bg="blackAlpha.600"
+          zIndex="1200"
+          display={{ base: 'block', md: 'none' }}
+          aria-hidden="true"
+          onClick={closeNav}
+        />
+      )}
+
+      {/* Drawer panel */}
+      <Box
+        id="pipeline-nav-drawer"
+        ref={drawerRef as React.RefObject<HTMLDivElement>}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pipeline-nav-drawer-title"
+        position="fixed"
+        top="0"
+        left="0"
+        bottom="0"
+        w="280px"
+        bg="white"
+        zIndex="1201"
+        display={{ base: 'flex', md: 'none' }}
+        flexDirection="column"
+        shadow="2xl"
+        transform={isNavOpen ? 'translateX(0)' : 'translateX(-100%)'}
+        transition="transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)"
+        overflow="auto"
+        tabIndex={-1}
+      >
+        {/* Drawer header */}
+        <Flex
+          align="center"
+          justify="space-between"
+          px="4"
+          py="3"
+          borderBottom="1px solid"
+          borderColor="tertiary.100"
+          flexShrink={0}
+        >
+          <Heading id="pipeline-nav-drawer-title" size="sm" color="primary.500">
+            {config.name}
+          </Heading>
+          <Button
+            variant="ghost"
+            size="sm"
+            color="tertiary.500"
+            aria-label={t('common.close', 'Close menu')}
+            onClick={closeNav}
+          >
+            <CloseIcon size="1em" />
+          </Button>
+        </Flex>
+
+        {/* Tab section */}
+        {!isNewConfig && (
+          <Box px="4" py="3" borderBottom="1px solid" borderColor="tertiary.100">
+            <Text fontSize="xs" fontWeight="600" color="tertiary.500" textTransform="uppercase" letterSpacing="wide" mb="2">
+              {t('configDetails.view', 'View')}
+            </Text>
+            <Flex bg="tertiary.100" borderRadius="md" p="1" gap="1" data-testid="tab-toggle-mobile">
+              <Button
+                flex="1"
+                size="xs"
+                variant={activeTab === 'current' ? 'solid' : 'ghost'}
+                bg={activeTab === 'current' ? 'secondary.500' : undefined}
+                color={activeTab === 'current' ? 'white' : 'tertiary.600'}
+                _hover={activeTab === 'current' ? { bg: 'secondary.600' } : undefined}
+                onClick={() => { setActiveTab('current'); closeNav(); }}
+              >
+                {t('configDetails.tabCurrent', 'Current')}
+              </Button>
+              <Button
+                flex="1"
+                size="xs"
+                variant={activeTab === 'history' ? 'solid' : 'ghost'}
+                bg={activeTab === 'history' ? 'secondary.500' : undefined}
+                color={activeTab === 'history' ? 'white' : 'tertiary.600'}
+                _hover={activeTab === 'history' ? { bg: 'secondary.600' } : undefined}
+                onClick={() => { setActiveTab('history'); closeNav(); }}
+              >
+                {t('configDetails.tabHistory', 'History')}
+              </Button>
+            </Flex>
+          </Box>
+        )}
+
+        {/* Actions section */}
+        <Box px="4" py="3" flex="1">
+          <Text fontSize="xs" fontWeight="600" color="tertiary.500" textTransform="uppercase" letterSpacing="wide" mb="2">
+            {t('configDetails.actions', 'Actions')}
+          </Text>
+          <Flex direction="column" gap="2" as="ul" listStyleType="none">
+            <Box as="li">
+              <Button variant="outline" size="sm" w="full" borderColor="tertiary.300" color="tertiary.600" justifyContent="flex-start" onClick={() => { handleToggleAddStep(); closeNav(); }}>
                 <PlusIcon size="0.875em" /> {t('configDetails.addStep')}
               </Button>
-              {!isNewConfig && (
+            </Box>
+            {!isNewConfig && (
+              <Box as="li">
                 <Button
                   variant="outline"
                   size="sm"
+                  w="full"
+                  justifyContent="flex-start"
                   borderColor={isRunning ? 'tertiary.300' : 'secondary.500'}
                   color={isRunning ? 'tertiary.500' : 'secondary.500'}
-                  onClick={handleTriggerRun}
+                  onClick={() => { handleTriggerRun(); closeNav(); }}
                   disabled={isTriggering || isRunning}
-                  data-testid="trigger-run"
+                  data-testid="trigger-run-mobile"
                 >
-                  {isRunning
-                    ? t('configDetails.running', 'Running…')
-                    : isTriggering
-                      ? t('configDetails.triggering', 'Triggering…')
-                      : (<><PlayIcon size="0.75em" /> {t('configDetails.runNow', 'Run Now')}</>)}
+                  {isRunning ? t('configDetails.running', 'Running…') : isTriggering ? t('configDetails.triggering', 'Triggering…') : (<><PlayIcon size="0.75em" /> {t('configDetails.runNow', 'Run Now')}</>)}
                 </Button>
-              )}
-              <Button bg="primary.500" color="white" _hover={{ bg: 'primary.600' }} size="sm" onClick={handleSave} disabled={isSaving}>
+              </Box>
+            )}
+            <Box as="li">
+              <Button bg="primary.500" color="white" _hover={{ bg: 'primary.600' }} size="sm" w="full" justifyContent="flex-start" onClick={() => { handleSave(); closeNav(); }} disabled={isSaving}>
                 {isSaving ? t('configDetails.saving') : t('configDetails.save')}
               </Button>
-              {!isNewConfig && (
-                <Button variant="outline" size="sm" borderColor="tertiary.300" color="red.500" _hover={{ bg: 'red.50' }} onClick={handleDelete} disabled={isDeleting}>
+            </Box>
+            {!isNewConfig && (
+              <Box as="li">
+                <Button variant="outline" size="sm" w="full" justifyContent="flex-start" borderColor="tertiary.300" color="red.500" _hover={{ bg: 'red.50' }} onClick={() => { handleDelete(); closeNav(); }} disabled={isDeleting}>
                   {isDeleting ? t('configDetails.deleting') : t('configDetails.delete')}
                 </Button>
-              )}
-            </>
-        </Flex>
-      </Flex>
+              </Box>
+            )}
+          </Flex>
+        </Box>
+      </Box>
 
       {/* Body */}
       <Flex flex="1" overflow="hidden">
