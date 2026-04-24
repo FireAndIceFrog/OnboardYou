@@ -162,8 +162,8 @@
     },
     "edit": {
       "configuration": "Configuration",
-      "removeStep": "🗑️ Remove this step",
-      "confirmRemove": "⚠️ Click again to confirm removal",
+      "removeStep": "Remove this step",
+      "confirmRemove": "Click again to confirm removal",
       "addMapping": "Add mapping",
       "removeMapping": "Remove",
       "mappingFrom": "Current Name",

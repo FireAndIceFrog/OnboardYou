@@ -47,7 +47,7 @@
   "settings": {
     "title": "My Systems",
     "subtitle": "Configure where processed employee data is dispatched after each pipeline run.",
-    "saved": "Saved ✓",
+    "saved": "Saved",
     "unsaved": "Unsaved",
     "saving": "Saving…",
     "loading": "Loading settings…",
@@ -106,7 +106,7 @@
       "client_credentials": "Client Credentials",
       "authorization_code": "Authorization Code"
     },
-    "testConnection": "🔗 Test Connection",
+    "testConnection": "Test Connection",
     "saveSettings": "Save Settings",
     "showAdvanced": "Show advanced settings",
     "hideAdvanced": "Hide advanced settings",
@@ -122,12 +122,12 @@
       "description": "Configure the schema of the object sent to your API and optionally the path used as the request body.",
       "schema": "Schema",
       "schemaHint": "Define the fields that make up your API payload.",
-      "addField": "+ Add Field",
+      "addField": "Add Field",
       "fieldName": "Field Name",
       "fieldType": "Field Type",
       "deleteField": "Delete",
       "fieldNamePlaceholder": "e.g. employee_id",
-      "emptySchema": "No fields defined yet. Click \"+ Add Field\" to get started.",
+      "emptySchema": "No fields defined yet. Click \"Add Field\" to get started.",
       "bodyPath": "Body Path",
       "bodyPathPlaceholder": "e.g. data.items"
     }
