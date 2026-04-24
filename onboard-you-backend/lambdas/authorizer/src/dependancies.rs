@@ -24,7 +24,7 @@ impl Dependancies {
 
         Self {
             auth_engine: AuthEngine::new(cfg.clone()),
-            jwks_repository: jwks_repository,
+            jwks_repository,
         }
     }
 }

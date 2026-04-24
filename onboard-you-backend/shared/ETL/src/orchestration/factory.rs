@@ -7,6 +7,7 @@
 //! a compiler error here until you wire it up.
 
 use crate::capabilities::egress::api_dispatcher::ApiDispatcher;
+use crate::capabilities::egress::show_data::ShowData;
 use crate::capabilities::ingestion::engine::{GenericIngestionConnector, WorkdayHrisConnector, SageHrConnector};
 use crate::capabilities::logic::engine::{
     CellphoneSanitizer, DropColumn, FilterByValue, HandleDiacritics, IdentityDeduplicator,
@@ -22,6 +23,7 @@ use polars::prelude::LazyFrame;
 use std::sync::Arc;
 
 /// Factory for creating OnboardingAction instances from manifest action configs.
+#[derive(Default)]
 pub struct ActionFactory;
 
 /// Captures which action failed and the error details.
@@ -41,7 +43,7 @@ impl std::fmt::Display for StepError {
 
 impl ActionFactory {
     pub fn new() -> Self {
-        ActionFactory {}
+        Self
     }
 }
 
@@ -130,6 +132,17 @@ impl ActionFactoryTrait for ActionFactory {
                 } else {
                     let action = ApiDispatcher::from_action_config(&cfg)?;
                     Ok(Arc::new(action))
+                }
+            }
+            (ActionType::ShowData, ActionConfigPayload::ShowData(cfg)) => {
+                // During validation (s3_key is None) create an unresolved stub —
+                // calculate_columns() is a pass-through so no S3 key is needed.
+                if cfg.s3_key.is_some() {
+                    let action = ShowData::from_action_config(&cfg)?;
+                    Ok(Arc::new(action))
+                } else {
+                    // Validation path: wrap a dummy that passes columns through.
+                    Ok(Arc::new(ShowDataStub))
                 }
             }
             (t, _) => Err(Error::ConfigurationError(format!(
@@ -224,6 +237,27 @@ impl ActionFactoryTrait for ActionFactory {
             })?;
         }
         Ok(context)
+    }
+}
+
+/// Validation-only stub for `ShowData`.
+///
+/// When the manifest is being validated (no S3 key yet) we still need to
+/// handle the `ShowData` arm in the factory.  This struct implements the
+/// pass-through `ColumnCalculator` and a no-op `OnboardingAction::execute`
+/// so column propagation works without an S3 key.
+struct ShowDataStub;
+impl onboard_you_models::ColumnCalculator for ShowDataStub {
+    fn calculate_columns(&self, ctx: RosterContext) -> Result<RosterContext> {
+        Ok(ctx)
+    }
+}
+impl OnboardingAction for ShowDataStub {
+    fn id(&self) -> &str {
+        "show_data"
+    }
+    fn execute(&self, ctx: RosterContext) -> Result<RosterContext> {
+        Ok(ctx)
     }
 }
 
@@ -591,5 +625,54 @@ mod tests {
         let warnings = result.deps.logger.drain_deferred_warnings();
         assert_eq!(warnings.len(), 1);
         assert_eq!(warnings[0].message, "test warning");
+    }
+
+    // -----------------------------------------------------------------------
+    // ShowData factory tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_factory_creates_show_data_stub_without_resolved_key() {
+        use onboard_you_models::ShowDataConfig;
+        // No s3_key resolved → factory returns the validation stub
+        let config = ActionConfig {
+            id: "snapshot".into(),
+            action_type: ActionType::ShowData,
+            config: ActionConfigPayload::ShowData(ShowDataConfig::default()),
+        };
+        let action = ActionFactory::new()
+            .create(&config)
+            .expect("ShowData without s3_key should produce a stub action");
+        assert_eq!(action.id(), "show_data");
+    }
+
+    #[test]
+    fn test_factory_creates_show_data_with_resolved_key() {
+        use onboard_you_models::ShowDataConfig;
+        let mut cfg = ShowDataConfig::default();
+        cfg.resolve_s3_key("org", "co", "snapshot");
+        let config = ActionConfig {
+            id: "snapshot".into(),
+            action_type: ActionType::ShowData,
+            config: ActionConfigPayload::ShowData(cfg),
+        };
+        let action = ActionFactory::new()
+            .create(&config)
+            .expect("ShowData with a resolved key should produce a real action");
+        assert_eq!(action.id(), "show_data");
+    }
+
+    #[test]
+    fn test_show_data_action_type_round_trip_serde() {
+        use onboard_you_models::ShowDataConfig;
+        let config = ActionConfig {
+            id: "snap".into(),
+            action_type: ActionType::ShowData,
+            config: ActionConfigPayload::ShowData(ShowDataConfig::default()),
+        };
+        let json = serde_json::to_string(&config).unwrap();
+        assert!(json.contains("\"show_data\""), "JSON must include the show_data type string");
+        let back: ActionConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.action_type, ActionType::ShowData);
     }
 }

@@ -29,7 +29,7 @@ pub async fn list_runs(
     Path(customer_company_id): Path<String>,
     Query(params): Query<ListRunsQuery>,
 ) -> Result<Json<ListResponse<PipelineRun>>, ApiError> {
-    let per_page = params.count_per_page.unwrap_or(20).min(100).max(1);
+    let per_page = params.count_per_page.unwrap_or(20).clamp(1, 100);
     let page = params.page.unwrap_or(1).max(1);
     let offset = (page - 1) * per_page;
 

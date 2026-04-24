@@ -5,6 +5,7 @@ import { PiiMaskingPanel } from './PiiMaskingPanel';
 import { WorkdayResponseGroupPanel } from './WorkdayResponseGroupPanel';
 import { SageHrHistoryPanel } from './SageHrHistoryPanel';
 import { ApiDispatcherPanel } from './ApiDispatcherPanel';
+import { ShowDataPanel } from './ShowDataPanel';
 
 /**
  * Props that every custom action panel receives.
@@ -33,6 +34,7 @@ const ACTION_PANEL_REGISTRY: Partial<Record<ActionType, ComponentType<ActionEdit
   workday_hris_connector: WorkdayResponseGroupPanel,
   sage_hr_connector: SageHrHistoryPanel,
   api_dispatcher: ApiDispatcherPanel,
+  show_data: ShowDataPanel,
 };
 
 /**

@@ -459,6 +459,78 @@
         }
       }
     },
+    "/config/{customer_company_id}/outputs/{action_id}": {
+      "get": {
+        "tags": [
+          "Show Data"
+        ],
+        "summary": "GET /config/{customer_company_id}/outputs/{action_id}",
+        "description": "Reads the CSV produced by the named `ShowData` pipeline step and returns\nit as a structured JSON payload.  Returns 404 if the output file does not\nyet exist (i.e. the pipeline has not run successfully with that step).",
+        "operationId": "get_show_data",
+        "parameters": [
+          {
+            "name": "customer_company_id",
+            "in": "path",
+            "description": "Customer company identifier",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "action_id",
+            "in": "path",
+            "description": "ID of the ShowData pipeline step",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSV output as JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShowDataResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Output not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/config/{customer_company_id}/runs": {
       "get": {
         "tags": [
@@ -939,6 +1011,9 @@
             "$ref": "#/components/schemas/ApiDispatcherConfig"
           },
           {
+            "$ref": "#/components/schemas/ShowDataConfig"
+          },
+          {
             "$ref": "#/components/schemas/GenericIngestionConnectorConfig"
           }
         ],
@@ -946,7 +1021,7 @@
       },
       "ActionType": {
         "type": "string",
-        "description": "All known action types in the pipeline.\n\nThis is the **single source of truth** — adding a new capability requires\nadding a variant here, which then forces the factory to handle it\n(exhaustive match). Serde maps these to/from `snake_case` JSON strings.\n\n| JSON value                | Variant                |\n|---------------------------|------------------------|\n| `\"workday_hris_connector\"`| `WorkdayHrisConnector` |\n| `\"sage_hr_connector\"`     | `SageHrConnector`      |\n| `\"scd_type_2\"`            | `ScdType2`             |\n| `\"pii_masking\"`           | `PiiMasking`           |\n| `\"identity_deduplicator\"` | `IdentityDeduplicator` |\n| `\"regex_replace\"`         | `RegexReplace`         |\n| `\"iso_country_sanitizer\"` | `IsoCountrySanitizer`  |\n| `\"cellphone_sanitizer\"`   | `CellphoneSanitizer`   |\n| `\"handle_diacritics\"`     | `HandleDiacritics`     |\n| `\"rename_column\"`         | `RenameColumn`         |\n| `\"drop_column\"`           | `DropColumn`           |\n| `\"filter_by_value\"`       | `FilterByValue`        |\n| `\"api_dispatcher\"`        | `ApiDispatcher`        |\n| `\"generic_ingestion_connector\"` | `GenericIngestionConnector` |",
+        "description": "All known action types in the pipeline.\n\nThis is the **single source of truth** — adding a new capability requires\nadding a variant here, which then forces the factory to handle it\n(exhaustive match). Serde maps these to/from `snake_case` JSON strings.\n\n| JSON value                | Variant                |\n|---------------------------|------------------------|\n| `\"workday_hris_connector\"`| `WorkdayHrisConnector` |\n| `\"sage_hr_connector\"`     | `SageHrConnector`      |\n| `\"scd_type_2\"`            | `ScdType2`             |\n| `\"pii_masking\"`           | `PiiMasking`           |\n| `\"identity_deduplicator\"` | `IdentityDeduplicator` |\n| `\"regex_replace\"`         | `RegexReplace`         |\n| `\"iso_country_sanitizer\"` | `IsoCountrySanitizer`  |\n| `\"cellphone_sanitizer\"`   | `CellphoneSanitizer`   |\n| `\"handle_diacritics\"`     | `HandleDiacritics`     |\n| `\"rename_column\"`         | `RenameColumn`         |\n| `\"drop_column\"`           | `DropColumn`           |\n| `\"filter_by_value\"`       | `FilterByValue`        |\n| `\"api_dispatcher\"`        | `ApiDispatcher`        |\n| `\"show_data\"`             | `ShowData`             |\n| `\"generic_ingestion_connector\"` | `GenericIngestionConnector` |",
         "enum": [
           "workday_hris_connector",
           "sage_hr_connector",
@@ -961,7 +1036,8 @@
           "rename_column",
           "drop_column",
           "filter_by_value",
-          "api_dispatcher"
+          "api_dispatcher",
+          "show_data"
         ]
       },
       "ApiDispatcherConfig": {
@@ -2461,6 +2537,47 @@
           }
         }
       },
+      "ShowDataConfig": {
+        "type": "object",
+        "description": "Configuration for the `ShowData` pipeline action.\n\nNo user-facing fields are required — the S3 output key is derived at\nruntime from the organisation, company and action IDs:\n`{org_id}/{company_id}/outputs/{action_id}.csv`\n\nMultiple `ShowData` steps in the same pipeline write to distinct files\nbecause each action has a unique `id` within the manifest.",
+        "properties": {
+          "s3_key": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Resolved S3 object key for the output CSV — injected at runtime.\n\nNot present in user-authored manifests; set by the pipeline engine\nimmediately before the actions are built."
+          }
+        }
+      },
+      "ShowDataResponse": {
+        "type": "object",
+        "description": "Response body for a single `ShowData` output file.",
+        "required": [
+          "columns",
+          "rows"
+        ],
+        "properties": {
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Column names derived from the CSV header row."
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {},
+              "propertyNames": {
+                "type": "string"
+              }
+            },
+            "description": "Rows as JSON objects (column name → string value)."
+          }
+        }
+      },
       "StartConversionRequest": {
         "type": "object",
         "description": "Request body for `POST /config/{id}/start-conversion`.\n\nInstructs the backend to convert the already-uploaded file to CSV.\nCSV files are short-circuited — no conversion is needed and column names\nare returned immediately.",
@@ -2660,6 +2777,10 @@
     {
       "name": "Settings",
       "description": "Organization settings management"
+    },
+    {
+      "name": "Show Data",
+      "description": "View data output from ShowData pipeline steps"
     }
   ]
 }

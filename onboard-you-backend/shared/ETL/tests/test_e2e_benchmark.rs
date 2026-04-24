@@ -102,7 +102,7 @@ fn run_full_pipeline(n: usize) -> RunMetrics {
         .map(|ac| {
             ActionFactory::new()
                 .create(ac)
-                .expect(&format!("create action '{}'", ac.action_type))
+                .unwrap_or_else(|_| panic!("create action '{}'", ac.action_type))
         })
         .collect();
 

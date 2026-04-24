@@ -23,6 +23,12 @@ pub struct Logging {
     /// Cloned into closures; drained after `.collect()` by the pipeline runner.
     warning_collector: WarningCollector,
 }
+impl Default for Logging {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Logging {
     pub fn new() -> Self {
         Self {

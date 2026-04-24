@@ -25,8 +25,8 @@ use polars::prelude::*;
 /// Generates:
 /// - `SAGE_HR_COLUMNS` — the fixed column list for schema / provenance.
 /// - `employees_to_dataframe` — columnar extraction that is guaranteed
-///    to stay aligned because both the column name and the struct field
-///    come from the same macro arm.
+///   to stay aligned because both the column name and the struct field
+///   come from the same macro arm.
 macro_rules! sage_hr_fields {
     ( $( ($col:expr, $field:ident) ),* $(,)? ) => {
         /// The fixed set of columns produced by the Sage HR connector.
@@ -532,7 +532,7 @@ mod tests {
             .iter()
             .map(|col| {
                 let val = df
-                    .column(*col)
+                    .column(col)
                     .unwrap()
                     .str()
                     .unwrap()

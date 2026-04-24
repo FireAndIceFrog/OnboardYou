@@ -3,6 +3,7 @@ pub mod config_controller;
 pub mod csv_upload_controller;
 pub mod runs_controller;
 pub mod settings_controller;
+pub mod show_data_controller;
 
 pub use auth_controller::login;
 pub use config_controller::{
@@ -11,3 +12,4 @@ pub use config_controller::{
 pub use csv_upload_controller::{csv_presigned_upload, start_conversion};
 pub use runs_controller::{get_run, list_runs, trigger_run};
 pub use settings_controller::{get_settings, upsert_settings};
+pub use show_data_controller::get_show_data;

@@ -11,10 +11,12 @@ pub mod api_dispatcher;
 pub mod engine;
 pub mod observability;
 pub mod repositories;
+pub mod show_data;
 pub mod traits;
 
 pub use api_dispatcher::*;
 pub use engine::*;
 pub use observability::*;
 pub use repositories::*;
+pub use show_data::*;
 pub use traits::*;

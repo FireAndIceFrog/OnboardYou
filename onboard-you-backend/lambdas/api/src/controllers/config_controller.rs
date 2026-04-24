@@ -43,7 +43,7 @@ pub async fn list_configs(
     claims: Claims,
     Query(params): Query<ListConfigsQuery>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let per_page = params.count_per_page.unwrap_or(20).min(100).max(1);
+    let per_page = params.count_per_page.unwrap_or(20).clamp(1, 100);
     let page = params.page.unwrap_or(1).max(1);
     let configs = engine::config_engine::list(&state, &claims.organization_id).await?;
     Ok(Json(ListResponse::from_vec(configs, page, per_page)))

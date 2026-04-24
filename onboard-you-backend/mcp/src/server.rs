@@ -207,12 +207,12 @@ impl ServerHandler for OnboardYouMcp {
         )
     }
 
-    fn list_resources(
+    async fn list_resources(
         &self,
         _request: Option<PaginatedRequestParams>,
         _context: RequestContext<RoleServer>,
-    ) -> impl std::future::Future<Output = Result<ListResourcesResult, McpError>> + Send + '_ {
-        async move {
+    ) -> Result<ListResourcesResult, McpError> {
+        {
             let resources = self
                 .schemas
                 .iter()
@@ -229,12 +229,12 @@ impl ServerHandler for OnboardYouMcp {
         }
     }
 
-    fn read_resource(
+    async fn read_resource(
         &self,
         request: ReadResourceRequestParams,
         _context: RequestContext<RoleServer>,
-    ) -> impl std::future::Future<Output = Result<ReadResourceResult, McpError>> + Send + '_ {
-        async move {
+    ) -> Result<ReadResourceResult, McpError> {
+        {
             let uri = &request.uri;
             let res = self
                 .schemas

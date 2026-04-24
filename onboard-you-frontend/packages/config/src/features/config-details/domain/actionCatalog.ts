@@ -12,6 +12,7 @@ import {
   EraserIcon,
   CalendarIcon,
   RocketIcon,
+  TableIcon,
 } from '@/shared/ui';
 
 /* ── Catalog entry ─────────────────────────────────────────── */
@@ -119,6 +120,14 @@ export const ACTION_CATALOG: ActionCatalogEntry[] = [
     description: 'Send the processed data to an external API endpoint.',
     category: 'egress',
     defaultConfig: { auth_type: 'default' },
+  },
+  {
+    actionType: 'show_data',
+    label: 'Show Data',
+    icon: TableIcon,
+    description: 'Save a snapshot of the current data to S3 and display it in the pipeline view.',
+    category: 'egress',
+    defaultConfig: {},
   },
 ];
 

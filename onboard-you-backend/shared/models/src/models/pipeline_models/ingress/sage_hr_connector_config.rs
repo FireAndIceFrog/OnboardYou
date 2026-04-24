@@ -60,7 +60,7 @@ impl SageHrConfig {
 
     /// Build query parameters for the employees endpoint.
     pub fn query_params(&self, page: u32) -> Vec<(&'static str, String)> {
-        let mut params = vec![("page".into(), page.to_string())];
+        let mut params = vec![("page", page.to_string())];
         if self.include_team_history {
             params.push(("team_history", "true".into()));
         }

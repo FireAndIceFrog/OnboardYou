@@ -33,7 +33,7 @@ export type ActionConfig = {
  * JSON serialisation (no wrapper key), while `ToSchema` generates a
  * `oneOf` schema listing every config variant for OpenAPI.
  */
-export type ActionConfigPayload = WorkdayConfig | SageHrConfig | ScdType2Config | PiiMaskingConfig | DedupConfig | RegexReplaceConfig | IsoCountrySanitizerConfig | CellphoneSanitizerConfig | HandleDiacriticsConfig | RenameConfig | DropConfig | FilterByValueConfig | ApiDispatcherConfig | GenericIngestionConnectorConfig;
+export type ActionConfigPayload = WorkdayConfig | SageHrConfig | ScdType2Config | PiiMaskingConfig | DedupConfig | RegexReplaceConfig | IsoCountrySanitizerConfig | CellphoneSanitizerConfig | HandleDiacriticsConfig | RenameConfig | DropConfig | FilterByValueConfig | ApiDispatcherConfig | ShowDataConfig | GenericIngestionConnectorConfig;
 
 /**
  * All known action types in the pipeline.
@@ -57,9 +57,10 @@ export type ActionConfigPayload = WorkdayConfig | SageHrConfig | ScdType2Config 
  * | `"drop_column"`           | `DropColumn`           |
  * | `"filter_by_value"`       | `FilterByValue`        |
  * | `"api_dispatcher"`        | `ApiDispatcher`        |
+ * | `"show_data"`             | `ShowData`             |
  * | `"generic_ingestion_connector"` | `GenericIngestionConnector` |
  */
-export type ActionType = 'workday_hris_connector' | 'sage_hr_connector' | 'generic_ingestion_connector' | 'scd_type_2' | 'pii_masking' | 'identity_deduplicator' | 'regex_replace' | 'iso_country_sanitizer' | 'cellphone_sanitizer' | 'handle_diacritics' | 'rename_column' | 'drop_column' | 'filter_by_value' | 'api_dispatcher';
+export type ActionType = 'workday_hris_connector' | 'sage_hr_connector' | 'generic_ingestion_connector' | 'scd_type_2' | 'pii_masking' | 'identity_deduplicator' | 'regex_replace' | 'iso_country_sanitizer' | 'cellphone_sanitizer' | 'handle_diacritics' | 'rename_column' | 'drop_column' | 'filter_by_value' | 'api_dispatcher' | 'show_data';
 
 /**
  * Fully-typed API dispatcher configuration.
@@ -1085,6 +1086,42 @@ export type SettingsRequest = {
 };
 
 /**
+ * Configuration for the `ShowData` pipeline action.
+ *
+ * No user-facing fields are required — the S3 output key is derived at
+ * runtime from the organisation, company and action IDs:
+ * `{org_id}/{company_id}/outputs/{action_id}.csv`
+ *
+ * Multiple `ShowData` steps in the same pipeline write to distinct files
+ * because each action has a unique `id` within the manifest.
+ */
+export type ShowDataConfig = {
+    /**
+     * Resolved S3 object key for the output CSV — injected at runtime.
+     *
+     * Not present in user-authored manifests; set by the pipeline engine
+     * immediately before the actions are built.
+     */
+    s3_key?: string | null;
+};
+
+/**
+ * Response body for a single `ShowData` output file.
+ */
+export type ShowDataResponse = {
+    /**
+     * Column names derived from the CSV header row.
+     */
+    columns: Array<string>;
+    /**
+     * Rows as JSON objects (column name → string value).
+     */
+    rows: Array<{
+        [key: string]: unknown;
+    }>;
+};
+
+/**
  * Request body for `POST /config/{id}/start-conversion`.
  *
  * Instructs the backend to convert the already-uploaded file to CSV.
@@ -1481,6 +1518,48 @@ export type CsvPresignedUploadResponses = {
 };
 
 export type CsvPresignedUploadResponse = CsvPresignedUploadResponses[keyof CsvPresignedUploadResponses];
+
+export type GetShowDataData = {
+    body?: never;
+    path: {
+        /**
+         * Customer company identifier
+         */
+        customer_company_id: string;
+        /**
+         * ID of the ShowData pipeline step
+         */
+        action_id: string;
+    };
+    query?: never;
+    url: '/config/{customer_company_id}/outputs/{action_id}';
+};
+
+export type GetShowDataErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ErrorResponse;
+    /**
+     * Output not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal server error
+     */
+    500: ErrorResponse;
+};
+
+export type GetShowDataError = GetShowDataErrors[keyof GetShowDataErrors];
+
+export type GetShowDataResponses = {
+    /**
+     * CSV output as JSON
+     */
+    200: ShowDataResponse;
+};
+
+export type GetShowDataResponse = GetShowDataResponses[keyof GetShowDataResponses];
 
 export type ListRunsData = {
     body?: never;

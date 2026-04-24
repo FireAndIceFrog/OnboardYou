@@ -27,6 +27,7 @@ use utoipa::ToSchema;
 /// | `"drop_column"`           | `DropColumn`           |
 /// | `"filter_by_value"`       | `FilterByValue`        |
 /// | `"api_dispatcher"`        | `ApiDispatcher`        |
+/// | `"show_data"`             | `ShowData`             |
 /// | `"generic_ingestion_connector"` | `GenericIngestionConnector` |
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
@@ -46,6 +47,7 @@ pub enum ActionType {
     DropColumn,
     FilterByValue,
     ApiDispatcher,
+    ShowData,
 }
 
 impl fmt::Display for ActionType {
@@ -141,6 +143,9 @@ impl<'de> Deserialize<'de> for ActionConfig {
             ActionType::ApiDispatcher => ActionConfigPayload::ApiDispatcher(
                 serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
             ),
+            ActionType::ShowData => ActionConfigPayload::ShowData(
+                serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
+            ),
             ActionType::GenericIngestionConnector => ActionConfigPayload::GenericIngestionConnector(
                 serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
             ),
@@ -178,6 +183,7 @@ pub enum ActionConfigPayload {
     FilterByValue(crate::FilterByValueConfig),
 
     ApiDispatcher(crate::ApiDispatcherConfig),
+    ShowData(crate::ShowDataConfig),
 
     GenericIngestionConnector(crate::GenericIngestionConnectorConfig),
 }
@@ -242,5 +248,24 @@ mod tests {
         assert_eq!(ActionType::ScdType2.to_string(), "scd_type_2");
         assert_eq!(ActionType::ApiDispatcher.to_string(), "api_dispatcher");
         assert_eq!(ActionType::GenericIngestionConnector.to_string(), "generic_ingestion_connector");
+        assert_eq!(ActionType::ShowData.to_string(), "show_data");
+    }
+
+    #[test]
+    fn test_manifest_deserializes_show_data_step() {
+        let json = r#"{
+            "version": "1.0",
+            "actions": [
+                {
+                    "id": "preview",
+                    "action_type": "show_data",
+                    "config": {}
+                }
+            ]
+        }"#;
+
+        let manifest = Manifest::from_json(json).expect("should parse a show_data step");
+        assert_eq!(manifest.actions[0].action_type, ActionType::ShowData);
+        assert!(matches!(manifest.actions[0].config, ActionConfigPayload::ShowData(_)));
     }
 }

@@ -159,8 +159,8 @@ impl OnboardingAction for IdentityDeduplicator {
         let mut canonical_ids: Vec<String> = Vec::with_capacity(n);
         let mut is_duplicate: Vec<bool> = Vec::with_capacity(n);
 
-        for i in 0..n {
-            let key = dedup_keys[i].as_str();
+        for (i, dedup_key) in dedup_keys.iter().enumerate().take(n) {
+            let key = dedup_key.as_str();
             let emp_id = employee_ids.get(i).unwrap_or("unknown");
 
             if let Some(&canon) = first_occurrence.get(key) {
