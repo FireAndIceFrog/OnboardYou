@@ -161,6 +161,10 @@ module "etl_trigger" {
       actions   = ["s3:GetObject"]
       resources = ["${module.csv_upload_bucket.bucket_arn}/*"]
     },
+    {
+      actions   = ["s3:PutObject"]
+      resources = ["${module.csv_upload_bucket.bucket_arn}/*/outputs/*"]
+    },
     # Textract — required when the ETL processes a GenericIngestionConnector
     # action on a non-CSV file (PDF, image, XML etc.).  The ETL calls
     # StartDocumentAnalysis / GetDocumentAnalysis on objects in the CSV upload
