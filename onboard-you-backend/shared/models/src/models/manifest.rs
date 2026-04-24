@@ -27,6 +27,7 @@ use utoipa::ToSchema;
 /// | `"drop_column"`           | `DropColumn`           |
 /// | `"filter_by_value"`       | `FilterByValue`        |
 /// | `"api_dispatcher"`        | `ApiDispatcher`        |
+/// | `"show_data"`             | `ShowData`             |
 /// | `"generic_ingestion_connector"` | `GenericIngestionConnector` |
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
@@ -46,6 +47,7 @@ pub enum ActionType {
     DropColumn,
     FilterByValue,
     ApiDispatcher,
+    ShowData,
 }
 
 impl fmt::Display for ActionType {
@@ -141,6 +143,9 @@ impl<'de> Deserialize<'de> for ActionConfig {
             ActionType::ApiDispatcher => ActionConfigPayload::ApiDispatcher(
                 serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
             ),
+            ActionType::ShowData => ActionConfigPayload::ShowData(
+                serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
+            ),
             ActionType::GenericIngestionConnector => ActionConfigPayload::GenericIngestionConnector(
                 serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
             ),
@@ -178,6 +183,7 @@ pub enum ActionConfigPayload {
     FilterByValue(crate::FilterByValueConfig),
 
     ApiDispatcher(crate::ApiDispatcherConfig),
+    ShowData(crate::ShowDataConfig),
 
     GenericIngestionConnector(crate::GenericIngestionConnectorConfig),
 }

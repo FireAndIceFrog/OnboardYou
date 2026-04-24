@@ -205,6 +205,17 @@ export function RocketIcon({ size, ...props }: IconProps) {
   );
 }
 
+export function TableIcon({ size, ...props }: IconProps) {
+  return (
+    <svg {...defaults(size)} {...props}>
+      <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M3 9h18" />
+      <path d="M3 15h18" />
+      <path d="M9 3v18" />
+    </svg>
+  );
+}
+
 /* ── UI controls ───────────────────────────────────────────── */
 
 export function MenuIcon({ size, ...props }: IconProps) {

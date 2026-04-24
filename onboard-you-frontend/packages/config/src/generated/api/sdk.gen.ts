@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateConfigData, CreateConfigErrors, CreateConfigResponses, CsvPresignedUploadData, CsvPresignedUploadErrors, CsvPresignedUploadResponses, DeleteConfigData, DeleteConfigErrors, DeleteConfigResponses, GetConfigData, GetConfigErrors, GetConfigResponses, GetRunData, GetRunErrors, GetRunResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, ListConfigsData, ListConfigsErrors, ListConfigsResponses, ListRunsData, ListRunsErrors, ListRunsResponses, LoginData, LoginErrors, LoginResponses, StartConversionData, StartConversionErrors, StartConversionResponses, TriggerRunData, TriggerRunErrors, TriggerRunResponses, UpdateConfigData, UpdateConfigErrors, UpdateConfigResponses, UpsertSettingsData, UpsertSettingsErrors, UpsertSettingsResponses, ValidateConfigData, ValidateConfigErrors, ValidateConfigResponses } from './types.gen';
+import type { CreateConfigData, CreateConfigErrors, CreateConfigResponses, CsvPresignedUploadData, CsvPresignedUploadErrors, CsvPresignedUploadResponses, DeleteConfigData, DeleteConfigErrors, DeleteConfigResponses, GetConfigData, GetConfigErrors, GetConfigResponses, GetRunData, GetRunErrors, GetRunResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, GetShowDataData, GetShowDataErrors, GetShowDataResponses, ListConfigsData, ListConfigsErrors, ListConfigsResponses, ListRunsData, ListRunsErrors, ListRunsResponses, LoginData, LoginErrors, LoginResponses, StartConversionData, StartConversionErrors, StartConversionResponses, TriggerRunData, TriggerRunErrors, TriggerRunResponses, UpdateConfigData, UpdateConfigErrors, UpdateConfigResponses, UpsertSettingsData, UpsertSettingsErrors, UpsertSettingsResponses, ValidateConfigData, ValidateConfigErrors, ValidateConfigResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -114,6 +114,19 @@ export const updateConfig = <ThrowOnError extends boolean = false>(options: Opti
 export const csvPresignedUpload = <ThrowOnError extends boolean = false>(options: Options<CsvPresignedUploadData, ThrowOnError>) => (options.client ?? client).post<CsvPresignedUploadResponses, CsvPresignedUploadErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/config/{customer_company_id}/csv-upload',
+    ...options
+});
+
+/**
+ * GET /config/{customer_company_id}/outputs/{action_id}
+ *
+ * Reads the CSV produced by the named `ShowData` pipeline step and returns
+ * it as a structured JSON payload.  Returns 404 if the output file does not
+ * yet exist (i.e. the pipeline has not run successfully with that step).
+ */
+export const getShowData = <ThrowOnError extends boolean = false>(options: Options<GetShowDataData, ThrowOnError>) => (options.client ?? client).get<GetShowDataResponses, GetShowDataErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/config/{customer_company_id}/outputs/{action_id}',
     ...options
 });
 

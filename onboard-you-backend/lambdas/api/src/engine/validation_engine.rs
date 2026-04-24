@@ -40,6 +40,13 @@ pub async fn validate_pipeline(
             None => return Err(ApiError::Validation("No actions in manifest".into())),
         };
         let egress_config: Box<dyn DynamicEgressModel> = match last_action.config.clone() {
+            ActionConfigPayload::ShowData(_) => {
+                // ShowData accepts any columns — no fixed schema to validate against.
+                return Ok(ValidationResult {
+                    steps: validation_result.steps,
+                    final_columns,
+                });
+            }
             ActionConfigPayload::ApiDispatcher(cfg) => {
                 let pre_settings = match cfg {
                     ApiDispatcherConfig::Default => {
@@ -75,7 +82,7 @@ pub async fn validate_pipeline(
                 }
             },
             _ => return Err(ApiError::Validation(format!(
-                "Last step must be an API Dispatcher, found '{}'",
+                "Last step must be an egress action (API Dispatcher or Show Data), found '{}'",
                 last_action.action_type
             ))),
         }?;

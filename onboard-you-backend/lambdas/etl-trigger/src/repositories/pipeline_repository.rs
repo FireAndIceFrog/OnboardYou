@@ -51,6 +51,9 @@ impl IPipelineRepo for PipelineRepository {
             if let ActionConfigPayload::GenericIngestionConnector(ref mut cfg) = ac.config {
                 cfg.resolve_s3_key(organization_id, customer_company_id);
             }
+            if let ActionConfigPayload::ShowData(ref mut cfg) = ac.config {
+                cfg.resolve_s3_key(organization_id, customer_company_id, &ac.id);
+            }
         }
 
         // Build actions from manifest via Factory

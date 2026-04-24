@@ -7,6 +7,7 @@
 //! a compiler error here until you wire it up.
 
 use crate::capabilities::egress::api_dispatcher::ApiDispatcher;
+use crate::capabilities::egress::show_data::ShowData;
 use crate::capabilities::ingestion::engine::{GenericIngestionConnector, WorkdayHrisConnector, SageHrConnector};
 use crate::capabilities::logic::engine::{
     CellphoneSanitizer, DropColumn, FilterByValue, HandleDiacritics, IdentityDeduplicator,
@@ -132,6 +133,17 @@ impl ActionFactoryTrait for ActionFactory {
                     Ok(Arc::new(action))
                 }
             }
+            (ActionType::ShowData, ActionConfigPayload::ShowData(cfg)) => {
+                // During validation (s3_key is None) create an unresolved stub —
+                // calculate_columns() is a pass-through so no S3 key is needed.
+                if cfg.s3_key.is_some() {
+                    let action = ShowData::from_action_config(&cfg)?;
+                    Ok(Arc::new(action))
+                } else {
+                    // Validation path: wrap a dummy that passes columns through.
+                    Ok(Arc::new(ShowDataStub))
+                }
+            }
             (t, _) => Err(Error::ConfigurationError(format!(
                 "Mismatched payload for action type {t:?}"
             ))),
@@ -224,6 +236,27 @@ impl ActionFactoryTrait for ActionFactory {
             })?;
         }
         Ok(context)
+    }
+}
+
+/// Validation-only stub for `ShowData`.
+///
+/// When the manifest is being validated (no S3 key yet) we still need to
+/// handle the `ShowData` arm in the factory.  This struct implements the
+/// pass-through `ColumnCalculator` and a no-op `OnboardingAction::execute`
+/// so column propagation works without an S3 key.
+struct ShowDataStub;
+impl onboard_you_models::ColumnCalculator for ShowDataStub {
+    fn calculate_columns(&self, ctx: RosterContext) -> Result<RosterContext> {
+        Ok(ctx)
+    }
+}
+impl OnboardingAction for ShowDataStub {
+    fn id(&self) -> &str {
+        "show_data"
+    }
+    fn execute(&self, ctx: RosterContext) -> Result<RosterContext> {
+        Ok(ctx)
     }
 }
 

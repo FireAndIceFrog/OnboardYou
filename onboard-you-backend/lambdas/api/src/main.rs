@@ -21,6 +21,7 @@ use controllers::{
 use controllers::{get_run, list_runs, trigger_run};
 use controllers::{csv_presigned_upload, start_conversion};
 use controllers::{get_settings, upsert_settings};
+use controllers::get_show_data;
 use dependancies::Dependancies;
 use models::{
     ConfigRequest, ErrorResponse, LoginRequest, LoginResponse,
@@ -63,6 +64,7 @@ use utoipa_swagger_ui::SwaggerUi;
         controllers::runs_controller::trigger_run,
         controllers::settings_controller::get_settings,
         controllers::settings_controller::upsert_settings,
+        controllers::show_data_controller::get_show_data,
     ),
     components(schemas(
         LoginRequest,
@@ -106,6 +108,7 @@ use utoipa_swagger_ui::SwaggerUi;
         (name = "CSV Upload", description = "CSV file upload and column discovery"),
         (name = "Runs", description = "Pipeline run history and diagnostics"),
         (name = "Settings", description = "Organization settings management"),
+        (name = "Show Data", description = "View data output from ShowData pipeline steps"),
     ),
     security(
         ("bearer" = []),
@@ -216,6 +219,10 @@ fn router(state: Dependancies) -> Router {
             get(get_run),
         )
         .route("/settings", get(get_settings).put(upsert_settings))
+        .route(
+            "/config/{customer_company_id}/outputs/{action_id}",
+            get(get_show_data),
+        )
         .with_state(state)
         .layer(cors)
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
