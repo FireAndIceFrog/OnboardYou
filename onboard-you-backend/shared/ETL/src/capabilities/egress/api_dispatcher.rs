@@ -185,7 +185,7 @@ fn dataframe_to_json_payload(df: &DataFrame) -> Result<String> {
 
     let envelope = serde_json::json!({ "data": rows });
 
-    serde_json::to_string(&envelope).map_err(|e| Error::SerializationError(e))
+    serde_json::to_string(&envelope).map_err(Error::SerializationError)
 }
 
 /// Map a Polars `AnyValue` to a `serde_json::Value`.

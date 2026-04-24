@@ -53,7 +53,7 @@ pub fn to_csv(bytes: &[u8], table_index: usize) -> Result<(Vec<u8>, Vec<String>)
                 .iter()
                 .map(|col| {
                     obj.and_then(|m| m.get(col))
-                        .map(|v| value_to_string(v))
+                        .map(value_to_string)
                         .unwrap_or_default()
                 })
                 .collect()
@@ -64,7 +64,7 @@ pub fn to_csv(bytes: &[u8], table_index: usize) -> Result<(Vec<u8>, Vec<String>)
     Ok((csv_bytes, columns))
 }
 
-fn find_array<'v>(value: &'v Value, index: usize) -> Result<&'v Vec<Value>> {
+fn find_array(value: &Value, index: usize) -> Result<&Vec<Value>> {
     match value {
         Value::Array(arr) => Ok(arr),
         Value::Object(map) => {

@@ -18,7 +18,7 @@ pub async fn get(deps: &Dependancies, organization_id: &str) -> Result<OrgSettin
         .settings_repo
         .get(organization_id)
         .await?
-        .ok_or_else(|| ApiError::NotFound(format!("{organization_id}")))
+        .ok_or_else(|| ApiError::NotFound(organization_id.to_string()))
 }
 
 /// Validate and persist organization settings.
@@ -108,7 +108,7 @@ mod tests {
     }
 
     async fn test_state() -> (Dependancies, Arc<NoOpScheduleRepo>) {
-        let schedule_repository = Arc::new(NoOpScheduleRepo::default());
+        let schedule_repository = Arc::new(NoOpScheduleRepo);
         let mut deps = Dependancies::new(Env::default()).await;
         deps.settings_repo = Arc::new(InMemorySettingsRepo::default());
         deps.schedule_repo = schedule_repository.clone();

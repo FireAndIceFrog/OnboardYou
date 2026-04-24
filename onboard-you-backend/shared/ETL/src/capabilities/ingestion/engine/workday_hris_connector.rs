@@ -242,8 +242,8 @@ impl StringOrElse for String {
 /// Generates:
 /// - `WORKDAY_COLUMNS` — the fixed column list for schema / provenance.
 /// - `workers_to_dataframe` — columnar extraction that is guaranteed
-///    to stay aligned because both the column name and the struct field
-///    come from the same macro arm.
+///   to stay aligned because both the column name and the struct field
+///   come from the same macro arm.
 macro_rules! workday_fields {
     ( $( ($col:expr, $field:ident) ),* $(,)? ) => {
         /// The fixed set of columns produced by the Workday `Get_Workers` connector.
@@ -913,7 +913,7 @@ mod tests {
 
         // Verify field-ownership metadata
         assert_eq!(ctx.field_metadata().len(), 18);
-        for (_field, meta) in ctx.field_metadata() {
+        for meta in ctx.field_metadata().values() {
             assert_eq!(meta.source, "WORKDAY_HRIS");
             assert!(meta.modified_by.is_none());
         }

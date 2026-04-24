@@ -6,19 +6,14 @@ use utoipa::ToSchema;
 use crate::DynamicEgressModel;
 
 /// The OAuth2 grant type this repo instance should use.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum OAuth2GrantType {
     /// Machine-to-machine: `client_id` + `client_secret` → access token.
+    #[default]
     ClientCredentials,
     /// Delegated identity: uses a stored `refresh_token` to rotate access tokens.
     AuthorizationCode,
-}
-
-impl Default for OAuth2GrantType {
-    fn default() -> Self {
-        Self::ClientCredentials
-    }
 }
 
 /// Configuration for OAuth2-authenticated egress.

@@ -146,3 +146,72 @@ fn parse_csv_line(line: &str) -> Vec<String> {
     fields.push(field.trim().to_string());
     fields
 }
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::Value;
+
+    // ── parse_csv_line ────────────────────────────────────────────────────────
+
+    #[test]
+    fn parse_csv_line_cases() {
+        // (input, expected_fields)
+        let cases: &[(&str, &[&str])] = &[
+            ("a,b,c",                            &["a", "b", "c"]),
+            (r#""a,b",c"#,                        &["a,b", "c"]),
+            (r#""say ""hi""",ok"#,                &["say \"hi\"", "ok"]),
+            ("only",                             &["only"]),
+            ("  padded  , spaced ",              &["padded", "spaced"]),
+            ("",                                 &[""]),
+        ];
+
+        for (input, expected) in cases {
+            let result = parse_csv_line(input);
+            let expected: Vec<String> = expected.iter().map(|s| s.to_string()).collect();
+            assert_eq!(result, expected, "input: {input:?}");
+        }
+    }
+
+    // ── parse_csv_to_response ─────────────────────────────────────────────────
+
+    #[test]
+    fn parse_csv_returns_columns_and_rows() {
+        let csv = "name,age\nAlice,30\nBob,25\n";
+        let resp = parse_csv_to_response(csv).unwrap();
+        assert_eq!(resp.columns, vec!["name", "age"]);
+        assert_eq!(resp.rows.len(), 2);
+        assert_eq!(resp.rows[0]["name"], Value::String("Alice".into()));
+        assert_eq!(resp.rows[1]["age"],  Value::String("25".into()));
+    }
+
+    #[test]
+    fn parse_csv_empty_string_is_error() {
+        assert!(parse_csv_to_response("").is_err());
+    }
+
+    #[test]
+    fn parse_csv_header_only_produces_no_rows() {
+        let resp = parse_csv_to_response("name,age").unwrap();
+        assert_eq!(resp.columns, vec!["name", "age"]);
+        assert!(resp.rows.is_empty());
+    }
+
+    #[test]
+    fn parse_csv_ignores_trailing_blank_lines() {
+        let csv = "id,val\n1,hello\n\n\n";
+        let resp = parse_csv_to_response(csv).unwrap();
+        assert_eq!(resp.rows.len(), 1);
+    }
+
+    #[test]
+    fn parse_csv_short_row_defaults_missing_fields_to_empty() {
+        let csv = "a,b,c\n1,2\n";
+        let resp = parse_csv_to_response(csv).unwrap();
+        assert_eq!(resp.rows[0]["c"], Value::String("".into()));
+    }
+}

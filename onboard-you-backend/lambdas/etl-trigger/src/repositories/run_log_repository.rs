@@ -62,8 +62,7 @@ impl PgRunLogRepo {
 impl IRunLogRepo for PgRunLogRepo {
     async fn create_run(&self, run: &PipelineRun) -> Result<(), Error> {
         let manifest_json = run.manifest_snapshot.as_ref()
-            .map(|m| serde_json::to_value(m).ok())
-            .flatten();
+            .and_then(|m| serde_json::to_value(m).ok());
         sqlx::query(
             r#"INSERT INTO pipeline_runs (id, organization_id, customer_company_id, status, started_at, warnings, manifest_snapshot)
                VALUES ($1, $2, $3, $4, NOW(), '[]'::jsonb, $5)"#,

@@ -254,7 +254,7 @@ mod tests {
             expected: bool,
         }
 
-        let cases = vec![
+        let cases = [
             StatusCase { name: "200_not_retryable", code: 200, expected: false },
             StatusCase { name: "400_not_retryable", code: 400, expected: false },
             StatusCase { name: "401_not_retryable", code: 401, expected: false },

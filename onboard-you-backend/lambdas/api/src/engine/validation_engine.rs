@@ -179,6 +179,7 @@ mod tests {
     }
 
     /// Describes one validation scenario.
+    #[derive(Default)]
     struct Case {
         name: &'static str,
         /// Raw manifest JSON. If `None`, built from `columns` + `dispatcher`.
@@ -191,19 +192,6 @@ mod tests {
         org_id: Option<&'static str>,
         /// Pre-seeded OrgSettings for the in-memory repo.
         settings: Option<OrgSettings>,
-    }
-
-    impl Default for Case {
-        fn default() -> Self {
-            Self {
-                name: "",
-                manifest_json: None,
-                columns: &[],
-                dispatcher: None,
-                org_id: None,
-                settings: None,
-            }
-        }
     }
 
     fn all_cases() -> Vec<Case> {

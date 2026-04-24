@@ -1,8 +1,8 @@
-/// Auto-generated schema documentation from utoipa `ToSchema` derives.
-///
-/// Each resource is a JSON Schema produced at runtime from the shared
-/// models crate — so the MCP resource descriptions stay in sync with
-/// the Rust types automatically.
+//! Auto-generated schema documentation from utoipa `ToSchema` derives.
+//!
+//! Each resource is a JSON Schema produced at runtime from the shared
+//! models crate — so the MCP resource descriptions stay in sync with
+//! the Rust types automatically.
 
 use onboard_you_models::*;
 use utoipa::PartialSchema;

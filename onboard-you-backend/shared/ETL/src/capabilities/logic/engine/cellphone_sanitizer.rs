@@ -370,7 +370,7 @@ impl OnboardingAction for CellphoneSanitizer {
         // Bundle phone + country columns into a struct so we can access
         // multiple columns inside a single `.map()` closure while staying lazy.
         let all_cols: Vec<Expr> = std::iter::once(col(&self.config.phone_column))
-            .chain(self.config.country_columns.iter().map(|c| col(c)))
+            .chain(self.config.country_columns.iter().map(col))
             .collect();
 
         let phone_col_name = self.config.phone_column.clone();

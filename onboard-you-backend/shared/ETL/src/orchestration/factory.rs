@@ -23,6 +23,7 @@ use polars::prelude::LazyFrame;
 use std::sync::Arc;
 
 /// Factory for creating OnboardingAction instances from manifest action configs.
+#[derive(Default)]
 pub struct ActionFactory;
 
 /// Captures which action failed and the error details.
@@ -42,7 +43,7 @@ impl std::fmt::Display for StepError {
 
 impl ActionFactory {
     pub fn new() -> Self {
-        ActionFactory {}
+        Self
     }
 }
 
@@ -624,5 +625,54 @@ mod tests {
         let warnings = result.deps.logger.drain_deferred_warnings();
         assert_eq!(warnings.len(), 1);
         assert_eq!(warnings[0].message, "test warning");
+    }
+
+    // -----------------------------------------------------------------------
+    // ShowData factory tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_factory_creates_show_data_stub_without_resolved_key() {
+        use onboard_you_models::ShowDataConfig;
+        // No s3_key resolved → factory returns the validation stub
+        let config = ActionConfig {
+            id: "snapshot".into(),
+            action_type: ActionType::ShowData,
+            config: ActionConfigPayload::ShowData(ShowDataConfig::default()),
+        };
+        let action = ActionFactory::new()
+            .create(&config)
+            .expect("ShowData without s3_key should produce a stub action");
+        assert_eq!(action.id(), "show_data");
+    }
+
+    #[test]
+    fn test_factory_creates_show_data_with_resolved_key() {
+        use onboard_you_models::ShowDataConfig;
+        let mut cfg = ShowDataConfig::default();
+        cfg.resolve_s3_key("org", "co", "snapshot");
+        let config = ActionConfig {
+            id: "snapshot".into(),
+            action_type: ActionType::ShowData,
+            config: ActionConfigPayload::ShowData(cfg),
+        };
+        let action = ActionFactory::new()
+            .create(&config)
+            .expect("ShowData with a resolved key should produce a real action");
+        assert_eq!(action.id(), "show_data");
+    }
+
+    #[test]
+    fn test_show_data_action_type_round_trip_serde() {
+        use onboard_you_models::ShowDataConfig;
+        let config = ActionConfig {
+            id: "snap".into(),
+            action_type: ActionType::ShowData,
+            config: ActionConfigPayload::ShowData(ShowDataConfig::default()),
+        };
+        let json = serde_json::to_string(&config).unwrap();
+        assert!(json.contains("\"show_data\""), "JSON must include the show_data type string");
+        let back: ActionConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.action_type, ActionType::ShowData);
     }
 }
