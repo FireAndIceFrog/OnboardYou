@@ -72,7 +72,7 @@ variable "supabase_access_token" {
 variable "supabase_organization_id" {
   description = "Slug for the Supabase organization (found in dashboard URL)"
   type        = string
-}}
+}
 
 # ── Email Ingestion ────────────────────────────────────────────
 

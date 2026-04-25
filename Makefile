@@ -15,7 +15,7 @@ VENV := .venv/bin/activate
 #
 
 
-.PHONY: setup build-lambdas build-config-api build-etl-trigger build-authorizer \
+.PHONY: setup build-lambdas build-config-api build-etl-trigger build-authorizer build-email-ingestor \
         plan apply deploy clean smoke-test assemble-pages openapi-ts setup-hooks \
         build-mcp sync-env-mcp snapshots
 
@@ -36,7 +36,7 @@ setup:
 ## Build — cross-compile Rust Lambdas with cargo-lambda
 ##──────────────────────────────────────────────────────────────
 
-build-lambdas: build-config-api build-etl-trigger build-authorizer
+build-lambdas: build-config-api build-etl-trigger build-authorizer build-email-ingestor
 
 build-config-api:
 	@echo "▸ Building config-api Lambda..."
@@ -59,6 +59,15 @@ build-etl-trigger:
 build-authorizer:
 	@echo "▸ Building authorizer Lambda..."
 	. $(VENV) && cargo lambda build --release -p authorizer
+
+build-email-ingestor:
+	@echo "▸ Building email-ingestor Lambda..."
+	. $(VENV) && \
+		OPENSSL_DIR=$(OPENSSL_DIR) \
+		OPENSSL_LIB_DIR=$(OPENSSL_LIB_DIR) \
+		OPENSSL_STATIC=$(OPENSSL_STATIC) \
+		RUSTFLAGS="$(RUSTFLAGS)" \
+		cargo lambda build --release -p email-ingestor
 
 snapshots:
 	cargo insta test --all

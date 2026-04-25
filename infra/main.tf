@@ -357,86 +357,12 @@ module "api" {
 #                   email-ingestor Lambda
 # ══════════════════════════════════════════════════════════════
 
-# ── SES domain identity ──────────────────────────────────────
-resource "aws_ses_domain_identity" "email_ingestion" {
-  domain = var.email_ingestion_domain
-}
-
-# ── SES receipt rule set ──────────────────────────────────────
-resource "aws_ses_receipt_rule_set" "email_ingestion" {
-  rule_set_name = "onboardyou-email-ingestion-${var.env_postfix}"
-}
-
-resource "aws_ses_active_receipt_rule_set" "email_ingestion" {
-  rule_set_name = aws_ses_receipt_rule_set.email_ingestion.rule_set_name
-}
-
-# ── ses-inbox S3 bucket ───────────────────────────────────────
-resource "aws_s3_bucket" "ses_inbox" {
-  bucket = "onboardyou-ses-inbox-${var.env_postfix}"
-}
-
-resource "aws_s3_bucket_lifecycle_configuration" "ses_inbox" {
-  bucket = aws_s3_bucket.ses_inbox.id
-
-  rule {
-    id     = "expire-raw-emails"
-    status = "Enabled"
-
-    expiration {
-      days = 7
-    }
-  }
-}
-
-# SES needs to be able to write to the bucket.
-resource "aws_s3_bucket_policy" "ses_inbox" {
-  bucket = aws_s3_bucket.ses_inbox.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "AllowSESPut"
-        Effect = "Allow"
-        Principal = {
-          Service = "ses.amazonaws.com"
-        }
-        Action   = "s3:PutObject"
-        Resource = "${aws_s3_bucket.ses_inbox.arn}/*"
-        Condition = {
-          StringEquals = {
-            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
-          }
-        }
-      }
-    ]
-  })
-}
-
-# ── SES receipt rule → store email in ses-inbox ───────────────
-resource "aws_ses_receipt_rule" "store_to_s3" {
-  name          = "store-to-s3"
-  rule_set_name = aws_ses_receipt_rule_set.email_ingestion.rule_set_name
-  enabled       = true
-  scan_enabled  = true
-  recipients    = []  # empty = catch-all for the domain
-
-  s3_action {
-    bucket_name       = aws_s3_bucket.ses_inbox.id
-    object_key_prefix = "incoming/"
-    position          = 1
-  }
-
-  depends_on = [aws_s3_bucket_policy.ses_inbox]
-}
-
-# ── EmailRoutes DynamoDB table ────────────────────────────────
-module "email_routes_table" {
-  source      = "./modules/dynamodb"
-  table_name  = "EmailRoutes-${var.env_postfix}"
-  hash_key    = "sender_email"
-  enable_pitr = false
+# ── SES (domain, receipt rules, ses-inbox bucket, EmailRoutes table) ──
+module "ses" {
+  source                 = "./modules/ses"
+  env_postfix            = var.env_postfix
+  email_ingestion_domain = var.email_ingestion_domain
+  aws_account_id         = data.aws_caller_identity.current.account_id
 }
 
 # ── email-ingestor Lambda ─────────────────────────────────────
@@ -454,9 +380,9 @@ module "email_ingestor" {
   log_retention_days = var.log_retention_days
 
   environment_variables = {
-    SES_INBOX_BUCKET    = aws_s3_bucket.ses_inbox.id
+    SES_INBOX_BUCKET    = module.ses.ses_inbox_bucket_id
     CSV_UPLOAD_BUCKET   = module.csv_upload_bucket.bucket_name
-    EMAIL_ROUTES_TABLE  = module.email_routes_table.name
+    EMAIL_ROUTES_TABLE  = module.ses.email_routes_table_name
     ETL_SQS_QUEUE_URL   = aws_sqs_queue.etl_events.id
     RUST_LOG            = "info"
   }
@@ -464,7 +390,7 @@ module "email_ingestor" {
   iam_policy_statements = [
     {
       actions   = ["s3:GetObject"]
-      resources = ["${aws_s3_bucket.ses_inbox.arn}/*"]
+      resources = ["${module.ses.ses_inbox_bucket_arn}/*"]
     },
     {
       actions   = ["s3:PutObject", "s3:GetObject"]
@@ -472,7 +398,7 @@ module "email_ingestor" {
     },
     {
       actions   = ["dynamodb:GetItem"]
-      resources = [module.email_routes_table.arn, module.pipeline_configs_table.arn]
+      resources = [module.ses.email_routes_table_arn, module.pipeline_configs_table.arn]
     },
     {
       actions   = ["sqs:SendMessage"]
@@ -491,16 +417,16 @@ module "email_ingestor" {
 
 # ── S3 event notification → email-ingestor ────────────────────
 resource "aws_lambda_permission" "allow_ses_inbox_s3" {
-  statement_id  = "AllowS3InvokeEmailIngestor"
-  action        = "lambda:InvokeFunction"
-  function_name = module.email_ingestor.function_name
-  principal     = "s3.amazonaws.com"
-  source_arn    = aws_s3_bucket.ses_inbox.arn
+  statement_id   = "AllowS3InvokeEmailIngestor"
+  action         = "lambda:InvokeFunction"
+  function_name  = module.email_ingestor.function_name
+  principal      = "s3.amazonaws.com"
+  source_arn     = module.ses.ses_inbox_bucket_arn
   source_account = data.aws_caller_identity.current.account_id
 }
 
 resource "aws_s3_bucket_notification" "ses_inbox_to_lambda" {
-  bucket = aws_s3_bucket.ses_inbox.id
+  bucket = module.ses.ses_inbox_bucket_id
 
   lambda_function {
     lambda_function_arn = module.email_ingestor.arn

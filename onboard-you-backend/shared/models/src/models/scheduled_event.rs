@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Domain model for scheduled events, primarily from EventBridge Scheduler.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", tag = "eventType", content = "payload")]
 pub enum ScheduledEvent {
     //infer it based on the event type field in the payload
@@ -10,7 +10,7 @@ pub enum ScheduledEvent {
 }
 
 /// Event payload from EventBridge Scheduler.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScheduledEtlEvent {
     pub event_type: String,
@@ -37,6 +37,7 @@ mod tests {
                 event_type: "ScheduledEtlEvent".to_string(),
                 organization_id: "org123".to_string(),
                 customer_company_id: "comp456".to_string(),
+                filename_override: None,
             }),
         ];
 

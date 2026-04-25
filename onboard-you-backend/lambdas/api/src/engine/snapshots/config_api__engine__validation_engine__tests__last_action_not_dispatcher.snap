@@ -2,4 +2,4 @@
 source: onboard-you-backend/lambdas/api/src/engine/validation_engine.rs
 expression: output
 ---
-ERR Validation: Last step must be an API Dispatcher, found 'generic_ingestion_connector'
+ERR Validation: Last step must be an egress action (API Dispatcher or Show Data), found 'generic_ingestion_connector'

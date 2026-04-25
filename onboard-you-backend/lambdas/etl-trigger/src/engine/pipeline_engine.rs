@@ -259,7 +259,7 @@ mod tests {
             action_factory: Arc::new(onboard_you::ActionFactory::new()),
         });
 
-        let result = run(deps.clone(), "org-1", "cust-1").await.expect("run ok");
+        let result = run(deps.clone(), "org-1", "cust-1", None).await.expect("run ok");
         assert_eq!(result.status, "success");
         assert!(cfg_called.load(Ordering::SeqCst));
         assert!(etl_default.load(Ordering::SeqCst));
