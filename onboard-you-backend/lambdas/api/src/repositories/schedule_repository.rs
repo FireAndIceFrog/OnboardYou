@@ -41,6 +41,7 @@ impl ScheduleRepo for EventBridgeScheduleRepo {
             event_type: "ScheduledEtlEvent".to_string(),
             organization_id: config.organization_id.clone(),
             customer_company_id: config.customer_company_id.clone(),
+            filename_override: None,
         }))
         .map_err(|e| ApiError::Repository(format!("Failed to serialize event payload: {e}")))?;
 

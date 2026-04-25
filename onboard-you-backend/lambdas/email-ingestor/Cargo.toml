@@ -1,0 +1,29 @@
+[package]
+name = "email-ingestor"
+version = "0.1.0"
+edition = "2021"
+description = "Email Ingestor Lambda: Parses inbound SES emails, stages attachments in S3, triggers ETL pipeline via SQS"
+
+[[bin]]
+name = "email-ingestor"
+path = "src/main.rs"
+
+[dependencies]
+onboard_you_models = { path = "../../shared/models" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+lambda_runtime = { workspace = true }
+aws-config = { workspace = true }
+aws-sdk-s3 = { workspace = true }
+aws-sdk-sqs = { workspace = true }
+aws-sdk-textract = { workspace = true }
+aws-sdk-dynamodb = { workspace = true }
+serde_dynamo = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+openssl = { workspace = true }
+mailparse = { workspace = true }

@@ -136,7 +136,10 @@ impl GenericIngestionConnector {
     ///
     /// When `override_columns` is provided those names are applied to the
     /// columns in order, replacing whatever headers the CSV contains.
-    fn parse_csv(csv_bytes: &[u8], override_columns: Option<&[String]>) -> Result<LazyFrame> {
+    ///
+    /// `pub(super)` so sibling connectors in the same `engine` module can
+    /// reuse this without duplicating parsing logic.
+    pub(super) fn parse_csv(csv_bytes: &[u8], override_columns: Option<&[String]>) -> Result<LazyFrame> {
         // 1. Read header row to discover column count / names.
         let header_df = CsvReadOptions::default()
             .with_n_rows(Some(0))

@@ -16,6 +16,13 @@ pub struct ScheduledEtlEvent {
     pub event_type: String,
     pub organization_id: String,
     pub customer_company_id: String,
+    /// Override filename supplied by the email-ingestor Lambda.
+    ///
+    /// When set, the pipeline engine uses this timestamped S3 filename instead
+    /// of whatever is stored in the `EmailIngestionConnector` config.  For
+    /// scheduled and manually triggered runs this is `None`.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub filename_override: Option<String>,
 }
 
 

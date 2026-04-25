@@ -33,7 +33,7 @@ export type ActionConfig = {
  * JSON serialisation (no wrapper key), while `ToSchema` generates a
  * `oneOf` schema listing every config variant for OpenAPI.
  */
-export type ActionConfigPayload = WorkdayConfig | SageHrConfig | ScdType2Config | PiiMaskingConfig | DedupConfig | RegexReplaceConfig | IsoCountrySanitizerConfig | CellphoneSanitizerConfig | HandleDiacriticsConfig | RenameConfig | DropConfig | FilterByValueConfig | ApiDispatcherConfig | ShowDataConfig | GenericIngestionConnectorConfig;
+export type ActionConfigPayload = WorkdayConfig | SageHrConfig | ScdType2Config | PiiMaskingConfig | DedupConfig | RegexReplaceConfig | IsoCountrySanitizerConfig | CellphoneSanitizerConfig | HandleDiacriticsConfig | RenameConfig | DropConfig | FilterByValueConfig | ApiDispatcherConfig | ShowDataConfig | GenericIngestionConnectorConfig | EmailIngestionConnectorConfig;
 
 /**
  * All known action types in the pipeline.
@@ -60,7 +60,7 @@ export type ActionConfigPayload = WorkdayConfig | SageHrConfig | ScdType2Config 
  * | `"show_data"`             | `ShowData`             |
  * | `"generic_ingestion_connector"` | `GenericIngestionConnector` |
  */
-export type ActionType = 'workday_hris_connector' | 'sage_hr_connector' | 'generic_ingestion_connector' | 'scd_type_2' | 'pii_masking' | 'identity_deduplicator' | 'regex_replace' | 'iso_country_sanitizer' | 'cellphone_sanitizer' | 'handle_diacritics' | 'rename_column' | 'drop_column' | 'filter_by_value' | 'api_dispatcher' | 'show_data';
+export type ActionType = 'workday_hris_connector' | 'sage_hr_connector' | 'generic_ingestion_connector' | 'email_ingestion_connector' | 'scd_type_2' | 'pii_masking' | 'identity_deduplicator' | 'regex_replace' | 'iso_country_sanitizer' | 'cellphone_sanitizer' | 'handle_diacritics' | 'rename_column' | 'drop_column' | 'filter_by_value' | 'api_dispatcher' | 'show_data';
 
 /**
  * Fully-typed API dispatcher configuration.
@@ -316,30 +316,22 @@ export type FilterByValueConfig = {
  * |               |            |          | when a multi-table document is converted via Textract             |
  */
 export type GenericIngestionConnectorConfig = {
-    /**
-     * User-defined column headers.
-     *
-     * When provided, these override the header row in the converted CSV.
-     * Must exactly match the number of columns produced by Textract (or the
-     * CSV header count for native CSV uploads).  When `None`, column names
-     * are taken directly from the first row of the CSV.
-     */
     columns?: Array<string> | null;
-    /**
-     * Original upload filename (e.g. `"employees.pdf"`, `"roster.xml"`).
-     *
-     * The connector resolves the converted CSV path by stripping the file
-     * extension and appending `.csv`:
-     * `{org_id}/{company_id}/{stem}.csv` on `CSV_UPLOAD_BUCKET`.
-     */
     filename: string;
-    /**
-     * Zero-based index of the Textract table to extract.
-     *
-     * Relevant only for multi-table documents (PDFs, etc.).  Defaults to `0`
-     * (the first table found by Textract).  Ignored when the upload is
-     * already a CSV — no Textract call is made for CSV files.
-     */
+    table_index?: number | null;
+};
+
+/**
+ * Configuration for the EmailIngestionConnector pipeline action.
+ *
+ * Receives HRIS data via inbound email attachment.  The `email-ingestor`
+ * Lambda validates the sender against `allowed_senders` and triggers the
+ * ETL pipeline with a `filename_override` pointing to the staged CSV.
+ */
+export type EmailIngestionConnectorConfig = {
+    allowed_senders: Array<string>;
+    subject_filter?: string | null;
+    columns?: Array<string> | null;
     table_index?: number | null;
 };
 

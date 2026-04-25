@@ -29,12 +29,14 @@ use utoipa::ToSchema;
 /// | `"api_dispatcher"`        | `ApiDispatcher`        |
 /// | `"show_data"`             | `ShowData`             |
 /// | `"generic_ingestion_connector"` | `GenericIngestionConnector` |
+/// | `"email_ingestion_connector"` | `EmailIngestionConnector` |
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ActionType {
     WorkdayHrisConnector,
     SageHrConnector,
     GenericIngestionConnector,
+    EmailIngestionConnector,
     #[serde(rename = "scd_type_2")]
     ScdType2,
     PiiMasking,
@@ -149,6 +151,9 @@ impl<'de> Deserialize<'de> for ActionConfig {
             ActionType::GenericIngestionConnector => ActionConfigPayload::GenericIngestionConnector(
                 serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
             ),
+            ActionType::EmailIngestionConnector => ActionConfigPayload::EmailIngestionConnector(
+                serde_json::from_value(raw.config).map_err(serde::de::Error::custom)?,
+            ),
         };
 
         Ok(ActionConfig {
@@ -186,6 +191,7 @@ pub enum ActionConfigPayload {
     ShowData(crate::ShowDataConfig),
 
     GenericIngestionConnector(crate::GenericIngestionConnectorConfig),
+    EmailIngestionConnector(crate::EmailIngestionConnectorConfig),
 }
 
 impl Manifest {

@@ -41,6 +41,7 @@ pub async fn run(
     deps: Arc<Dependancies>,
     organization_id: &str,
     customer_company_id: &str,
+    filename_override: Option<String>,
 ) -> Result<PipelineResult, Error> {
     tracing::info!(%organization_id, %customer_company_id, "ETL trigger fired");
 
@@ -117,7 +118,7 @@ pub async fn run(
 
     // 5. Execute the pipeline
     deps.pipeline_repo
-        .run_pipeline(&deps, manifest, organization_id, customer_company_id, &run_id)
+        .run_pipeline(&deps, manifest, organization_id, customer_company_id, &run_id, filename_override.as_deref())
         .await
 }
 
@@ -201,6 +202,7 @@ mod tests {
             _organization_id: &str,
             _customer_company_id: &str,
             _run_id: &str,
+            _filename_override: Option<&str>,
         ) -> Result<crate::models::PipelineResult, Error> {
             self.called.store(true, Ordering::SeqCst);
             Ok(crate::models::PipelineResult::success(

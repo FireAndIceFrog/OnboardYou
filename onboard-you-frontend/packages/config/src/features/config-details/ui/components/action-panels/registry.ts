@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import type { ActionType } from '@/generated/api';
 import { GenericIngestionConnectorPanel } from './GenericIngestionConnectorPanel';
+import { EmailIngestionConnectorPanel } from './EmailIngestionConnectorPanel';
 import { PiiMaskingPanel } from './PiiMaskingPanel';
 import { WorkdayResponseGroupPanel } from './WorkdayResponseGroupPanel';
 import { SageHrHistoryPanel } from './SageHrHistoryPanel';
@@ -30,6 +31,7 @@ export interface ActionEditorProps {
  */
 const ACTION_PANEL_REGISTRY: Partial<Record<ActionType, ComponentType<ActionEditorProps>>> = {
   generic_ingestion_connector: GenericIngestionConnectorPanel,
+  email_ingestion_connector: EmailIngestionConnectorPanel,
   pii_masking: PiiMaskingPanel,
   workday_hris_connector: WorkdayResponseGroupPanel,
   sage_hr_connector: SageHrHistoryPanel,

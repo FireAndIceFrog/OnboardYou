@@ -72,4 +72,12 @@ variable "supabase_access_token" {
 variable "supabase_organization_id" {
   description = "Slug for the Supabase organization (found in dashboard URL)"
   type        = string
+}}
+
+# ── Email Ingestion ────────────────────────────────────────────
+
+variable "email_ingestion_domain" {
+  description = "Domain to register with SES for inbound email ingestion (e.g. 'onboard.acme.com')"
+  type        = string
+  default     = ""
 }

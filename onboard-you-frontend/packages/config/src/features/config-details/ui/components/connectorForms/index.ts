@@ -4,11 +4,13 @@ import type { ConnectorFormProps } from './types';
 import { WorkdayConnectorForm } from './WorkdayConnectorForm';
 import { SageHrConnectorForm } from './SageHrConnectorForm';
 import { GenericIngestionConnectorForm } from './GenericIngestionConnectorForm';
+import { EmailIngestionConnectorForm } from './EmailIngestionConnectorForm';
 
 const CONNECTOR_FORM_REGISTRY: Record<ConnectorType, ComponentType<ConnectorFormProps>> = {
   [ConnectorType.Workday]: WorkdayConnectorForm,
   [ConnectorType.SageHR]: SageHrConnectorForm,
   [ConnectorType.GenericIngestion]: GenericIngestionConnectorForm,
+  [ConnectorType.EmailIngestion]: EmailIngestionConnectorForm,
 };
 
 /**
@@ -23,4 +25,4 @@ export function getConnectorFormComponent(
 }
 
 export type { ConnectorFormProps };
-export { WorkdayConnectorForm, SageHrConnectorForm, GenericIngestionConnectorForm };
+export { WorkdayConnectorForm, SageHrConnectorForm, GenericIngestionConnectorForm, EmailIngestionConnectorForm };

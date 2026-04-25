@@ -3,13 +3,36 @@
 use crate::dependancies::Dependancies;
 use crate::engine::file_converter_engine;
 use crate::models::{ApiError, PresignedUploadResponse};
+use chrono::Utc;
 
 /// Build the S3 object key from runtime context.
 fn s3_key(organization_id: &str, customer_company_id: &str, filename: &str) -> String {
     format!("{organization_id}/{customer_company_id}/{filename}")
 }
 
+/// Inject a UTC timestamp into a filename stem so every upload is unique.
+///
+/// `"employees.pdf"` → `"employees_20260425T143000Z.pdf"`
+/// `"roster.csv"`    → `"roster_20260425T143000Z.csv"`
+/// `"data"`          → `"data_20260425T143000Z"`
+pub fn timestamped_filename(filename: &str) -> String {
+    let ts = Utc::now().format("%Y%m%dT%H%M%SZ");
+    match filename.rfind('.') {
+        Some(pos) if pos > 0 => {
+            let stem = &filename[..pos];
+            let ext = &filename[pos..]; // includes the dot
+            format!("{stem}_{ts}{ext}")
+        }
+        _ => format!("{filename}_{ts}"),
+    }
+}
+
 /// Generate a presigned PUT URL for a CSV upload.
+///
+/// The returned `filename` in the response is a **timestamped** variant of
+/// the original (e.g. `"employees_20260425T143000Z.pdf"`).  The caller must
+/// use this server-assigned name — not the local `File.name` — for any
+/// subsequent `start-conversion` call and for storing in the manifest config.
 pub async fn presigned_upload(
     deps: &Dependancies,
     organization_id: &str,
@@ -27,14 +50,15 @@ pub async fn presigned_upload(
         ));
     }
 
-    let key = s3_key(organization_id, customer_company_id, filename);
+    let stamped = timestamped_filename(filename);
+    let key = s3_key(organization_id, customer_company_id, &stamped);
 
     let upload_url = deps.s3_repo.presigned_put_url(&key).await?;
 
     Ok(PresignedUploadResponse {
         upload_url,
         key,
-        filename: filename.to_string(),
+        filename: stamped,
     })
 }
 
@@ -176,7 +200,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn presigned_upload_success() {
+    async fn presigned_upload_returns_timestamped_filename() {
         let state = build_state(FakeS3 {
             presign: Some("https://presigned.url".into()),
             headers: None,
@@ -188,8 +212,12 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(out.upload_url, "https://presigned.url");
-        assert_eq!(out.filename, "file.csv");
-        assert_eq!(out.key, "org/comp/file.csv");
+        // Filename must start with "file_" and end with ".csv" (timestamp in between)
+        assert!(out.filename.starts_with("file_"), "filename: {}", out.filename);
+        assert!(out.filename.ends_with(".csv"), "filename: {}", out.filename);
+        // S3 key must use the timestamped name
+        assert!(out.key.starts_with("org/comp/file_"), "key: {}", out.key);
+        assert!(out.key.ends_with(".csv"), "key: {}", out.key);
     }
 
     #[tokio::test]
@@ -209,5 +237,40 @@ mod tests {
             .await
             .unwrap_err();
         assert!(matches!(err2, ApiError::Validation(_)));
+    }
+
+    // -----------------------------------------------------------------------
+    // timestamped_filename — table-driven
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn timestamped_filename_preserves_extension() {
+        struct Case { input: &'static str, prefix: &'static str, suffix: &'static str }
+        let cases = vec![
+            Case { input: "employees.pdf", prefix: "employees_", suffix: ".pdf" },
+            Case { input: "roster.csv",    prefix: "roster_",    suffix: ".csv" },
+            Case { input: "data.xml",      prefix: "data_",      suffix: ".xml" },
+            Case { input: "report.xlsx",   prefix: "report_",    suffix: ".xlsx" },
+            Case { input: "img.JPEG",      prefix: "img_",       suffix: ".JPEG" },
+        ];
+        for c in &cases {
+            let out = super::timestamped_filename(c.input);
+            assert!(out.starts_with(c.prefix), "input={}: got {}", c.input, out);
+            assert!(out.ends_with(c.suffix), "input={}: got {}", c.input, out);
+        }
+    }
+
+    #[test]
+    fn timestamped_filename_no_extension() {
+        let out = super::timestamped_filename("datafile");
+        assert!(out.starts_with("datafile_"), "got: {out}");
+        assert!(!out.contains('.'), "got: {out}");
+    }
+
+    #[test]
+    fn timestamped_filename_multiple_dots_uses_last_extension() {
+        let out = super::timestamped_filename("my.data.v2.csv");
+        assert!(out.starts_with("my.data.v2_"), "got: {out}");
+        assert!(out.ends_with(".csv"), "got: {out}");
     }
 }

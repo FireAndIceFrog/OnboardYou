@@ -32,6 +32,7 @@ impl TriggerRepo for SqsTriggerRepo {
             event_type: "ScheduledEtlEvent".to_string(),
             organization_id: organization_id.to_string(),
             customer_company_id: customer_company_id.to_string(),
+            filename_override: None,
         });
 
         let body = serde_json::to_string(&event)

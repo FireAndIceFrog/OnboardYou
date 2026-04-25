@@ -1,6 +1,9 @@
 pub mod generic_ingestion_connector_config;
 pub use generic_ingestion_connector_config::*;
 
+pub mod email_ingestion_connector_config;
+pub use email_ingestion_connector_config::*;
+
 pub mod workday_connector_config;
 pub use workday_connector_config::*;
 

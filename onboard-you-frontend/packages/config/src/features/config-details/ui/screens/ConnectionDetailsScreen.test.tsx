@@ -24,6 +24,7 @@ vi.mock('../../state/useConnectionForm', () => ({
         includePositionHistory: false,
       },
       genericIngestion: { filename: '', columns: [], uploadStatus: 'idle' as const, uploadError: null, conversionStatus: null },
+      emailIngestion: { allowedSenders: '', subjectFilter: '' },
     },
     errors: {},
     isValid: false,

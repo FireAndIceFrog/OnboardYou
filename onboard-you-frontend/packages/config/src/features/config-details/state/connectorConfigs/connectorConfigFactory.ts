@@ -1,3 +1,4 @@
+import { EmailIngestionConnectorConfig } from "./emailIngestionConnectorConfig";
 import { GenericIngestionConnectorConfig } from "./genericIngestionConnectorConfig";
 import { IConnectorConfig } from "./IConnectorConfig";
 import { SageHrConnectorConfig } from "./sageHrConnectorConfig";
@@ -6,7 +7,8 @@ import { WorkdayConnectorConfig } from "./workdayConnectorConfig";
 export enum ConnectorType {
     Workday = "workday",
     SageHR = "sage_hr",
-    GenericIngestion = "generic_ingestion"
+    GenericIngestion = "generic_ingestion",
+    EmailIngestion = "email_ingestion",
 }
 
 export class ConnectorConfigFactory {
@@ -16,6 +18,7 @@ export class ConnectorConfigFactory {
             [ConnectorType.Workday]: new WorkdayConnectorConfig(),
             [ConnectorType.SageHR]: new SageHrConnectorConfig(),
             [ConnectorType.GenericIngestion]: new GenericIngestionConnectorConfig(),
+            [ConnectorType.EmailIngestion]: new EmailIngestionConnectorConfig(),
         }
     }
 

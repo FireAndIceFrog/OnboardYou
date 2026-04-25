@@ -12,6 +12,7 @@ function baseProps(overrides: Partial<ConnectorFormProps> = {}): ConnectorFormPr
       workday: { tenantUrl: '', tenantId: '', username: '', password: '', workerCountLimit: '200', responseGroup: '' },
       sageHr: { subdomain: '', apiToken: '', includeTeamHistory: false, includeEmploymentStatusHistory: false, includePositionHistory: false },
       genericIngestion: { filename: '', columns: [], uploadStatus: 'idle' as const, uploadError: null, conversionStatus: null },
+      emailIngestion: { allowedSenders: '', subjectFilter: '' },
     },
     errors: {},
     config: { getActionConfig: vi.fn(), getDefaultState: vi.fn(), applyChange: vi.fn() as any, validate: vi.fn(() => ({})), isFormValid: vi.fn(() => false) },

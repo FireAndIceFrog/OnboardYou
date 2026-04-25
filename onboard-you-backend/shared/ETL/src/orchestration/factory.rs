@@ -8,7 +8,7 @@
 
 use crate::capabilities::egress::api_dispatcher::ApiDispatcher;
 use crate::capabilities::egress::show_data::ShowData;
-use crate::capabilities::ingestion::engine::{GenericIngestionConnector, WorkdayHrisConnector, SageHrConnector};
+use crate::capabilities::ingestion::engine::{EmailIngestionConnector, GenericIngestionConnector, WorkdayHrisConnector, SageHrConnector};
 use crate::capabilities::logic::engine::{
     CellphoneSanitizer, DropColumn, FilterByValue, HandleDiacritics, IdentityDeduplicator,
     IsoCountrySanitizer, PIIMasking, RegexReplace, RenameColumn, SCDType2,
@@ -81,6 +81,10 @@ impl ActionFactoryTrait for ActionFactory {
             }
             (ActionType::GenericIngestionConnector, ActionConfigPayload::GenericIngestionConnector(cfg)) => {
                 let connector = GenericIngestionConnector::from_action_config(&cfg)?;
+                Ok(Arc::new(connector))
+            }
+            (ActionType::EmailIngestionConnector, ActionConfigPayload::EmailIngestionConnector(cfg)) => {
+                let connector = EmailIngestionConnector::from_action_config(&cfg)?;
                 Ok(Arc::new(connector))
             }
             (ActionType::ScdType2, ActionConfigPayload::ScdType2(cfg)) => {

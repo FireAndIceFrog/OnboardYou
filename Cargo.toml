@@ -3,6 +3,7 @@ members = [
     "onboard-you-backend/shared/ETL",
     "onboard-you-backend/lambdas/api",
     "onboard-you-backend/lambdas/etl-trigger",
+    "onboard-you-backend/lambdas/email-ingestor",
     "onboard-you-backend/lambdas/authorizer", 
     "onboard-you-backend/shared/models",
     "onboard-you-backend/mcp",
@@ -49,3 +50,4 @@ insta = "1"
 paste = "1"
 calamine = { version = "0.25", features = ["dates"] }
 quick-xml = "0.36"
+mailparse = "0.15"

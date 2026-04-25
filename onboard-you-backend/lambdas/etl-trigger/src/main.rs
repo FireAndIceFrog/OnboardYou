@@ -54,6 +54,7 @@ async fn main() -> Result<(), Error> {
                         deps,
                         &payload.organization_id,
                         &payload.customer_company_id,
+                        payload.filename_override.clone(),
                     )
                     .await {
                         Ok(result) => {

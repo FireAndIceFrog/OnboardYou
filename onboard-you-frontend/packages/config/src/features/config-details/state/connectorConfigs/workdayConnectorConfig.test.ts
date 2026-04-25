@@ -19,6 +19,7 @@ function baseForm(): ConnectionForm {
     workday: { tenantUrl: '', tenantId: '', username: '', password: '', workerCountLimit: '200', responseGroup: 'include_personal_information,include_employment_information' },
     sageHr: { subdomain: '', apiToken: '', includeTeamHistory: false, includeEmploymentStatusHistory: false, includePositionHistory: false },
     genericIngestion: { filename: '', columns: [], uploadStatus: 'idle' as const, uploadError: null, conversionStatus: null },
+    emailIngestion: { allowedSenders: '', subjectFilter: '' },
   };
 }
 

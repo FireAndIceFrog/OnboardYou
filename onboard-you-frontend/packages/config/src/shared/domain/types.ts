@@ -50,6 +50,7 @@ import type { PipelineConfig } from '@/generated/api';
 export const ACTION_CATEGORIES: Record<string, 'ingestion' | 'logic' | 'egress'> = {
   generic_ingestion_connector: 'ingestion',
   workday_hris_connector: 'ingestion',
+  email_ingestion_connector: 'ingestion',
   // logic / transform steps
   scd_type_2: 'logic',
   pii_masking: 'logic',
@@ -79,6 +80,7 @@ export const ACTION_BUSINESS_LABELS: Record<string, string> = {
   // Ingestion
   generic_ingestion_connector: 'Import Any File',
   workday_hris_connector: 'Connect to Workday',
+  email_ingestion_connector: 'Ingest from Email',
   // Logic / Transform
   scd_type_2: 'Track Change History',
   pii_masking: 'Mask Sensitive Data',

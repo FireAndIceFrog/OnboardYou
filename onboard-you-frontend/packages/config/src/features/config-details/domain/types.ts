@@ -2,7 +2,7 @@ import type { ComponentType, SVGProps } from 'react';
 import type { Node, Edge } from '@xyflow/react';
 import type { PipelineConfig, ValidationResult, WorkdayResponseGroup, SageHrConfig as SageHrConfigApi } from '@/generated/api';
 import { ConnectorConfigFactory, ConnectorType } from '../state/connectorConfigs/connectorConfigFactory';
-import { OfficeBuildingIcon, LeafIcon, FolderOpenIcon } from '@/shared/ui';
+import { OfficeBuildingIcon, LeafIcon, FolderOpenIcon, EnvelopeIcon } from '@/shared/ui';
 
 const connectorFactory = new ConnectorConfigFactory();
 
@@ -33,6 +33,7 @@ export const HR_SYSTEMS = [
   { id: ConnectorType.Workday, nameKey: 'configDetails.connection.systems.workday', icon: OfficeBuildingIcon },
   { id: ConnectorType.SageHR, nameKey: 'configDetails.connection.systems.sage_hr', icon: LeafIcon },
   { id: ConnectorType.GenericIngestion, nameKey: 'configDetails.connection.systems.generic_ingestion', icon: FolderOpenIcon },
+  { id: ConnectorType.EmailIngestion, nameKey: 'configDetails.connection.systems.email_ingestion', icon: EnvelopeIcon },
 ] as const;
 
 export type SystemId = (typeof HR_SYSTEMS)[number]['id'];
@@ -68,6 +69,14 @@ export interface GenericIngestionFields {
   conversionStatus: 'not_needed' | 'converted' | null;
 }
 
+/** Form fields for the email ingestion connector. */
+export interface EmailIngestionFields {
+  /** Comma-separated list of allowed sender addresses or domain globs. */
+  allowedSenders: string;
+  /** Optional subject filter keyword. */
+  subjectFilter: string;
+}
+
 /** Per-field validation error map (field path → error message). */
 export type ValidationErrors = Record<string, string | undefined>;
 
@@ -77,6 +86,7 @@ export interface ConnectionForm {
   workday: WorkdayFields;
   sageHr: SageHrFields;
   genericIngestion: GenericIngestionFields;
+  emailIngestion: EmailIngestionFields;
 }
 
 export const INITIAL_CONNECTION_FORM: ConnectionForm = {
@@ -85,6 +95,7 @@ export const INITIAL_CONNECTION_FORM: ConnectionForm = {
   workday: connectorFactory.getConfig(ConnectorType.Workday).getDefaultState().workday!,
   sageHr: connectorFactory.getConfig(ConnectorType.SageHR).getDefaultState().sageHr!,
   genericIngestion: connectorFactory.getConfig(ConnectorType.GenericIngestion).getDefaultState().genericIngestion!,
+  emailIngestion: connectorFactory.getConfig(ConnectorType.EmailIngestion).getDefaultState().emailIngestion!,
 };
 
 /**

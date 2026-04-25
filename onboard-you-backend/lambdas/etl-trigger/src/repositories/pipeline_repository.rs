@@ -20,6 +20,7 @@ pub trait IPipelineRepo: Send + Sync {
         organization_id: &str,
         customer_company_id: &str,
         run_id: &str,
+        filename_override: Option<&str>,
     ) -> Result<PipelineResult, Error>;
 }
 
@@ -41,6 +42,7 @@ impl IPipelineRepo for PipelineRepository {
         organization_id: &str,
         customer_company_id: &str,
         run_id: &str,
+        filename_override: Option<&str>,
     ) -> Result<PipelineResult, Error> {
         let action_factory = deps.action_factory.clone();
 
@@ -50,6 +52,14 @@ impl IPipelineRepo for PipelineRepository {
         for ac in &mut manifest.actions {
             if let ActionConfigPayload::GenericIngestionConnector(ref mut cfg) = ac.config {
                 cfg.resolve_s3_key(organization_id, customer_company_id);
+            }
+            if let ActionConfigPayload::EmailIngestionConnector(ref mut cfg) = ac.config {
+                // filename_override must be present for email-triggered runs.
+                // Fall back to a config error if the event was malformed.
+                let filename = filename_override.ok_or_else(|| {
+                    Error::from("EmailIngestionConnector requires filename_override in the event")
+                })?;
+                cfg.resolve_s3_key(organization_id, customer_company_id, filename);
             }
             if let ActionConfigPayload::ShowData(ref mut cfg) = ac.config {
                 cfg.resolve_s3_key(organization_id, customer_company_id, &ac.id);
@@ -240,7 +250,7 @@ mod tests {
 
         let repo = PipelineRepository::new();
         let res = repo
-            .run_pipeline(&deps, manifest, "org", "cust", "run-test-1")
+            .run_pipeline(&deps, manifest, "org", "cust", "run-test-1", None)
             .await
             .expect("run pipeline");
         assert_eq!(res.status, "success");

@@ -36,18 +36,20 @@ export function isCsvFile(filename: string): boolean {
 
 /**
  * Step 1: Request a presigned PUT URL from the API.
- * Reuses the existing csv-upload endpoint — it accepts any filename.
+ * Returns both the presigned URL and the **server-assigned** timestamped
+ * filename (e.g. `"employees_20260425T143000Z.pdf"`).  The caller must use
+ * this canonical name — not the local `File.name` — for subsequent calls.
  */
 async function getPresignedUploadUrl(
   customerCompanyId: string,
   filename: string,
-): Promise<string> {
+): Promise<{ uploadUrl: string; serverFilename: string }> {
   const { data } = await csvPresignedUpload({
     path: { customer_company_id: customerCompanyId },
     query: { filename },
     throwOnError: true,
   });
-  return data.upload_url;
+  return { uploadUrl: data.upload_url, serverFilename: data.filename };
 }
 
 /**
@@ -100,19 +102,23 @@ export async function startConversion(
  *
  * Returns:
  * - `{ filename, columns, conversionStatus: 'not_needed' }` for CSVs
- * - `{ filename, columns: [], conversionStatus: 'queued' }` for non-CSV files
+ * - `{ filename, columns: [], conversionStatus: 'converted' }` for non-CSV files
+ *
+ * `filename` is always the **server-assigned** timestamped name — not the
+ * original local filename.  Store this in the manifest config so the ETL
+ * pipeline reads the correct S3 key.
  */
 export async function uploadFileAndStartConversion(
   customerCompanyId: string,
   file: File,
   tableIndex?: number,
 ): Promise<{ filename: string; columns: string[]; conversionStatus: StartConversionResponse['status'] }> {
-  const uploadUrl = await getPresignedUploadUrl(customerCompanyId, file.name);
+  const { uploadUrl, serverFilename } = await getPresignedUploadUrl(customerCompanyId, file.name);
   await uploadFileToS3(uploadUrl, file);
-  const conversion = await startConversion(customerCompanyId, file.name, tableIndex);
+  const conversion = await startConversion(customerCompanyId, serverFilename, tableIndex);
 
   return {
-    filename: file.name,
+    filename: serverFilename,
     columns: conversion.columns ?? [],
     conversionStatus: conversion.status,
   };
